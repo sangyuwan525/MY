@@ -1,0 +1,39 @@
+# --------------------
+# 1. 构建输出 (Build Artifacts)
+# --------------------
+# CMake 的主构建目录
+build/
+# CMake 内部缓存
+CMakeCache.txt
+# 编译后的可执行文件（防止 build/ 遗漏）
+*.elf
+# 链接器生成的内存映射文件
+*.map
+# 编译生成的对象文件
+*.o
+*.obj
+# 依赖文件
+*.d
+
+# --------------------
+# 2. IDE 和本地缓存 (IDE/Local Configuration)
+# --------------------
+# Clion/JetBrains 配置
+.idea/
+
+# VS Code 配置（酌情排除 launch.json/tasks.json）
+.vscode/
+
+# 其他 IDE 配置文件
+.settings/
+.mxproject
+
+# 语言服务器缓存
+.clangd
+
+# --------------------
+# 3. 调试和运行时文件 (Debugging/Runtime)
+# --------------------
+# 调试产生的跟踪文件
+*.swo
+*.swp
