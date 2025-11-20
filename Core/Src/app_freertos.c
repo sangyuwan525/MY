@@ -68,6 +68,13 @@ const osThreadAttr_t Task_Printf_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
+/* Definitions for Taskcommand */
+osThreadId_t TaskcommandHandle;
+const osThreadAttr_t Taskcommand_attributes = {
+  .name = "Taskcommand",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -77,6 +84,7 @@ const osThreadAttr_t Task_Printf_attributes = {
 void StartDefaultTask(void *argument);
 void StartTask_LED(void *argument);
 void StartTask_Printf(void *argument);
+void StartTaskcommand(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -115,6 +123,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Task_Printf */
   Task_PrintfHandle = osThreadNew(StartTask_Printf, NULL, &Task_Printf_attributes);
+
+  /* creation of Taskcommand */
+  TaskcommandHandle = osThreadNew(StartTaskcommand, NULL, &Taskcommand_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -180,6 +191,24 @@ __weak void StartTask_Printf(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartTask_Printf */
+}
+
+/* USER CODE BEGIN Header_StartTaskcommand */
+/**
+* @brief Function implementing the Taskcommand thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTaskcommand */
+__weak void StartTaskcommand(void *argument)
+{
+  /* USER CODE BEGIN StartTaskcommand */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTaskcommand */
 }
 
 /* Private application code --------------------------------------------------*/
