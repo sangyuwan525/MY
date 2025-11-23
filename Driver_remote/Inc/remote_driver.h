@@ -29,4 +29,6 @@ typedef struct
     int16_t cir;
 } rc_info_t;
 extern rc_info_t rc;
+/*-- Remote control data unpacking function --*/
+void code_unzipread(uint8_t *code);
 #endif //R1_CHASSIS_REMOTE_DRIVER_H

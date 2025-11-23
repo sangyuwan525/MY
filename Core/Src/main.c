@@ -108,7 +108,8 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("HELLO W");
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart4,readBuffer,sizeof(readBuffer));
+
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1,remote_Buffer,sizeof(remote_Buffer));//使用串口4预留给遥控器数据接收
   /* USER CODE END 2 */
 
   /* Init scheduler */

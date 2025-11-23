@@ -73,6 +73,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Driver_Motor/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Math_User/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Task/Inc
+
         # Add user defined include paths
 )
 

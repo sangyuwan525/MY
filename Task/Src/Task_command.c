@@ -3,8 +3,14 @@
 //
 #include "Task_command.h"
 
-// 指令的最小长度
-#define COMMAND_MIN_LENGTH 4
+#include <stdio.h>
+
+#include "FreeRTOS.h"
+#include "cmsis_os.h"
+#include "remote_driver.h"
+#include "usart.h"
+
+
 // 指令长度
 #define COMMAND_LENGTH 10
 // 循环缓冲区大小
@@ -15,10 +21,13 @@ uint8_t buffer[BUFFER_SIZE];
 uint8_t readIndex = 0;
 // 循环缓冲区写索引
 uint8_t writeIndex = 0;
+// 存放指令的数组
+uint8_t command[20];
+
 
 
 //串口空闲中断接收数组
-uint8_t readBuffer[10];
+uint8_t remote_Buffer[10];
 
 /**
 * @brief 增加读索引
@@ -113,7 +122,7 @@ uint8_t Command_GetCommand(uint8_t *command) {
     // 寻找完整指令
     while (1) {
         // 如果缓冲区长度小于COMMAND_MIN_LENGTH 则不可能有完整的指令
-        if (Command_GetLength() < COMMAND_MIN_LENGTH) {
+        if (Command_GetLength() < 4) {
         return 0;
         }
         // 如果不是包头 则跳过 重新开始寻找
@@ -121,11 +130,6 @@ uint8_t Command_GetCommand(uint8_t *command) {
         Command_AddReadIndex(1);
         continue;
         }
-        // // 如果缓冲区长度小于指令长度 则不可能有完整的指令
-        // uint8_t length = Command_Read(readIndex + 1);
-        // if (Command_GetLength() < length) {
-        // return 0;
-        // }
         // 如果校验和不正确 则跳过 重新开始寻找
         uint8_t sum = 0;
         for (uint8_t i = 0; i < COMMAND_LENGTH - 1; i++) {
@@ -141,5 +145,43 @@ uint8_t Command_GetCommand(uint8_t *command) {
         }
         Command_AddReadIndex(COMMAND_LENGTH);
         return 1;
+    }
+}
+/*---------------------------------------------------------------------------*/
+/* USER CODE BEGIN Header_StartTaskcommand */
+/**  * @brief  Function implementing the Taskcommand thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+
+
+void StartTaskcommand(void *argument)
+{
+    /* USER CODE BEGIN StartTaskcommand */
+    /* Infinite loop */
+    for(;;)
+    {
+        if (Command_GetCommand(command) != 0) {
+            // 处理指令内容，目前还没写
+            printf("Command Yes\n");
+            code_unzipread(command);
+        }
+        osDelay(10);
+    }
+    /* USER CODE END StartTaskcommand */
+}
+
+
+/* USER CODE END Header_StartTaskcommand */
+
+
+// 串口接收完成回调函数
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+    if (huart->Instance == UART5) {
+        // 将接收到的数据写入缓冲区
+        Command_Write(remote_Buffer, Size);
+        // 重新开启串口空闲中断接收
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
+        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
     }
 }
