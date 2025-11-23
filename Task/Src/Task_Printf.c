@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include "cmsis_os.h"
+#include "Task_Printf.h"
 void StartTask_Printf(void *argument)
 {
     /* USER CODE BEGIN StartTask_Printf */
