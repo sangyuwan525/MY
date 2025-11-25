@@ -109,7 +109,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("HELLO W");
 
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart1,remote_Buffer,sizeof(remote_Buffer));//使用串口4预留给遥控器数据接收
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));//使用串口4预留给遥控器数据接收
   /* USER CODE END 2 */
 
   /* Init scheduler */
