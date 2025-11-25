@@ -10,13 +10,12 @@
 #include "remote_driver.h"
 #include "usart.h"
 
-
-// 指令长度
-#define COMMAND_LENGTH 10
-// 循环缓冲区大小
-#define BUFFER_SIZE 128
-//数据帧帧头
-#define COMMAND_HEADER 0x61
+/* Definitions ---------------------------------------------------------------*/
+#define COMMAND_LENGTH 10// 指令长度
+#define BUFFER_SIZE 128// 循环缓冲区大小
+#define COMMAND_HEADER 0x61//数据帧帧头
+#define CRC_DATA_LENGTH (COMMAND_LENGTH - 2) // 参与CRC校验的数据长度
+/* Structs -------------------------------------------------------------------*/
 // 16位CRC循环校验码表，多项式 \text{0x1021}、初始值 \text{0xFFFF} 且高位优先的
 const uint16_t CRC_16_Table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -188,17 +187,7 @@ uint8_t Command_GetCommand(uint8_t *command) {
         Command_AddReadIndex(1);
         continue;
         }
-        // 如果校验和不正确 则跳过 重新开始寻找
-        // uint8_t sum = 0;
-        // for (uint8_t i = 0; i < COMMAND_LENGTH - 1; i++) {
-        // sum += Command_Read(readIndex + i);
-        // }
-        // if (sum != Command_Read(readIndex + COMMAND_LENGTH - 1)) {
-        // Command_AddReadIndex(1);
-        // continue;
-        // }
-        const uint8_t CRC_DATA_LENGTH = COMMAND_LENGTH - 2;
-
+        // 计算CRC校验
         uint8_t crc_data[CRC_DATA_LENGTH];
         for (uint8_t i = 0; i < CRC_DATA_LENGTH; i++) {
             crc_data[i] = Command_Read(readIndex + i);
@@ -227,11 +216,10 @@ uint8_t Command_GetCommand(uint8_t *command) {
   * @param  argument: Not used
   * @retval None
   */
-
-
 void StartTaskcommand(void *argument)
 {
     /* USER CODE BEGIN StartTaskcommand */
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
     /* Infinite loop */
     for(;;)
     {
@@ -265,6 +253,7 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
 {
     HAL_StatusTypeDef ret=HAL_ERROR;
     huart->RxState = HAL_UART_STATE_READY;
+    __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_ORE | UART_FLAG_NE);
     if (huart == &huart5){
         ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
         if(ret!=HAL_OK){
