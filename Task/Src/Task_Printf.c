@@ -11,8 +11,8 @@ void StartTask_Printf(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        printf("hello world\r\n");
-        osDelay(500);
+        printf("x=%d y=%d cir=%d sw1=%d sw2=%d button1=%d\r\n",rc.ch1,rc.ch2,rc.cir,rc.sw1,rc.sw2,rc.button1);
+        osDelay(50);
     }
     /* USER CODE END StartTask_Printf */
 }

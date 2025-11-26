@@ -231,8 +231,8 @@ void StartTaskcommand(void *argument)
             Command_Write(rx_msg.data,rx_msg.size);
             while (Command_GetCommand(processsed_command)!=0){;
                 // 处理指令内容，目前还没写
-                printf("Command Yes\n");
-                // code_unzipread(processsed_command);
+                // printf("Command Yes\n");
+                code_unzipread(processsed_command);
             }
         }
         // if (Command_GetCommand(command) != 0) {
@@ -277,7 +277,7 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
     if (huart == &huart5){
         ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
         if(ret!=HAL_OK){
-            printf("ErrorCB Uart4 IT Enable Failed:%d\r\n",ret);
+            printf("ErrorCB Uart5 IT Enable Failed:%d\r\n",ret);
         }
     }
 }
