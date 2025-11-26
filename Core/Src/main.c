@@ -107,7 +107,7 @@ int main(void)
   MX_UART5_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("HELLO W");
+  printf("Initial Success\r\n");
 
 
   /* USER CODE END 2 */

@@ -4,18 +4,18 @@
 #include "Task_command.h"
 
 #include <stdio.h>
-
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
 #include "remote_driver.h"
 #include "usart.h"
+#include "queue.h"
 
 /* Definitions ---------------------------------------------------------------*/
 #define COMMAND_LENGTH 10// 指令长度
 #define BUFFER_SIZE 128// 循环缓冲区大小
 #define COMMAND_HEADER 0x61//数据帧帧头
 #define CRC_DATA_LENGTH (COMMAND_LENGTH - 2) // 参与CRC校验的数据长度
-/* Structs -------------------------------------------------------------------*/
+
 // 16位CRC循环校验码表，多项式 \text{0x1021}、初始值 \text{0xFFFF} 且高位优先的
 const uint16_t CRC_16_Table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -51,13 +51,13 @@ const uint16_t CRC_16_Table[256] = {
     0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
     0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 };
-
+/* Global Variables ----------------------------------------------------------*/
 // 循环缓冲区
-uint8_t buffer[BUFFER_SIZE];
+static uint8_t buffer[BUFFER_SIZE];
 // 循环缓冲区读索引
-uint8_t readIndex = 0;
+static uint8_t readIndex = 0;
 // 循环缓冲区写索引
-uint8_t writeIndex = 0;
+static uint8_t writeIndex = 0;
 // 存放指令的数组
 uint8_t command[20];
 //串口空闲中断接收数组
@@ -219,16 +219,28 @@ uint8_t Command_GetCommand(uint8_t *command) {
 void StartTaskcommand(void *argument)
 {
     /* USER CODE BEGIN StartTaskcommand */
+    UartRxMessage_t rx_msg;
+    uint8_t processsed_command[COMMAND_LENGTH];
+
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
+    __HAL_DMA_DISABLE_IT(huart5.hdmarx, DMA_IT_HT);
     /* Infinite loop */
     for(;;)
     {
-        if (Command_GetCommand(command) != 0) {
-            // 处理指令内容，目前还没写
-            printf("Command Yes\n");
-            code_unzipread(command);
+        if (osMessageQueueGet(remote_queueHandle,&rx_msg,NULL,osWaitForever) == osOK){
+            Command_Write(rx_msg.data,rx_msg.size);
+            while (Command_GetCommand(processsed_command)!=0){;
+                // 处理指令内容，目前还没写
+                printf("Command Yes\n");
+                // code_unzipread(processsed_command);
+            }
         }
-        osDelay(10);
+        // if (Command_GetCommand(command) != 0) {
+        //     // 处理指令内容，目前还没写
+        //     printf("Command Yes\n");
+        //     code_unzipread(command);
+        // }
+        // osDelay(10);
     }
     /* USER CODE END StartTaskcommand */
 }
@@ -240,8 +252,16 @@ void StartTaskcommand(void *argument)
 // 串口接收完成回调函数
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == UART5) {
+
+        UartRxMessage_t rx_msg;
+        uint16_t data_size = (Size < sizeof(rx_msg.data)) ? Size : sizeof(rx_msg.data);
+
+        memcpy(rx_msg.data, remote_Buffer, data_size);
+        rx_msg.size = data_size;
+
+        osMessageQueuePut(remote_queueHandle,&rx_msg,0,0);//使用队列将数据传递给任务
         // 将接收到的数据写入缓冲区
-        Command_Write(remote_Buffer, Size);
+        // Command_Write(remote_Buffer, Size);
         // 重新开启串口空闲中断接收
         HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
@@ -257,7 +277,7 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
     if (huart == &huart5){
         ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
         if(ret!=HAL_OK){
-            printf("ErrorCB Uart4 IT Enable Failed:%d",ret);
+            printf("ErrorCB Uart4 IT Enable Failed:%d\r\n",ret);
         }
     }
 }

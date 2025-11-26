@@ -11,7 +11,7 @@ void StartTask_Printf(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        printf("hello\n");
+        printf("hello world\r\n");
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */

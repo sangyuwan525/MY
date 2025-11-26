@@ -7,8 +7,16 @@
 
 #include "main.h"
 #include <string.h>
-extern uint8_t remote_Buffer[10];
 
+#include "cmsis_os2.h"
+extern uint8_t remote_Buffer[10];
+extern osMessageQueueId_t remote_queueHandle;
+/* Structs -------------------------------------------------------------------*/
+// 用于在中断和任务之间安全传递数据的结构体
+typedef struct {
+    uint8_t data[10];
+    uint16_t size;
+} UartRxMessage_t;
 
 uint8_t Command_Write(uint8_t *data, uint8_t length);
 
