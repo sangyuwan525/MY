@@ -232,15 +232,13 @@ void StartTaskcommand(void *argument)
             while (Command_GetCommand(processsed_command)!=0){;
                 // 处理指令内容，目前还没写
                 // printf("Command Yes\n");
-                code_unzipread(processsed_command);
+                if (osMutexAcquire(rc_mutexHandle,0) == osOK) {
+                    code_unzipread(processsed_command);//解压遥控器数据到rc结构体
+                    Remote_Data_Convert(&rc,&remote_engineer);//将rc数据转换为工程量数据到remote_engineer结构体
+                    osMutexRelease(rc_mutexHandle);
+                }
             }
         }
-        // if (Command_GetCommand(command) != 0) {
-        //     // 处理指令内容，目前还没写
-        //     printf("Command Yes\n");
-        //     code_unzipread(command);
-        // }
-        // osDelay(10);
     }
     /* USER CODE END StartTaskcommand */
 }
@@ -260,8 +258,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         rx_msg.size = data_size;
 
         osMessageQueuePut(remote_queueHandle,&rx_msg,0,0);//使用队列将数据传递给任务
-        // 将接收到的数据写入缓冲区
-        // Command_Write(remote_Buffer, Size);
         // 重新开启串口空闲中断接收
         HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);

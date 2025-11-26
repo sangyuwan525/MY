@@ -81,6 +81,11 @@ osMessageQueueId_t remote_queueHandle;
 const osMessageQueueAttr_t remote_queue_attributes = {
   .name = "remote_queue"
 };
+/* Definitions for rc_mutex */
+osMutexId_t rc_mutexHandle;
+const osMutexAttr_t rc_mutex_attributes = {
+  .name = "rc_mutex"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -103,6 +108,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of rc_mutex */
+  rc_mutexHandle = osMutexNew(&rc_mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
