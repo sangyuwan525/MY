@@ -48,7 +48,8 @@ typedef struct {
 
 extern rc_info_t rc;
 extern remote_engineer_t remote_engineer;
-extern osMutexId_t rc_mutexHandle;
+
+extern osMutexId_t rc_mutexHandle;//互斥锁，由于保护遥控器数据变量
 /*-- Remote control data unpacking function --*/
 void code_unzipread(uint8_t *code);
 void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_data);
