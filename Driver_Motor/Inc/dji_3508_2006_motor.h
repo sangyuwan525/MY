@@ -8,6 +8,10 @@
 **********************************************/
 
 #include "main.h"
+#include "cmsis_os2.h"
+
+
+
 #define SPEED_MODE 0
 #define LOC_MODE 1
 
@@ -62,5 +66,5 @@ void Discontrol_dji_motor(void);
 void Recontrol_dji_motor(void);
 
 /**************USER_end**************/
-
+extern osMessageQueueId_t motorRxQueueHandle;
 #endif

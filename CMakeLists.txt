@@ -49,6 +49,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Task/Src/Task_command.c
         Task/Src/Task_chassis.c
         Task/Inc/Task_chassis.h
+        Task/Src/Task_dji_control.c
+        Task/Inc/Task_dji_control.h
 
 
 )

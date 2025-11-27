@@ -77,6 +77,13 @@ const osThreadAttr_t Taskcommand_attributes = {
   .priority = (osPriority_t) osPriorityLow,
   .stack_size = 256 * 4
 };
+/* Definitions for Task_dji */
+osThreadId_t Task_djiHandle;
+const osThreadAttr_t Task_dji_attributes = {
+  .name = "Task_dji",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 256 * 4
+};
 /* Definitions for remote_queue */
 osMessageQueueId_t remote_queueHandle;
 const osMessageQueueAttr_t remote_queue_attributes = {
@@ -102,6 +109,7 @@ void StartTask_chassis(void *argument);
 void StartTask_LED(void *argument);
 void StartTask_Printf(void *argument);
 void StartTaskcommand(void *argument);
+void StartTask_dji(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -154,6 +162,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Taskcommand */
   TaskcommandHandle = osThreadNew(StartTaskcommand, NULL, &Taskcommand_attributes);
+
+  /* creation of Task_dji */
+  Task_djiHandle = osThreadNew(StartTask_dji, NULL, &Task_dji_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -235,6 +246,24 @@ __weak void StartTaskcommand(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartTaskcommand */
+}
+
+/* USER CODE BEGIN Header_StartTask_dji */
+/**
+* @brief Function implementing the Task_dji thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask_dji */
+__weak void StartTask_dji(void *argument)
+{
+  /* USER CODE BEGIN StartTask_dji */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTask_dji */
 }
 
 /* Private application code --------------------------------------------------*/

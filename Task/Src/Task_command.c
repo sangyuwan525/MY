@@ -2,7 +2,6 @@
 // Created by 马皓然 on 2025/11/20.
 //
 #include "Task_command.h"
-
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
@@ -253,11 +252,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
         UartRxMessage_t rx_msg;
         uint16_t data_size = (Size < sizeof(rx_msg.data)) ? Size : sizeof(rx_msg.data);
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 调度标志
 
         memcpy(rx_msg.data, remote_Buffer, data_size);
         rx_msg.size = data_size;
 
-        osMessageQueuePut(remote_queueHandle,&rx_msg,0,0);//使用队列将数据传递给任务
+        if (xQueueSendFromISR(remote_queueHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+        {
+            // TODO: 处理队列满的错误
+        }
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
         // 重新开启串口空闲中断接收
         HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);

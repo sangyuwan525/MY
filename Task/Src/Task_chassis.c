@@ -36,7 +36,7 @@ void StartTask_chassis(void *argument)
             // 如果获取数据失败（互斥量争夺失败），可以考虑错误处理或跳过本次循环
         }
         // 任务延时，保证任务周期性运行，例如每 10ms 运行一次
-        osDelayUntil(CHASSIS_TASK_PERIOD);
+        osDelay(CHASSIS_TASK_PERIOD);
     }
     /* USER CODE END StartTask_chassis */
 }

@@ -3,6 +3,10 @@
 // #include "control.h"
 // #include "ak80_motor.h"
 #include <stdio.h>
+#include <string.h>
+#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "queue.h"
 
 uint8_t rece_can=0;
 extern int jump_flag;
@@ -283,41 +287,77 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
 	if(hfdcan==&hfdcan1)
 	{
-		static int cnt[8]={0};
+
 		FDCAN_RxHeaderTypeDef rx_header;
 		uint8_t rx_data[8];
-		static uint32_t database;
-		HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
-		//switch (rx_header.Identifier)
-		// {
-		//			case CAN_3508_M5_ID:
-		//			case CAN_3508_M6_ID:
-		//			case CAN_3508_M7_ID:{
-		//					Dji_3508_last_four_motor_control(rx_header.Identifier-CAN_3508_M1_ID,rx_data);
-		//					break;
-		//			}
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 用于在中断退出时请求调度
+		//static int cnt[8]={0};
+		// static uint32_t database;
+		// HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
+		while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK)
+		{
+			if(rx_header.Identifier>=CAN_3508_M5_ID&&rx_header.Identifier<=CAN_3508_M8_ID)
+			{
+				Motor_Rx_Queue_t rx_msg;
+				rx_msg.motor_id = rx_header.Identifier;
+				// 使用 memcpy 拷贝原始数据，中断中必须避免直接赋值大型结构体
+				memcpy(rx_msg.rx_data, rx_data, 8);
+				if (xQueueSendFromISR(motorRxQueueHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+				{
+					// TODO: 队列已满，数据丢失。此处可添加日志记录或计数器。
+				}
+			}
+		}
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		// if(rx_header.Identifier>=CAN_3508_M5_ID&&rx_header.Identifier<=CAN_3508_M8_ID) {
+		// 	switch (rx_header.Identifier){
+		// 		 case CAN_3508_M5_ID:
+		// 		 case CAN_3508_M6_ID:
+		// 		 case CAN_3508_M7_ID:
+		// 		 case CAN_3508_M8_ID: {
+		// 			 Dji_3508_last_four_motor_control(rx_header.Identifier - CAN_3508_M1_ID, rx_data);
+		// 			 break;
+		// 		 }
+		// 		default:
+		// 			break;
+		// 	 }
 		// }
 	}
     if(hfdcan==&hfdcan3)
 	{
-		static int cnt[8]={0};
+		// static int cnt[8]={0};
 		FDCAN_RxHeaderTypeDef rx_header;
 		uint8_t rx_data[8];
-		HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
-		if(rx_header.Identifier>=CAN_3508_M1_ID&&rx_header.Identifier<=CAN_3508_M4_ID){
-			// switch (rx_header.Identifier){
-			// 	case CAN_3508_M1_ID:
-			// 	case CAN_3508_M2_ID:
-			//  		case CAN_3508_M3_ID:
-			// 	case CAN_3508_M4_ID:{
-			//               Dji_3508_first_four_motor_control(rx_header.Identifier-CAN_3508_M1_ID,rx_data);
-			// 		break;
-			// 		}
-			//           default:
-			//               break;
-			// 	}
-		}
-
+    	BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 用于在中断退出时请求调度
+    	while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK)
+    	{
+    		if(rx_header.Identifier>=CAN_3508_M1_ID&&rx_header.Identifier<=CAN_3508_M4_ID)
+    		{
+    			Motor_Rx_Queue_t rx_msg;
+    			rx_msg.motor_id = rx_header.Identifier;
+    			// 使用 memcpy 拷贝原始数据，中断中必须避免直接赋值大型结构体
+    			memcpy(rx_msg.rx_data, rx_data, 8);
+    			if (xQueueSendFromISR(motorRxQueueHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+    			{
+    				// TODO: 队列已满，数据丢失。此处可添加日志记录或计数器。
+    			}
+    		}
+    	}
+    	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		// HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
+		// if(rx_header.Identifier>=CAN_3508_M1_ID&&rx_header.Identifier<=CAN_3508_M4_ID){
+		// 	switch (rx_header.Identifier) {
+		// 		case CAN_3508_M1_ID:
+		// 		case CAN_3508_M2_ID:
+		// 		case CAN_3508_M3_ID:
+		// 		case CAN_3508_M4_ID: {
+		// 			Dji_3508_first_four_motor_control(rx_header.Identifier - CAN_3508_M1_ID, rx_data);
+		// 			break;
+		// 		}
+		// 		default:
+		// 			break;
+		// 	}
+		// }
 	}
 }
 
