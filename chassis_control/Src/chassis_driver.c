@@ -5,6 +5,7 @@
 
 #include "chassis_driver.h"
 #include <math.h>
+#include "dji_3508_2006_motor.h"
 #define PI  3.1415926f
 // --- 1. 全局数据实例 ---
 // 用于存储轮子最终指令，由 speed_decompose 填充
@@ -135,8 +136,6 @@ static void speed_decompose_unknown(int motor_id, float vx, float vy, float vr) 
 #endif
 
 
-// --- 3. 主速度控制函数实现
-
 void cha_remote(float vx, float vy, float vr)
 {
     float velx, vely, vela;
@@ -173,11 +172,11 @@ void cha_remote(float vx, float vy, float vr)
     // 假设有一个通用的发送函数：Change_Motor_Command(motor_id, speed, angle)
     for (int i = 0; i < WHEEL_NUM; i++)
     {
-#ifdef CHASSIS_TYPE_MECANUM
+#ifdef CHASSIS_TYPE_QUANXIANGLUN
         // 全向轮只需发送转速指令
         // 假设 Change_dji_speed 是发送电机转速的函数
         Change_dji_speed(i, wheel_data[i].vel);
-#elif defined(CHASSIS_TYPE_SWERVE)
+#elif defined(CHASSIS_TYPE_DUOLUN)
         // 舵轮需要发送转速和转向角
         Chassis_Send_Swerve_Command(i,
                                     wheel_data[i].vel,

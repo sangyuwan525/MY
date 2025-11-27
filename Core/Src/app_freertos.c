@@ -48,12 +48,12 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for Task_chassis */
+osThreadId_t Task_chassisHandle;
+const osThreadAttr_t Task_chassis_attributes = {
+  .name = "Task_chassis",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 512 * 4
 };
 /* Definitions for Task_LED */
 osThreadId_t Task_LEDHandle;
@@ -67,14 +67,14 @@ osThreadId_t Task_PrintfHandle;
 const osThreadAttr_t Task_Printf_attributes = {
   .name = "Task_Printf",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for Taskcommand */
 osThreadId_t TaskcommandHandle;
 const osThreadAttr_t Taskcommand_attributes = {
   .name = "Taskcommand",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for remote_queue */
 osMessageQueueId_t remote_queueHandle;
@@ -92,7 +92,7 @@ const osMutexAttr_t rc_mutex_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
+void StartTask_chassis(void *argument);
 void StartTask_LED(void *argument);
 void StartTask_Printf(void *argument);
 void StartTaskcommand(void *argument);
@@ -134,8 +134,8 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of Task_chassis */
+  Task_chassisHandle = osThreadNew(StartTask_chassis, NULL, &Task_chassis_attributes);
 
   /* creation of Task_LED */
   Task_LEDHandle = osThreadNew(StartTask_LED, NULL, &Task_LED_attributes);
@@ -156,24 +156,22 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartTask_chassis */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the Task_chassis thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-__weak void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartTask_chassis */
+__weak void StartTask_chassis(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN StartTask_chassis */
   /* Infinite loop */
   for(;;)
   {
-
-
-    osDelay(500);
+    osDelay(1);
   }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END StartTask_chassis */
 }
 
 /* USER CODE BEGIN Header_StartTask_LED */

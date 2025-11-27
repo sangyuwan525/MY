@@ -47,6 +47,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         BSP/Src/bsp_can.c
         Math_User/Src/pid.c
         Task/Src/Task_command.c
+        Task/Src/Task_chassis.c
+        Task/Inc/Task_chassis.h
 
 
 )
@@ -92,4 +94,9 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
 )
 
+# STM32G474xx (Cortex-M4F) 应该启用 HARD FPU
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfloat-abi=hard -mfpu=fpv4-sp-d16")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfloat-abi=hard -mfpu=fpv4-sp-d16")
+# 使能printf浮点数支持
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -u _printf_float)
 

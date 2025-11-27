@@ -71,6 +71,13 @@ void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_d
     } else {
         engineer_data->mode = 0; // 待机模式
     }
+
+    engineer_data->button1 = rc_data->button1;
+    engineer_data->button2 = rc_data->button2;
+    engineer_data->button3 = rc_data->button3;
+    engineer_data->button4 = rc_data->button4;
+    engineer_data->button5 = rc_data->button5;
+    engineer_data->button6 = rc_data->button6;
 }
 /**
  * @brief  获取受保护的遥控器工程量数据
