@@ -26,7 +26,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <Task_command.h>
+#include "Task_command.h"
+#include "dji_3508_2006_motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -81,6 +82,11 @@ osMessageQueueId_t remote_queueHandle;
 const osMessageQueueAttr_t remote_queue_attributes = {
   .name = "remote_queue"
 };
+/* Definitions for motorRxQueue */
+osMessageQueueId_t motorRxQueueHandle;
+const osMessageQueueAttr_t motorRxQueue_attributes = {
+  .name = "motorRxQueue"
+};
 /* Definitions for rc_mutex */
 osMutexId_t rc_mutexHandle;
 const osMutexAttr_t rc_mutex_attributes = {
@@ -127,6 +133,9 @@ void MX_FREERTOS_Init(void) {
   /* Create the queue(s) */
   /* creation of remote_queue */
   remote_queueHandle = osMessageQueueNew (16, sizeof(UartRxMessage_t), &remote_queue_attributes);
+
+  /* creation of motorRxQueue */
+  motorRxQueueHandle = osMessageQueueNew (16, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
 

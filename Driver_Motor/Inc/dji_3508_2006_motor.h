@@ -39,6 +39,12 @@ typedef enum{
 	CAN_3508_M7_ID = 0x207,
 	CAN_3508_M8_ID = 0x208,
 } can_msg_id_e;
+// 定义一个结构体，用于在中断和任务之间传递电机反馈数据
+typedef struct
+{
+	uint32_t motor_id;          // 电机ID (CAN ID)
+	uint8_t  rx_data[8];        // 原始CAN数据
+} Motor_Rx_Queue_t;
 
 /**************USER_begin**************/
 extern int set_loc_s[9];
