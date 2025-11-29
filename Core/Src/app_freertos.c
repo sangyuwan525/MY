@@ -81,8 +81,8 @@ const osThreadAttr_t Taskcommand_attributes = {
 osThreadId_t Task_djiHandle;
 const osThreadAttr_t Task_dji_attributes = {
   .name = "Task_dji",
-  .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 256 * 4
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 2048 * 4
 };
 /* Definitions for remote_queue */
 osMessageQueueId_t remote_queueHandle;
@@ -143,7 +143,7 @@ void MX_FREERTOS_Init(void) {
   remote_queueHandle = osMessageQueueNew (16, sizeof(UartRxMessage_t), &remote_queue_attributes);
 
   /* creation of motorRxQueue */
-  motorRxQueueHandle = osMessageQueueNew (16, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
+  motorRxQueueHandle = osMessageQueueNew (32, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
 

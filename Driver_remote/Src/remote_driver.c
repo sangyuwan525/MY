@@ -4,7 +4,8 @@
 #include "remote_driver.h"
 #define RC_CHANNEL_MAX      660.0f
 #define RC_CHANNEL_MID      0.0f
-#define MAX_CHASSIS_SPEED   3.0f // 最大底盘速度，例如 3.0 m/s
+//目前底下这两个值还未经过标定，只是个模糊值
+#define MAX_CHASSIS_SPEED   1000.0f // 最大底盘速度
 #define MAX_CHASSIS_W_RAD   5.0f // 最大底盘角速度，例如 5.0 rad/s
 
 rc_info_t rc;
@@ -59,17 +60,17 @@ void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_d
     float cir_norm = (float)rc_data->cir / RC_CHANNEL_MAX; // cir 范围: [-660, 660]
 
     // 转换为实际工程量速度
-    engineer_data->vx = ch1_norm * MAX_CHASSIS_SPEED; // 假设 ch1 控制 Y 轴速度
-    engineer_data->vy = ch2_norm * MAX_CHASSIS_SPEED; // 假设 ch2 控制 X 轴速度
-    engineer_data->vw = cir_norm * MAX_CHASSIS_W_RAD; // 假设 cir 控制角速度
+    engineer_data->vx = (int16_t)(ch1_norm * MAX_CHASSIS_SPEED);
+    engineer_data->vy = (int16_t)(ch2_norm * MAX_CHASSIS_SPEED);
+    engineer_data->vw = (int16_t)(cir_norm * MAX_CHASSIS_W_RAD);
 
-    // 2. 模式和比例因子判断（由开关控制）
-    if (rc_data->sw1 == 1) {
-        engineer_data->mode = 1; // 自动模式
-    } else if (rc_data->sw1 == 2) {
-        engineer_data->mode = 2; // 手动模式
+    // 模式和比例因子判断（由开关控制）
+    if (rc_data->sw1 == 1 && rc_data->sw2 == 1)  {
+        engineer_data->mode = CHASSIS_MODE_MANUAL;// 手动模式
+    } else if (rc_data->sw1 == 2 && rc_data->sw2 == 2) {
+        engineer_data->mode = CHASSIS_MODE_AUTO; // 自动模式
     } else {
-        engineer_data->mode = 0; // 待机模式
+        engineer_data->mode = CHASSIS_MODE_STANDBY; // 待机模式
     }
 
     engineer_data->button1 = rc_data->button1;

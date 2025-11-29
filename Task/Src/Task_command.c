@@ -10,7 +10,7 @@
 #include "queue.h"
 
 /* Definitions ---------------------------------------------------------------*/
-#define COMMAND_LENGTH 10// 指令长度
+
 #define BUFFER_SIZE 128// 循环缓冲区大小
 #define COMMAND_HEADER 0x61//数据帧帧头
 #define CRC_DATA_LENGTH (COMMAND_LENGTH - 2) // 参与CRC校验的数据长度
@@ -228,8 +228,7 @@ void StartTaskcommand(void *argument)
     {
         if (osMessageQueueGet(remote_queueHandle,&rx_msg,NULL,osWaitForever) == osOK){
             Command_Write(rx_msg.data,rx_msg.size);
-            while (Command_GetCommand(processsed_command)!=0){;
-                // 处理指令内容，目前还没写
+            while (Command_GetCommand(processsed_command)!=0){
                 // printf("Command Yes\n");
                 if (osMutexAcquire(rc_mutexHandle,0) == osOK) {
                     code_unzipread(processsed_command);//解压遥控器数据到rc结构体

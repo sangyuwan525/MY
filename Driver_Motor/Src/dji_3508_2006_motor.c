@@ -24,10 +24,10 @@ static int control_flag_first4=1;
 static int control_flag_last4=1;
 static int control_flag=1;
 static int mode_s[9]={
-	LOC_MODE,
-	LOC_MODE,
-	LOC_MODE,
-	LOC_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
 	LOC_MODE,
 	LOC_MODE,
 	LOC_MODE,
@@ -68,7 +68,14 @@ int Basic_int_abs(int x){/*绝对值*/
 5.其它：
 */
 motor_measure_t Get_dji_information(int motor_id){
+	motor_measure_t temp_info;
+	// taskENTER_CRITICAL();
+	{
+		temp_info = motor_inf[motor_id];
+	}
+	// taskEXIT_CRITICAL();
 	return motor_inf[motor_id];
+
 }
 /*
 1.函数功能：设定dji电机的速度大小
@@ -397,4 +404,30 @@ void Dji_3508_all_motor_control(void) {
         (int16_t)motor_3508_pid_g[5].spd.now_out,
         (int16_t)motor_3508_pid_g[6].spd.now_out,
         (int16_t)motor_3508_pid_g[7].spd.now_out);}
+}
+
+void Dji_Motor_Update_Status(uint32_t id, uint8_t *data)
+{
+	int index = -1;
+	// 1. 根据 CAN ID 匹配数组索引 (0-7)
+	// CAN_3508_M1_ID 是 0x201
+	if (id >= CAN_3508_M1_ID && id <= CAN_3508_M4_ID) {
+		index = id - CAN_3508_M1_ID; // 0 ~ 3
+	}
+	else if (id >= CAN_3508_M5_ID && id <= CAN_3508_M8_ID) {
+		index = id - CAN_3508_M5_ID + 4; // 4 ~ 7
+	}
+	else {
+		return; // ID 不在范围内，直接退出
+	}
+	Get_motor_measure(&motor_inf[index], data);
+	// 3. 处理上电第一帧数据的初始化逻辑
+	if (motor_inf[index].first == 0)
+	{
+		motor_inf[index].first = 1;
+		motor_inf[index].last_angle = motor_inf[index].angle;
+		motor_inf[index].total_angle = 0;
+	}
+	// 4. 计算多圈绝对角度
+	Get_total_angle(&motor_inf[index]);
 }

@@ -28,6 +28,8 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "Task_command.h"
+#include "bsp_can.h"
+#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,7 +111,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 
-
+  FDCAN1_RxFilter_Config();
+  Pid_parameter_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

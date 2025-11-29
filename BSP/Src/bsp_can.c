@@ -296,7 +296,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 		// HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
 		while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK)
 		{
-			if(rx_header.Identifier>=CAN_3508_M5_ID&&rx_header.Identifier<=CAN_3508_M8_ID)
+			if(rx_header.Identifier>=CAN_3508_M1_ID&&rx_header.Identifier<=CAN_3508_M4_ID)
 			{
 				Motor_Rx_Queue_t rx_msg;
 				rx_msg.motor_id = rx_header.Identifier;

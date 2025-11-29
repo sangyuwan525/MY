@@ -65,6 +65,10 @@ motor_measure_t Get_dji_information(int motor_id);
 void Discontrol_dji_motor(void);
 void Recontrol_dji_motor(void);
 
+
+void Dji_3508_all_motor_control(void);
+void Dji_Motor_Update_Status(uint32_t id, uint8_t *data);
+
 /**************USER_end**************/
 extern osMessageQueueId_t motorRxQueueHandle;
 #endif

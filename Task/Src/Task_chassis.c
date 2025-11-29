@@ -4,7 +4,7 @@
 #include "remote_driver.h"
 #include "chassis_driver.h"
 #include "Task_chassis.h"
-
+#include "dji_3508_2006_motor.h"
 
 
 void StartTask_chassis(void *argument)
@@ -18,7 +18,7 @@ void StartTask_chassis(void *argument)
         if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
         {
             // 模式 2 为手动模式
-            if (rc_engineer_data.mode == 2)
+            if (rc_engineer_data.mode == 1)
             {
                 // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
                 cha_remote(rc_engineer_data.vx,
@@ -35,6 +35,7 @@ void StartTask_chassis(void *argument)
         {
             // 如果获取数据失败（互斥量争夺失败），可以考虑错误处理或跳过本次循环
         }
+        //Change_dji_speed(0,1000);
         // 任务延时，保证任务周期性运行，例如每 10ms 运行一次
         osDelay(CHASSIS_TASK_PERIOD);
     }
