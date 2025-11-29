@@ -4,7 +4,7 @@
 #include "fdcan.h"
 #include "pid.h"
 #include "math.h"
-
+#include <stdbool.h>
 
 
 //3508电流范围   -16384-16384
@@ -20,11 +20,14 @@
 ////将用6号电机代替9号电机
 static int set_spd_s[9]={0,0,0,0,0,0,0,0,0};
 int set_loc_s[9]={0,0,0,0,0,0,0,0,0};
+static int control_flag_first4=1;
+static int control_flag_last4=1;
+static int control_flag=1;
 static int mode_s[9]={
-	LOC_MODE,
-	LOC_MODE,
-	LOC_MODE,
-	LOC_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
+	SPEED_MODE,
 	LOC_MODE,
 	LOC_MODE,
 	LOC_MODE,
@@ -34,9 +37,12 @@ static int mode_s[9]={
 static motor_measure_t motor_inf[9]={0};/*3508电机参数*/
 static void Get_total_angle(motor_measure_t *p);
 static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4);
-static int control_flag=1;
+
+
 void Dji_3508_first_four_motor_control(int i,uint8_t rx_data[8]);
 void Dji_3508_last_four_motor_control(int i,uint8_t rx_data[8]);
+
+static bool motor_enabled[8] = {true, true, true, true, true, true, true, true};
 /**************内部变量与函数end**************/
 
 
@@ -46,6 +52,9 @@ void Change_dji_loc(int motor_id,int target_loc);
 motor_measure_t Get_dji_information(int motor_id);
 void Discontrol_dji_motor(void);
 void Recontrol_dji_motor(void);
+
+void Set_motor_enabled(int motor_id, bool enabled);
+void Dji_3508_all_motor_control(void); // 新增：集成 PID 计算和发送函数
 /**************外部接口end**************/
 int Basic_int_abs(int x){/*绝对值*/
 	return x>=0 ? x:-x;
@@ -59,7 +68,14 @@ int Basic_int_abs(int x){/*绝对值*/
 5.其它：
 */
 motor_measure_t Get_dji_information(int motor_id){
+	motor_measure_t temp_info;
+	// taskENTER_CRITICAL();
+	{
+		temp_info = motor_inf[motor_id];
+	}
+	// taskEXIT_CRITICAL();
 	return motor_inf[motor_id];
+
 }
 /*
 1.函数功能：设定dji电机的速度大小
@@ -216,7 +232,7 @@ void Dji_3508_first_four_motor_control(int i,uint8_t rx_data[8])//   0<=i<=3
 		}
 	}
 	Can_dji_3508_motor_send(&hfdcan3,CAN_FIRST_FOUR_MOTOR_ALL_ID,
-		(int16_t)motor_3508_pid_g[0].spd.now_out,   //将PID的计算结果通过CAN发到电机
+				(int16_t)motor_3508_pid_g[0].spd.now_out,   //将PID的计算结果通过CAN发到电机
 		(int16_t)motor_3508_pid_g[1].spd.now_out,
 		(int16_t)motor_3508_pid_g[2].spd.now_out,
 		(int16_t)motor_3508_pid_g[3].spd.now_out);
@@ -323,4 +339,95 @@ void Dji_3508_first_motor_control(int i,uint8_t rx_data[8])
 		(int16_t)motor_3508_pid_g[1].spd.now_out,
 		(int16_t)motor_3508_pid_g[2].spd.now_out,
 		(int16_t)motor_3508_pid_g[3].spd.now_out);
+}
+
+/*
+1.函数功能：集成 PID 计算后发送所有电机电流，一共八个电机，前四个一条 CAN 报文，后四个一条 CAN 报文
+2.入参：无
+3.返回值：无
+4.用法及调用要求：在任务中定期调用，假设电机信息已通过回调更新
+5.其它：未启用的电机不进行 PID 计算，直接设为 0
+*/
+void Dji_3508_all_motor_control(void) {
+    // 计算前四个电机
+    for (int i = 0; i < 4; i++) {
+        if (motor_enabled[i]) {
+            if (mode_s[i] == LOC_MODE) {
+                Pid_incremental_cal(&motor_3508_pid_g[i].loc, motor_inf[i].total_angle, set_loc_s[i]);
+                Pid_incremental_cal(&motor_3508_pid_g[i].spd, motor_inf[i].speed_rpm, motor_3508_pid_g[i].loc.now_out);
+            } else if (mode_s[i] == SPEED_MODE) {
+                Pid_incremental_cal(&motor_3508_pid_g[i].spd, motor_inf[i].speed_rpm, set_spd_s[i]);
+            }
+        } else {
+            motor_3508_pid_g[i].spd.now_out = 0;
+        }
+    }
+
+    // 如果全局控制关闭，设为 0
+    if (control_flag == 0) {
+        for (int i = 0; i < 4; i++) {
+            motor_3508_pid_g[i].spd.now_out = 0;
+        }
+    }
+	if(control_flag_first4){
+    // 发送前四个电机
+    Can_dji_3508_motor_send(&hfdcan1, CAN_FIRST_FOUR_MOTOR_ALL_ID,
+        (int16_t)motor_3508_pid_g[0].spd.now_out,
+        (int16_t)motor_3508_pid_g[1].spd.now_out,
+        (int16_t)motor_3508_pid_g[2].spd.now_out,
+        (int16_t)motor_3508_pid_g[3].spd.now_out);}
+
+    // 计算后四个电机
+    for (int i = 4; i < 8; i++) {
+        if (motor_enabled[i]) {
+            if (mode_s[i] == LOC_MODE) {
+                Pid_incremental_cal(&motor_3508_pid_g[i].loc, motor_inf[i].total_angle, set_loc_s[i]);
+                Pid_incremental_cal(&motor_3508_pid_g[i].spd, motor_inf[i].speed_rpm, motor_3508_pid_g[i].loc.now_out);
+            } else if (mode_s[i] == SPEED_MODE) {
+                Pid_incremental_cal(&motor_3508_pid_g[i].spd, motor_inf[i].speed_rpm, set_spd_s[i]);
+            }
+        } else {
+            motor_3508_pid_g[i].spd.now_out = 0;
+        }
+    }
+
+    // 如果全局控制关闭，设为 0
+    if (control_flag == 0) {
+        for (int i = 4; i < 8; i++) {
+            motor_3508_pid_g[i].spd.now_out = 0;
+        }
+    }
+	if(control_flag_last4){
+    // 发送后四个电机
+    Can_dji_3508_motor_send(&hfdcan1, CAN_LAST_FOUR_MOTOR_ALL_ID,
+        (int16_t)motor_3508_pid_g[4].spd.now_out,
+        (int16_t)motor_3508_pid_g[5].spd.now_out,
+        (int16_t)motor_3508_pid_g[6].spd.now_out,
+        (int16_t)motor_3508_pid_g[7].spd.now_out);}
+}
+
+void Dji_Motor_Update_Status(uint32_t id, uint8_t *data)
+{
+	int index = -1;
+	// 1. 根据 CAN ID 匹配数组索引 (0-7)
+	// CAN_3508_M1_ID 是 0x201
+	if (id >= CAN_3508_M1_ID && id <= CAN_3508_M4_ID) {
+		index = id - CAN_3508_M1_ID; // 0 ~ 3
+	}
+	else if (id >= CAN_3508_M5_ID && id <= CAN_3508_M8_ID) {
+		index = id - CAN_3508_M5_ID + 4; // 4 ~ 7
+	}
+	else {
+		return; // ID 不在范围内，直接退出
+	}
+	Get_motor_measure(&motor_inf[index], data);
+	// 3. 处理上电第一帧数据的初始化逻辑
+	if (motor_inf[index].first == 0)
+	{
+		motor_inf[index].first = 1;
+		motor_inf[index].last_angle = motor_inf[index].angle;
+		motor_inf[index].total_angle = 0;
+	}
+	// 4. 计算多圈绝对角度
+	Get_total_angle(&motor_inf[index]);
 }

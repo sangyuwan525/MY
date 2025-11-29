@@ -2,7 +2,6 @@
 // Created by 马皓然 on 2025/11/20.
 //
 #include "Task_command.h"
-
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "cmsis_os.h"
@@ -11,7 +10,7 @@
 #include "queue.h"
 
 /* Definitions ---------------------------------------------------------------*/
-#define COMMAND_LENGTH 10// 指令长度
+
 #define BUFFER_SIZE 128// 循环缓冲区大小
 #define COMMAND_HEADER 0x61//数据帧帧头
 #define CRC_DATA_LENGTH (COMMAND_LENGTH - 2) // 参与CRC校验的数据长度
@@ -229,18 +228,15 @@ void StartTaskcommand(void *argument)
     {
         if (osMessageQueueGet(remote_queueHandle,&rx_msg,NULL,osWaitForever) == osOK){
             Command_Write(rx_msg.data,rx_msg.size);
-            while (Command_GetCommand(processsed_command)!=0){;
-                // 处理指令内容，目前还没写
-                printf("Command Yes\n");
-                // code_unzipread(processsed_command);
+            while (Command_GetCommand(processsed_command)!=0){
+                // printf("Command Yes\n");
+                if (osMutexAcquire(rc_mutexHandle,0) == osOK) {
+                    code_unzipread(processsed_command);//解压遥控器数据到rc结构体
+                    Remote_Data_Convert(&rc,&remote_engineer);//将rc数据转换为工程量数据到remote_engineer结构体
+                    osMutexRelease(rc_mutexHandle);
+                }
             }
         }
-        // if (Command_GetCommand(command) != 0) {
-        //     // 处理指令内容，目前还没写
-        //     printf("Command Yes\n");
-        //     code_unzipread(command);
-        // }
-        // osDelay(10);
     }
     /* USER CODE END StartTaskcommand */
 }
@@ -255,13 +251,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
 
         UartRxMessage_t rx_msg;
         uint16_t data_size = (Size < sizeof(rx_msg.data)) ? Size : sizeof(rx_msg.data);
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 调度标志
 
         memcpy(rx_msg.data, remote_Buffer, data_size);
         rx_msg.size = data_size;
 
-        osMessageQueuePut(remote_queueHandle,&rx_msg,0,0);//使用队列将数据传递给任务
-        // 将接收到的数据写入缓冲区
-        // Command_Write(remote_Buffer, Size);
+        if (xQueueSendFromISR(remote_queueHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+        {
+            // TODO: 处理队列满的错误
+        }
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
         // 重新开启串口空闲中断接收
         HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
@@ -277,7 +277,7 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
     if (huart == &huart5){
         ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
         if(ret!=HAL_OK){
-            printf("ErrorCB Uart4 IT Enable Failed:%d\r\n",ret);
+            printf("ErrorCB Uart5 IT Enable Failed:%d\r\n",ret);
         }
     }
 }

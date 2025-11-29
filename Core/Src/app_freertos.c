@@ -26,7 +26,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include <Task_command.h>
+#include "Task_command.h"
+#include "dji_3508_2006_motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,12 +49,12 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for Task_chassis */
+osThreadId_t Task_chassisHandle;
+const osThreadAttr_t Task_chassis_attributes = {
+  .name = "Task_chassis",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 512 * 4
 };
 /* Definitions for Task_LED */
 osThreadId_t Task_LEDHandle;
@@ -67,19 +68,36 @@ osThreadId_t Task_PrintfHandle;
 const osThreadAttr_t Task_Printf_attributes = {
   .name = "Task_Printf",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for Taskcommand */
 osThreadId_t TaskcommandHandle;
 const osThreadAttr_t Taskcommand_attributes = {
   .name = "Taskcommand",
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
+};
+/* Definitions for Task_dji */
+osThreadId_t Task_djiHandle;
+const osThreadAttr_t Task_dji_attributes = {
+  .name = "Task_dji",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 2048 * 4
 };
 /* Definitions for remote_queue */
 osMessageQueueId_t remote_queueHandle;
 const osMessageQueueAttr_t remote_queue_attributes = {
   .name = "remote_queue"
+};
+/* Definitions for motorRxQueue */
+osMessageQueueId_t motorRxQueueHandle;
+const osMessageQueueAttr_t motorRxQueue_attributes = {
+  .name = "motorRxQueue"
+};
+/* Definitions for rc_mutex */
+osMutexId_t rc_mutexHandle;
+const osMutexAttr_t rc_mutex_attributes = {
+  .name = "rc_mutex"
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,10 +105,11 @@ const osMessageQueueAttr_t remote_queue_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
+void StartTask_chassis(void *argument);
 void StartTask_LED(void *argument);
 void StartTask_Printf(void *argument);
 void StartTaskcommand(void *argument);
+void StartTask_dji(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -103,6 +122,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of rc_mutex */
+  rc_mutexHandle = osMutexNew(&rc_mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -120,14 +142,17 @@ void MX_FREERTOS_Init(void) {
   /* creation of remote_queue */
   remote_queueHandle = osMessageQueueNew (16, sizeof(UartRxMessage_t), &remote_queue_attributes);
 
+  /* creation of motorRxQueue */
+  motorRxQueueHandle = osMessageQueueNew (32, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
 
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of Task_chassis */
+  Task_chassisHandle = osThreadNew(StartTask_chassis, NULL, &Task_chassis_attributes);
 
   /* creation of Task_LED */
   Task_LEDHandle = osThreadNew(StartTask_LED, NULL, &Task_LED_attributes);
@@ -137,6 +162,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Taskcommand */
   TaskcommandHandle = osThreadNew(StartTaskcommand, NULL, &Taskcommand_attributes);
+
+  /* creation of Task_dji */
+  Task_djiHandle = osThreadNew(StartTask_dji, NULL, &Task_dji_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -148,24 +176,22 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartTask_chassis */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the Task_chassis thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-__weak void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartTask_chassis */
+__weak void StartTask_chassis(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN StartTask_chassis */
   /* Infinite loop */
   for(;;)
   {
-
-
-    osDelay(500);
+    osDelay(1);
   }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END StartTask_chassis */
 }
 
 /* USER CODE BEGIN Header_StartTask_LED */
@@ -220,6 +246,24 @@ __weak void StartTaskcommand(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartTaskcommand */
+}
+
+/* USER CODE BEGIN Header_StartTask_dji */
+/**
+* @brief Function implementing the Task_dji thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask_dji */
+__weak void StartTask_dji(void *argument)
+{
+  /* USER CODE BEGIN StartTask_dji */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTask_dji */
 }
 
 /* Private application code --------------------------------------------------*/

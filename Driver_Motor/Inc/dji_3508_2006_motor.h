@@ -8,6 +8,10 @@
 **********************************************/
 
 #include "main.h"
+#include "cmsis_os2.h"
+
+
+
 #define SPEED_MODE 0
 #define LOC_MODE 1
 
@@ -39,6 +43,12 @@ typedef enum{
 	CAN_3508_M7_ID = 0x207,
 	CAN_3508_M8_ID = 0x208,
 } can_msg_id_e;
+// 定义一个结构体，用于在中断和任务之间传递电机反馈数据
+typedef struct
+{
+	uint32_t motor_id;          // 电机ID (CAN ID)
+	uint8_t  rx_data[8];        // 原始CAN数据
+} Motor_Rx_Queue_t;
 
 /**************USER_begin**************/
 extern int set_loc_s[9];
@@ -55,6 +65,10 @@ motor_measure_t Get_dji_information(int motor_id);
 void Discontrol_dji_motor(void);
 void Recontrol_dji_motor(void);
 
-/**************USER_end**************/
 
+void Dji_3508_all_motor_control(void);
+void Dji_Motor_Update_Status(uint32_t id, uint8_t *data);
+
+/**************USER_end**************/
+extern osMessageQueueId_t motorRxQueueHandle;
 #endif
