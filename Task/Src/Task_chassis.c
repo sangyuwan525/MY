@@ -18,7 +18,7 @@ void StartTask_chassis(void *argument)
         if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
         {
             // 模式 2 为手动模式
-            if (rc_engineer_data.mode == 1)
+            if (rc_engineer_data.mode == CHASSIS_MODE_MANUAL)
             {
                 // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
                 cha_remote(rc_engineer_data.vx,
