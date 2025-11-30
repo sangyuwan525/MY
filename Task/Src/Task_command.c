@@ -226,7 +226,7 @@ void StartTaskcommand(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        if (osMessageQueueGet(remote_queueHandle,&rx_msg,NULL,osWaitForever) == osOK){
+        if (xQueueReceive((QueueHandle_t)remote_queueHandle, &rx_msg, portMAX_DELAY) == pdPASS){
             Command_Write(rx_msg.data,rx_msg.size);
             while (Command_GetCommand(processsed_command)!=0){
                 // printf("Command Yes\n");
