@@ -2,9 +2,8 @@
 #define DJI_3508_2006_MOTOR_H
 
 /**********************************************
-依赖文件：basic.c中的数学函数
-					pid.c中的pid参数及pid计算
-					can_database.c中的回调
+pid.c中的pid参数及pid计算
+can_database.c中的回调
 **********************************************/
 
 #include "main.h"
@@ -12,8 +11,22 @@
 
 
 
-#define SPEED_MODE 0
-#define LOC_MODE 1
+// #define SPEED_MODE 0
+// #define LOC_MODE 1
+
+enum {
+	SPEED_MODE = 0,
+	LOC_MODE = 1,
+	GROUP_MODE = 2,
+};
+// =========================================================================
+// !!!!!! 用户配置区：电机同步组配置 !!!!!!
+// =========================================================================
+// 定义电机同步组：将所有需要保持同步的电机ID放入此数组中。
+// 例如：如果要让电机ID 1, 3, 5, 7同步，则配置为 {1, 3, 5, 7, 0}
+// 数组末尾必须以 0 结束，0 不会参与同步计算。
+#define MAX_SYNC_MOTORS_PER_GROUP 8
+extern const uint8_t SYNC_GROUP_IDS[MAX_SYNC_MOTORS_PER_GROUP];
 
 typedef struct{
 	uint16_t angle;
@@ -52,7 +65,8 @@ typedef struct
 
 /**************USER_begin**************/
 extern int set_loc_s[9];
-static motor_measure_t motor_inf[9];/*3508电机参数*/
+extern osMessageQueueId_t motorRxQueueHandle;
+// static motor_measure_t motor_inf[9];/*3508电机参数*/
 void Dji_3508_first_four_motor_control(int i,uint8_t rx_data[8]);//使用can3
 void Dji_3508_last_four_motor_control(int i,uint8_t rx_data[8]);//使用can1
 
@@ -68,7 +82,6 @@ void Recontrol_dji_motor(void);
 
 void Dji_3508_all_motor_control(void);
 void Dji_Motor_Update_Status(uint32_t id, uint8_t *data);
-
 /**************USER_end**************/
-extern osMessageQueueId_t motorRxQueueHandle;
+
 #endif
