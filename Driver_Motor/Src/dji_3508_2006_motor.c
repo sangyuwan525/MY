@@ -98,7 +98,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 4: DJI_M_CHASSIS_RB - CAN1 - ID 0x204
+	// 索引 4: DJI_M_CHASSIS_F1 - CAN1 - ID 0x205
 	// ------------------------------------------------------------------------
 	[DJI_M_CHASSIS_F1] = {
     	.hcan_tx          = &hfdcan1,
@@ -111,7 +111,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 5: DJI_M_CHASSIS_RB - CAN1 - ID 0x204
+	// 索引 5: DJI_M_CHASSIS_F2 - CAN1 - ID 0x206
 	// ------------------------------------------------------------------------
 	[DJI_M_CHASSIS_F2] = {
     	.hcan_tx          = &hfdcan1,
@@ -464,6 +464,7 @@ void Dji_3508_all_motor_control(void) {
     int16_t current_array_0x200[4] = {0}; // 对应 0x201-0x204
     int16_t current_array_0x1FF[4] = {0}; // 对应 0x205-0x208
 
+	taskENTER_CRITICAL();
     for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
         Dji_Motor_t *motor = &g_dji_motor_registry[i];
 
@@ -527,7 +528,7 @@ void Dji_3508_all_motor_control(void) {
              current_array_0x1FF[motor->tx_index] = motor->current_set;
         }
     }
-
+	taskEXIT_CRITICAL();
     // **发送 CAN 报文**
     // 假设 CAN_FIRST_FOUR_MOTOR_ALL_ID (0x200) 和 CAN_LAST_FOUR_MOTOR_ALL_ID (0x1FF) 使用相同的 CAN 句柄 hfdcan1
     Can_dji_3508_motor_send(g_dji_motor_registry[0].hcan_tx, CAN_FIRST_FOUR_MOTOR_ALL_ID,
