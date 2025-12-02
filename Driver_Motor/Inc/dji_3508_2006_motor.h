@@ -27,6 +27,11 @@ typedef enum
 	DJI_M_CHASSIS_LB,	  // 左后底盘电机 (假设索引 1)
 	DJI_M_CHASSIS_RF,     // 右前底盘电机 (假设索引 2)
 	DJI_M_CHASSIS_RB,     // 右后底盘电机 (假设索引 3)
+	DJI_M_CHASSIS_F1,
+	DJI_M_CHASSIS_F2,
+	DJI_M_CHASSIS_B,
+	DJI_2006_1,
+	DJI_2006_2,
 	DJI_MOTOR_COUNT
 } Dji_MotorID_e;
 

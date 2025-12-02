@@ -30,6 +30,16 @@ void StartTask_chassis(void *argument)
                 // 停止底盘，发送 (0, 0, 0) 指令
                 cha_remote(0.0f, 0.0f, 0.0f);
             }
+            if (rc_engineer_data.button1 == 1)
+            {
+                // 按钮1被按下，执行相应操作
+                Change_dji_loc(4,-100000);
+                Change_dji_loc(5,100000);
+            }
+            else {
+                Change_dji_loc(4,0);
+                Change_dji_loc(5,0);
+            }
         }
         else
         {
