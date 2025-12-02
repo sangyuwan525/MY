@@ -18,10 +18,12 @@ void StartTask_dji(void *argument)
     /* Infinite loop */
     for(;;)
     {
-        while (xQueueReceive(motorRxQueueHandle, &rx_msg_tmp, 0) == pdPASS) // 0表示不等待
+        while (xQueueReceive((QueueHandle_t)motorRxQueueHandle, &rx_msg_tmp, 0) == pdPASS) // 0表示不等待
         {
-            Dji_Motor_Update_Status(rx_msg_tmp.motor_id, rx_msg_tmp.rx_data);
+            // Dji_Motor_Update_Status(rx_msg_tmp.motor_id, rx_msg_tmp.rx_data);
+            Dji_Motor_Update_Status(rx_msg_tmp.hcan, rx_msg_tmp.motor_id, rx_msg_tmp.rx_data);
         }
+
         Dji_3508_all_motor_control();
 
         xLastWakeTime = xTaskGetTickCount();

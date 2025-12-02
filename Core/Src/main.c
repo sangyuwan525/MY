@@ -112,7 +112,8 @@ int main(void)
   printf("Initial Success\r\n");
 
   FDCAN1_RxFilter_Config();
-  Pid_parameter_init();
+  Dji_Motor_Registry_Init();
+  // Pid_parameter_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */

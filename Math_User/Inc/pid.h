@@ -27,6 +27,7 @@ typedef struct{
 typedef struct {
     pid_incremental_struct spd;
     pid_incremental_struct loc;
+    pid_incremental_struct diff;
 }motor_pid_parameter;
 
 /**************Public_begin**************/
