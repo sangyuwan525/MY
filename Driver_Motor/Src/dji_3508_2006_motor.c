@@ -189,7 +189,7 @@ void Dji_Motor_Registry_Init(void)
 		motor->current_set = 0;
 		motor->is_online = false;
 		// 假设 motor_3508_pid_g 的索引 i 对应注册表中的电机实例 i
-		if (i < 9) // 确保不越界访问 motor_3508_pid_g 数组 (大小为 9)
+		if (i < DJI_MOTOR_COUNT) // 确保不越界访问 motor_3508_pid_g 数组 (大小为 9)
 		{
 			memcpy(&motor->pid_params,
 				   &motor_3508_pid_g[i],
@@ -394,7 +394,9 @@ static float Calculate_Group_Average_Angle(void)
 	{
 		return (float)total_sum / count;
 	}
-	return 0.0f;
+	else {
+		return 0.0f;
+	}
 }
 
 void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t *data)
@@ -408,12 +410,10 @@ void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t 
 			break; // 找到唯一匹配的电机
 		}
 	}
-
 	if (index == -1) {
 		// 未找到匹配的电机实例 (可能是未配置的 ID 或 CAN 句柄不匹配)
 		return;
 	}
-
 	// 找到匹配的电机实例
 	Dji_Motor_t *motor = &g_dji_motor_registry[index];
 	taskENTER_CRITICAL();
@@ -429,10 +429,8 @@ void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t 
 			motor->feedback.total_angle = 0; // 首次启动，总角度归零
 			motor->is_online = true;         // 首次收到信号，标记为在线
 		}
-
 		// 计算多圈绝对角度 (total_angle, total_round_cnt)
 		Get_total_angle(&motor->feedback);
-
 		// 更新在线状态 (每次收到报文都更新计数/标记)
 		motor->is_online = true; // 每次收到都重置在线标记（如果采用超时机制，还需要一个计数器）
 	}
@@ -459,11 +457,9 @@ void Dji_3508_all_motor_control(void) {
             break;
         }
     }
-
     if (group_mode_active) {
         average_angle = Calculate_Group_Average_Angle();
     }
-
     // 定义 CAN 发送缓冲区 (前 4 个和后 4 个)
     int16_t current_array_0x200[4] = {0}; // 对应 0x201-0x204
     int16_t current_array_0x1FF[4] = {0}; // 对应 0x205-0x208
