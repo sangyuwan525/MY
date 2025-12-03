@@ -20,6 +20,12 @@ enum {
 	GROUP_MODE = 2,
 };
 
+enum {
+	FDCNA1=0,
+	FDCNA2,
+	FDCNA3,
+};
+
 // 统一的电机索引ID：使用枚举来映射到注册表数组的索引，增加可读性
 typedef enum
 {
@@ -34,6 +40,15 @@ typedef enum
 	DJI_2006_2,
 	DJI_MOTOR_COUNT
 } Dji_MotorID_e;
+
+typedef struct {
+	FDCAN_HandleTypeDef *hcan;
+	int16_t currents_0x200[4];
+	int16_t currents_0x1FF[4];
+	bool need_to_send;
+} Can_Tx_Buffer_t;
+
+
 
 /* CAN send and receive ID */
 typedef enum{
@@ -57,6 +72,7 @@ typedef enum{
 // 数组末尾必须以 0 结束，0 不会参与同步计算。
 #define MAX_SYNC_MOTORS_PER_GROUP 8
 extern const uint8_t SYNC_GROUP_IDS[MAX_SYNC_MOTORS_PER_GROUP];
+#define MAX_CAN_HANDLES 3
 // 电机反馈结构体
 typedef struct{
 	uint16_t angle;
