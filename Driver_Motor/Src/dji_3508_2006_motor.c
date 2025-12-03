@@ -22,7 +22,7 @@
 /**************内部变量与函数begin**************/
 static int control_flag=1;
 const uint8_t SYNC_GROUP_IDS[MAX_SYNC_MOTORS_PER_GROUP] = {4, 5, 6, 0, 0, 0, 0, 0}; // 示例：ID 1, 3, 5, 7 同步
-
+Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES];
 static void Get_total_angle(motor_measure_t *p);
 static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4);
 
@@ -126,21 +126,21 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	// ------------------------------------------------------------------------
 	// 索引 6: DJI_M_CHASSIS_RB - CAN1 - ID 0x204
 	// ------------------------------------------------------------------------
-	// [DJI_M_CHASSIS_B] = {
- //    	.hcan_tx          = &hfdcan1,
-	// 	.can_rx_id        = CAN_3508_M7_ID,
-	// 	.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-	// 	.tx_index         = 2,
-	// 	.target_spd       = 0,
-	// 	.control_mode     = SPEED_MODE,
-	// 	.is_enabled       = true,
-	// },
+	[DJI_M_CHASSIS_B] = {
+    	.hcan_tx          = &hfdcan1,
+		.can_rx_id        = CAN_3508_M7_ID,
+		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
+		.tx_index         = 0,
+		.target_spd       = 0,
+		.control_mode     = SPEED_MODE,
+		.is_enabled       = false,
+	},
 
 	// ------------------------------------------------------------------------
-	// 索引 4: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
+	// 索引 7: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
 	// ------------------------------------------------------------------------
 	// [DJI_2006_1] = {
- //    	.hcan_tx          = &hfdcan2,
+ //    	.hcan_tx          = &hfdcan3,
 	// 	.can_rx_id        = CAN_3508_M1_ID,
 	// 	.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
 	// 	.tx_index         = 0,
@@ -149,14 +149,14 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	// 	.is_enabled       = true,
 	// },
 	//
-	// // ------------------------------------------------------------------------
-	// // 索引 5: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
-	// // ------------------------------------------------------------------------
+	// // // ------------------------------------------------------------------------
+	// // // 索引 8: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
+	// // // ------------------------------------------------------------------------
 	// [DJI_2006_2] = {
- //    	.hcan_tx          = &hfdcan2,
+ //    	.hcan_tx          = &hfdcan3,
 	// 	.can_rx_id        = CAN_3508_M2_ID,
 	// 	.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-	// 	.tx_index         = 0,
+	// 	.tx_index         = 1,
 	// 	.target_spd       = 0,
 	// 	.control_mode     = SPEED_MODE,
 	// 	.is_enabled       = true,
@@ -165,6 +165,11 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
     // ... 更多电机实例 ...
 };
 
+Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES] = {
+	{.hcan = &hfdcan1, .need_to_send = false}, // Index 0: FDCAN1
+	{.hcan = &hfdcan2, .need_to_send = false}, // Index 1: FDCAN2
+	{.hcan = &hfdcan3, .need_to_send = false}  // Index 2: FDCAN3
+};
 /**
  * @brief  初始化DJI电机注册表中的所有配置。
  *
@@ -180,6 +185,9 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 void Dji_Motor_Registry_Init(void)
 {
 	Pid_parameter_init();
+	g_can_tx_buffers[0].hcan = &hfdcan1;
+	g_can_tx_buffers[1].hcan = &hfdcan2;
+	g_can_tx_buffers[2].hcan = &hfdcan3;
 	for (int i = 0; i < DJI_MOTOR_COUNT; i++)
 	{
 		Dji_Motor_t *motor = &g_dji_motor_registry[i];
@@ -450,6 +458,12 @@ void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t 
 void Dji_3508_all_motor_control(void) {
     float average_angle = 0.0f;
     bool group_mode_active = false;
+
+	for (int i = 0; i < MAX_CAN_HANDLES; i++) {
+		memset(g_can_tx_buffers[i].currents_0x200, 0, sizeof(g_can_tx_buffers[i].currents_0x200));
+		memset(g_can_tx_buffers[i].currents_0x1FF, 0, sizeof(g_can_tx_buffers[i].currents_0x1FF));
+		g_can_tx_buffers[i].need_to_send = false; // 每次控制循环前重置发送标记
+	}
     // 遍历注册表，检查 GROUP_MODE 是否激活
     for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
         if (g_dji_motor_registry[i].control_mode == GROUP_MODE) {
@@ -460,15 +474,17 @@ void Dji_3508_all_motor_control(void) {
     if (group_mode_active) {
         average_angle = Calculate_Group_Average_Angle();
     }
-    // 定义 CAN 发送缓冲区 (前 4 个和后 4 个)
-    int16_t current_array_0x200[4] = {0}; // 对应 0x201-0x204
-    int16_t current_array_0x1FF[4] = {0}; // 对应 0x205-0x208
 
 	taskENTER_CRITICAL();
     for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
         Dji_Motor_t *motor = &g_dji_motor_registry[i];
 
-        if (motor->is_enabled && motor->feedback.first == 1) { // 检查是否启用且已接收第一帧
+    	int can_index = -1;
+    	if (motor->hcan_tx == &hfdcan1) can_index = FDCNA1;
+    	else if (motor->hcan_tx == &hfdcan2) can_index = FDCNA2;
+    	else if (motor->hcan_tx == &hfdcan3) can_index = FDCNA3;
+
+        if (motor->is_enabled && motor->feedback.first == 1  && can_index != -1) { // 检查是否启用且已接收第一帧
 
             // 模式控制
             if (motor->control_mode == LOC_MODE)
@@ -516,30 +532,46 @@ void Dji_3508_all_motor_control(void) {
             motor->current_set = 0;
         }
 
-        // **全局控制关闭，清零**
+        // 全局控制关闭，清零
         if (control_flag == 0) {
             motor->current_set = 0;
         }
 
         // 填充 CAN 发送数组
-        if (motor->can_tx_header_id == CAN_FIRST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
-             current_array_0x200[motor->tx_index] = motor->current_set;
-        } else if (motor->can_tx_header_id == CAN_LAST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
-             current_array_0x1FF[motor->tx_index] = motor->current_set;
-        }
+    	if (can_index != -1) {
+    		if (motor->can_tx_header_id == CAN_FIRST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
+    			g_can_tx_buffers[can_index].currents_0x200[motor->tx_index] = motor->current_set;
+    			g_can_tx_buffers[can_index].need_to_send = true; // 标记该 CAN 句柄需要发送
+    		} else if (motor->can_tx_header_id == CAN_LAST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
+    			g_can_tx_buffers[can_index].currents_0x1FF[motor->tx_index] = motor->current_set;
+    			g_can_tx_buffers[can_index].need_to_send = true; // 标记该 CAN 句柄需要发送
+    		}
+    	}
     }
 	taskEXIT_CRITICAL();
     // **发送 CAN 报文**
-    // 假设 CAN_FIRST_FOUR_MOTOR_ALL_ID (0x200) 和 CAN_LAST_FOUR_MOTOR_ALL_ID (0x1FF) 使用相同的 CAN 句柄 hfdcan1
-    Can_dji_3508_motor_send(g_dji_motor_registry[0].hcan_tx, CAN_FIRST_FOUR_MOTOR_ALL_ID,
-        current_array_0x200[0],
-        current_array_0x200[1],
-        current_array_0x200[2],
-        current_array_0x200[3]);
+	for (int i = 0; i < MAX_CAN_HANDLES; i++) {
+		Can_Tx_Buffer_t *buffer = &g_can_tx_buffers[i];
+		if (buffer->need_to_send) {
+			// 发送 0x200 报文 (M1-M4)
+			Can_dji_3508_motor_send(
+				buffer->hcan,
+				CAN_FIRST_FOUR_MOTOR_ALL_ID,
+				buffer->currents_0x200[0],
+				buffer->currents_0x200[1],
+				buffer->currents_0x200[2],
+				buffer->currents_0x200[3]
+			);
 
-    Can_dji_3508_motor_send(g_dji_motor_registry[4].hcan_tx, CAN_LAST_FOUR_MOTOR_ALL_ID,
-        current_array_0x1FF[0],
-        current_array_0x1FF[1],
-        current_array_0x1FF[2],
-        current_array_0x1FF[3]);
+			// 发送 0x1FF 报文 (M5-M8)
+			Can_dji_3508_motor_send(
+				buffer->hcan,
+				CAN_LAST_FOUR_MOTOR_ALL_ID,
+				buffer->currents_0x1FF[0],
+				buffer->currents_0x1FF[1],
+				buffer->currents_0x1FF[2],
+				buffer->currents_0x1FF[3]
+			);
+		}
+	}
 }
