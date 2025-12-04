@@ -362,6 +362,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 	uint8_t rx_data[8];
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+	//if (hfdcan==&hfdcan3) printf("6");
+
 	while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK)
 	{
 		// 确保 ID 在我们关注的电机ID范围内 (0x201 - 0x208)
@@ -384,13 +386,36 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 {
-	if(hfdcan==&hfdcan2)
+	// if(hfdcan==&hfdcan2)
+	// {
+	// 		// static int cnt[8]={0};
+	// 	FDCAN_RxHeaderTypeDef rx_header;
+ //    	uint8_t rx_data[8];
+ //    	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data);
+	// }
+	FDCAN_RxHeaderTypeDef rx_header;
+	uint8_t rx_data[8];
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	//if (hfdcan==&hfdcan3) printf("6");
+
+	while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) == HAL_OK)
 	{
-			// static int cnt[8]={0};
-		FDCAN_RxHeaderTypeDef rx_header;
-    	uint8_t rx_data[8];
-    	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data);
+		// 确保 ID 在我们关注的电机ID范围内 (0x201 - 0x208)
+		if(rx_header.Identifier >= CAN_3508_M1_ID && rx_header.Identifier <= CAN_3508_M8_ID)
+		{
+			Motor_Rx_Queue_t rx_msg;
+			rx_msg.hcan = hfdcan; // 保存当前的 CAN 句柄
+			rx_msg.motor_id = rx_header.Identifier;
+			memcpy(rx_msg.rx_data, rx_data, 8);
+
+			if (xQueueSendFromISR(motorRxQueueHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+			{
+				// 队列已满
+			}
+		}
 	}
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void send_message(uint32_t id,uint8_t data)

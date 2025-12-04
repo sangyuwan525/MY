@@ -130,37 +130,37 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
     	.hcan_tx          = &hfdcan1,
 		.can_rx_id        = CAN_3508_M7_ID,
 		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 0,
+		.tx_index         = 2,
 		.target_spd       = 0,
 		.control_mode     = SPEED_MODE,
-		.is_enabled       = false,
+		.is_enabled       = true,
 	},
 
 	// ------------------------------------------------------------------------
 	// 索引 7: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
 	// ------------------------------------------------------------------------
-	// [DJI_2006_1] = {
- //    	.hcan_tx          = &hfdcan3,
-	// 	.can_rx_id        = CAN_3508_M1_ID,
-	// 	.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-	// 	.tx_index         = 0,
-	// 	.target_spd       = 0,
-	// 	.control_mode     = SPEED_MODE,
-	// 	.is_enabled       = true,
-	// },
-	//
+	[DJI_2006_L] = {
+    	.hcan_tx          = &hfdcan2,
+		.can_rx_id        = CAN_3508_M1_ID,
+		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
+		.tx_index         = 0,
+		.target_spd       = 0,
+		.control_mode     = SPEED_MODE,
+		.is_enabled       = true,
+	},
+
 	// // // ------------------------------------------------------------------------
 	// // // 索引 8: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
 	// // // ------------------------------------------------------------------------
-	// [DJI_2006_2] = {
- //    	.hcan_tx          = &hfdcan3,
-	// 	.can_rx_id        = CAN_3508_M2_ID,
-	// 	.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-	// 	.tx_index         = 1,
-	// 	.target_spd       = 0,
-	// 	.control_mode     = SPEED_MODE,
-	// 	.is_enabled       = true,
-	// },
+	[DJI_2006_R] = {
+    	.hcan_tx          = &hfdcan2,
+		.can_rx_id        = CAN_3508_M2_ID,
+		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
+		.tx_index         = 1,
+		.target_spd       = 0,
+		.control_mode     = SPEED_MODE,
+		.is_enabled       = true,
+	},
 
     // ... 更多电机实例 ...
 };
@@ -562,7 +562,6 @@ void Dji_3508_all_motor_control(void) {
 				buffer->currents_0x200[2],
 				buffer->currents_0x200[3]
 			);
-
 			// 发送 0x1FF 报文 (M5-M8)
 			Can_dji_3508_motor_send(
 				buffer->hcan,

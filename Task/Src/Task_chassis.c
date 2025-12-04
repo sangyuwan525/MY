@@ -6,6 +6,11 @@
 #include "Task_chassis.h"
 #include "dji_3508_2006_motor.h"
 
+#define front_up 300000
+
+#define back_up 20000
+#define front_up2 250000
+
 
 void StartTask_chassis(void *argument)
 {
@@ -30,15 +35,35 @@ void StartTask_chassis(void *argument)
                 // 停止底盘，发送 (0, 0, 0) 指令
                 cha_remote(0.0f, 0.0f, 0.0f);
             }
+            //前3508抬升
             if (rc_engineer_data.button1 == 1)
             {
                 // 按钮1被按下，执行相应操作
-                Change_dji_loc(4,-300000);
-                Change_dji_loc(5,300000);
+                Change_dji_loc(4,-front_up);
+                Change_dji_loc(5,front_up);
             }
-            else {
-                Change_dji_loc(4,0);
-                Change_dji_loc(5,0);
+            //
+            if (rc_engineer_data.button2 == 1)
+            {
+                // 按钮2被按下，一起抬升
+                //Change_dji_loc(4,-front_up2);
+                //Change_dji_loc(5,front_up2);
+                Change_dji_loc(6,back_up);
+            }
+            if (rc_engineer_data.button3 == 1)
+            {
+                // 按钮3被按下，一起抬升
+                Change_dji_loc(6,0);
+            }
+            if (rc_engineer_data.button4 == 1)
+            {
+                // 按钮3被按下，一起抬升
+                Change_dji_speed(7,-1000);
+                Change_dji_speed(8,1000);
+            }else
+            {
+                Change_dji_speed(7,0);
+                Change_dji_speed(8,0);
             }
         }
         else
