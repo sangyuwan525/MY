@@ -98,9 +98,9 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 4: DJI_M_CHASSIS_F1 - CAN1 - ID 0x205
+	// 索引 4: DJI_M_CLIMB_LF - CAN1 - ID 0x205
 	// ------------------------------------------------------------------------
-	[DJI_M_CHASSIS_F1] = {
+	[DJI_M_CLIMB_LF] = {
     	.hcan_tx          = &hfdcan1,
 		.can_rx_id        = CAN_3508_M5_ID,
 		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
@@ -111,9 +111,9 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 5: DJI_M_CHASSIS_F2 - CAN1 - ID 0x206
+	// 索引 5: DJI_M_CLIMB_RF - CAN1 - ID 0x206
 	// ------------------------------------------------------------------------
-	[DJI_M_CHASSIS_F2] = {
+	[DJI_M_CLIMB_RF] = {
     	.hcan_tx          = &hfdcan2,
 		.can_rx_id        = CAN_3508_M6_ID,
 		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
@@ -124,9 +124,9 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 6: DJI_M_CHASSIS_RB - CAN1 - ID 0x204
+	// 索引 6: DJI_M_CLIMB_LB - CAN1 - ID 0x204
 	// ------------------------------------------------------------------------
-	[DJI_M_CHASSIS_B] = {
+	[DJI_M_CLIMB_LB] = {
     	.hcan_tx          = &hfdcan2,
 		.can_rx_id        = CAN_3508_M7_ID,
 		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
@@ -137,7 +137,20 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// ------------------------------------------------------------------------
-	// 索引 7: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
+	// 索引 7: DJI_M_CLIMB_RB - CAN1 - ID 0x204
+	// ------------------------------------------------------------------------
+	[DJI_M_CLIMB_RB] = {
+    		.hcan_tx          = &hfdcan2,
+			.can_rx_id        = CAN_3508_M8_ID,
+			.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
+			.tx_index         = 3,
+			.target_spd       = 0,
+			.control_mode     = SPEED_MODE,
+			.is_enabled       = true,
+		},
+
+	// ------------------------------------------------------------------------
+	// 索引 8: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
 	// ------------------------------------------------------------------------
 	[DJI_2006_L] = {
     	.hcan_tx          = &hfdcan2,
@@ -150,7 +163,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 	},
 
 	// // // ------------------------------------------------------------------------
-	// // // 索引 8: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
+	// // // 索引 9: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
 	// // // ------------------------------------------------------------------------
 	[DJI_2006_R] = {
     	.hcan_tx          = &hfdcan2,

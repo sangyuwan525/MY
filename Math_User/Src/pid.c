@@ -2,6 +2,7 @@
 // Created by 马皓然 on 2025/11/10.
 //
 #include "pid.h"
+#include "dji_3508_2006_motor.h"
 // #include "basic.h"
 /**************内部变量与函数begin**************/
 /*增量式pid初始化*/
@@ -10,7 +11,7 @@ static void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemTy
 
 
 /**************外部接口begin**************/
-motor_pid_parameter motor_3508_pid_g[9];/*电机pid参数*/
+motor_pid_parameter motor_3508_pid_g[DJI_MOTOR_COUNT];/*电机pid参数*/
 void Pid_parameter_init(void);/*各套pid参数初始化参数,必须先调用*/
 ElemType Pid_incremental_cal(pid_incremental_struct* pid_struct, ElemType position, ElemType target);/*增量式pid计算*/
 /**************外部接口end**************/
@@ -80,6 +81,9 @@ void Pid_parameter_init(void){
 
     Pid_increment_struct_init(&motor_3508_pid_g[8].loc,  0.15, 	0.001,	0.03,  4000,    -4000);
 	Pid_increment_struct_init(&motor_3508_pid_g[8].spd,  24.0, 	1.2,	  0.035,   9500,  -9500);
+
+	Pid_increment_struct_init(&motor_3508_pid_g[9].loc,  0.15, 	0.001,	0.03,  4000,    -4000);
+	Pid_increment_struct_init(&motor_3508_pid_g[9].spd,  24.0, 	1.2,	  0.035,   9500,  -9500);
 
 }
 #endif

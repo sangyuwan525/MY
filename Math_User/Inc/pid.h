@@ -4,6 +4,7 @@
 
 #ifndef R1_CHASSIS_PID_H
 #define R1_CHASSIS_PID_H
+extern enum Dji_MotorID_e;
 
 typedef float ElemType;
 
@@ -31,7 +32,7 @@ typedef struct {
 }motor_pid_parameter;
 
 /**************Public_begin**************/
-extern motor_pid_parameter motor_3508_pid_g[9];
+//extern motor_pid_parameter motor_3508_pid_g[DJI_MOTOR_COUNT];
 void Pid_parameter_init(void);/*各套pid参数初始化参数,在使用电机前必须先进行调用*/
 ElemType Pid_incremental_cal(pid_incremental_struct* pid_struct, ElemType position, ElemType target);/*增量式pid计算*/
 /**************Public_end**************/

@@ -33,11 +33,12 @@ typedef enum
 	DJI_M_CHASSIS_LB,	  // 左后底盘电机 (假设索引 1)
 	DJI_M_CHASSIS_RF,     // 右前底盘电机 (假设索引 2)
 	DJI_M_CHASSIS_RB,     // 右后底盘电机 (假设索引 3)
-	DJI_M_CHASSIS_F1,	//4
-	DJI_M_CHASSIS_F2,//5
-	DJI_M_CHASSIS_B,//6
-	DJI_2006_L,//7
-	DJI_2006_R,//8
+	DJI_M_CLIMB_LF,	//4
+	DJI_M_CLIMB_RF,//5
+	DJI_M_CLIMB_LB,//6
+	DJI_M_CLIMB_RB,
+	DJI_2006_L,//
+	DJI_2006_R,//
 	DJI_MOTOR_COUNT
 } Dji_MotorID_e;
 
@@ -121,6 +122,7 @@ typedef struct
 extern int set_loc_s[9];
 extern osMessageQueueId_t motorRxQueueHandle;
 // 声明统一的电机注册表
+extern motor_pid_parameter motor_3508_pid_g[DJI_MOTOR_COUNT];
 extern Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT];
 // static motor_measure_t motor_inf[9];/*3508电机参数*/
 void Dji_3508_first_four_motor_control(int i,uint8_t rx_data[8]);//使用can3

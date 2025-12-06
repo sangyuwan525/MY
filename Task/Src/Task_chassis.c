@@ -39,8 +39,8 @@ void StartTask_chassis(void *argument)
             if (rc_engineer_data.button1 == 1)
             {
                 // 按钮1被按下，执行相应操作
-                Change_dji_loc(4,-front_up);
-                Change_dji_loc(5,front_up);
+                Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                Change_dji_loc(DJI_M_CLIMB_RF,front_up);
 
             }
             //
@@ -49,29 +49,34 @@ void StartTask_chassis(void *argument)
                 // 按钮2被按下，一起抬升
                 //Change_dji_loc(4,-front_up2);
                 //Change_dji_loc(5,front_up2);
-                Change_dji_loc(6,0);
+                Change_dji_loc(DJI_M_CLIMB_LB,0);
+                Change_dji_loc(DJI_M_CLIMB_RB,0);
             }
             if (rc_engineer_data.button3 == 1)
             {
                 // 按钮3被按下，一起抬升
-                Change_dji_loc(DJI_M_CHASSIS_B,0);
+                //Change_dji_loc(DJI_M_CHASSIS_B,0);
             }
             if (rc_engineer_data.button4 == 1)
             {
                 // 按钮3被按下，一起抬升
-                Change_dji_speed(7,-1000);
-                Change_dji_speed(8,1000);
+                Change_dji_speed(DJI_2006_L,-1000);
+                Change_dji_speed(DJI_2006_R,1000);
             }else
             {
-                Change_dji_speed(7,0);
-                Change_dji_speed(8,0);
+                Change_dji_speed(DJI_2006_L,0);
+                Change_dji_speed(DJI_2006_R,0);
             }
             if (rc_engineer_data.button5 == 1)
             {
                 // 按钮3被按下，一起抬升
-                Change_dji_loc(6,back_up);
-                Change_dji_loc(4,-front_up2);
-                Change_dji_loc(5,front_up2);
+                //Change_dji_loc(6,back_up);
+                //Change_dji_loc(4,-front_up2);
+                //Change_dji_loc(5,front_up2);
+                Change_dji_loc(DJI_M_CLIMB_LF,-front_up2);
+                Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
+                Change_dji_loc(DJI_M_CLIMB_LB,back_up);
+                Change_dji_loc(DJI_M_CLIMB_RB,back_up);
             }
             int number1=Get_dji_information(6).total_angle;
             int number2=Get_dji_information(5).total_angle;
