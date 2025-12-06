@@ -4,7 +4,6 @@
 
 #ifndef R1_CHASSIS_PID_H
 #define R1_CHASSIS_PID_H
-extern enum Dji_MotorID_e;
 
 typedef float ElemType;
 

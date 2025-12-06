@@ -9,7 +9,7 @@ can_database.c中的回调
 #include "main.h"
 #include "cmsis_os2.h"
 #include <stdbool.h>
-#include "pid.h"
+
 
 // #define SPEED_MODE 0
 // #define LOC_MODE 1
@@ -36,12 +36,13 @@ typedef enum
 	DJI_M_CLIMB_LF,	//4
 	DJI_M_CLIMB_RF,//5
 	DJI_M_CLIMB_LB,//6
-	DJI_M_CLIMB_RB,
-	DJI_2006_L,//
-	DJI_2006_R,//
+	DJI_M_CLIMB_RB,//7
+	DJI_2006_L,//8
+	DJI_2006_R,//9
 	DJI_MOTOR_COUNT
 } Dji_MotorID_e;
 
+#include "pid.h"
 typedef struct {
 	FDCAN_HandleTypeDef *hcan;
 	int16_t currents_0x200[4];

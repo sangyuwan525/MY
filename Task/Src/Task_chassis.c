@@ -8,14 +8,18 @@
 
 #define front_up 300000
 
-#define back_up 285000
-#define front_up2 0
+#define back_up 305000
+#define front_up2 (-20000)
 
 
 void StartTask_chassis(void *argument)
 {
     /* USER CODE BEGIN StartTask_chassis */
     remote_engineer_t rc_engineer_data;
+    Change_dji_loc(DJI_M_CLIMB_LF,-10000);
+    Change_dji_loc(DJI_M_CLIMB_RF,10000);
+    Change_dji_loc(DJI_M_CLIMB_LB,-10000);
+    Change_dji_loc(DJI_M_CLIMB_RB,10000);
     /* Infinite loop */
     for(;;)
     {
@@ -49,20 +53,23 @@ void StartTask_chassis(void *argument)
                 // 按钮2被按下，一起抬升
                 //Change_dji_loc(4,-front_up2);
                 //Change_dji_loc(5,front_up2);
+                Change_dji_loc(DJI_M_CLIMB_LF,0);
+                Change_dji_loc(DJI_M_CLIMB_RF,0);
                 Change_dji_loc(DJI_M_CLIMB_LB,0);
                 Change_dji_loc(DJI_M_CLIMB_RB,0);
             }
             if (rc_engineer_data.button3 == 1)
             {
                 // 按钮3被按下，一起抬升
-                //Change_dji_loc(DJI_M_CHASSIS_B,0);
-            }
-            if (rc_engineer_data.button4 == 1)
+                Change_dji_speed(DJI_2006_L,2500);
+                Change_dji_speed(DJI_2006_R,-2500);
+            }else if (rc_engineer_data.button4 == 1)
             {
                 // 按钮3被按下，一起抬升
-                Change_dji_speed(DJI_2006_L,-1000);
-                Change_dji_speed(DJI_2006_R,1000);
-            }else
+                Change_dji_speed(DJI_2006_L,-2500);
+                Change_dji_speed(DJI_2006_R,2500);
+            }
+           else
             {
                 Change_dji_speed(DJI_2006_L,0);
                 Change_dji_speed(DJI_2006_R,0);
@@ -76,7 +83,18 @@ void StartTask_chassis(void *argument)
                 Change_dji_loc(DJI_M_CLIMB_LF,-front_up2);
                 Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
                 Change_dji_loc(DJI_M_CLIMB_LB,back_up);
-                Change_dji_loc(DJI_M_CLIMB_RB,back_up);
+                Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
+            }
+            if (rc_engineer_data.button6 == 1)
+            {
+                // 按钮3被按下，一起抬升
+                //Change_dji_loc(6,back_up);
+                //Change_dji_loc(4,-front_up2);
+                //Change_dji_loc(5,front_up2);
+                Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+                Change_dji_loc(DJI_M_CLIMB_LB,0);
+                Change_dji_loc(DJI_M_CLIMB_RB,0);
             }
             int number1=Get_dji_information(6).total_angle;
             int number2=Get_dji_information(5).total_angle;

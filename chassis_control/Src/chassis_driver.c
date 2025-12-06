@@ -184,6 +184,5 @@ void cha_remote(float vx, float vy, float vr)
 #endif
     }
 
-    Change_dji_speed(7, wheel_data[0].vel);
-    Change_dji_speed(8, wheel_data[2].vel);
+
 }
