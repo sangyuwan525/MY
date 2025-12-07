@@ -5,21 +5,12 @@
 #include "chassis_driver.h"
 #include "Task_chassis.h"
 #include "dji_3508_2006_motor.h"
-
-#define front_up 300000
-
-#define back_up 305000
-#define front_up2 (-20000)
-
+#include "ClimbStairs.h"
 
 void StartTask_chassis(void *argument)
 {
     /* USER CODE BEGIN StartTask_chassis */
     remote_engineer_t rc_engineer_data;
-    Change_dji_loc(DJI_M_CLIMB_LF,-10000);
-    Change_dji_loc(DJI_M_CLIMB_RF,10000);
-    Change_dji_loc(DJI_M_CLIMB_LB,-10000);
-    Change_dji_loc(DJI_M_CLIMB_RB,10000);
     /* Infinite loop */
     for(;;)
     {
@@ -42,7 +33,7 @@ void StartTask_chassis(void *argument)
             //前3508抬升
             if (rc_engineer_data.button1 == 1)
             {
-                // 按钮1被按下，执行相应操作
+                // 按钮1被按下，前面两个3508抬升
                 Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
                 Change_dji_loc(DJI_M_CLIMB_RF,front_up);
 
@@ -50,22 +41,27 @@ void StartTask_chassis(void *argument)
             //
             if (rc_engineer_data.button2 == 1)
             {
-                // 按钮2被按下，一起抬升
+                // 按钮2被按下，四个3508归位
                 //Change_dji_loc(4,-front_up2);
                 //Change_dji_loc(5,front_up2);
-                Change_dji_loc(DJI_M_CLIMB_LF,0);
-                Change_dji_loc(DJI_M_CLIMB_RF,0);
-                Change_dji_loc(DJI_M_CLIMB_LB,0);
-                Change_dji_loc(DJI_M_CLIMB_RB,0);
+                // Change_dji_loc(DJI_M_CLIMB_LF,0);
+                // Change_dji_loc(DJI_M_CLIMB_RF,0);
+                // Change_dji_loc(DJI_M_CLIMB_LB,0);
+                // Change_dji_loc(DJI_M_CLIMB_RB,0);
+                Change_dji_loc(DJI_M_CLIMB_LF,-10000);
+                Change_dji_loc(DJI_M_CLIMB_RF,10000);
+                Change_dji_loc(DJI_M_CLIMB_LB,-10000);
+                Change_dji_loc(DJI_M_CLIMB_RB,10000);
             }
             if (rc_engineer_data.button3 == 1)
             {
-                // 按钮3被按下，一起抬升
+                // 按钮3被按下，2006推动底盘向前运动
                 Change_dji_speed(DJI_2006_L,2500);
                 Change_dji_speed(DJI_2006_R,-2500);
-            }else if (rc_engineer_data.button4 == 1)
+            }
+            else if (rc_engineer_data.button4 == 1)
             {
-                // 按钮3被按下，一起抬升
+                // 按钮4被按下，下楼梯时2006向相反方向运动
                 Change_dji_speed(DJI_2006_L,-2500);
                 Change_dji_speed(DJI_2006_R,2500);
             }
@@ -76,7 +72,7 @@ void StartTask_chassis(void *argument)
             }
             if (rc_engineer_data.button5 == 1)
             {
-                // 按钮3被按下，一起抬升
+                // 按钮5被按下，四个3508一起抬升底盘
                 //Change_dji_loc(6,back_up);
                 //Change_dji_loc(4,-front_up2);
                 //Change_dji_loc(5,front_up2);
@@ -96,9 +92,6 @@ void StartTask_chassis(void *argument)
                 Change_dji_loc(DJI_M_CLIMB_LB,0);
                 Change_dji_loc(DJI_M_CLIMB_RB,0);
             }
-            int number1=Get_dji_information(6).total_angle;
-            int number2=Get_dji_information(5).total_angle;
-
         }
         else
         {
