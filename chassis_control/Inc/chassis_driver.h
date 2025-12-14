@@ -6,8 +6,8 @@
 #define R1_CHASSIS_CHASSIS_DRIVER_H
 
 // --- 1. 底盘类型宏定义 ---
- //#define CHASSIS_TYPE_DUOLUN
- #define CHASSIS_TYPE_QUANXIANGLUN
+#define CHASSIS_TYPE_DUOLUN
+ //#define CHASSIS_TYPE_QUANXIANGLUN
 
 // 注意:以下这些值目前纯数瞎给，需要根据实际底盘参数进行调整
 #define WHEEL_NUM       4

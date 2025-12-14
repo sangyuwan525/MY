@@ -5,7 +5,7 @@
 #define RC_CHANNEL_MAX      660.0f
 #define RC_CHANNEL_MID      0.0f
 //目前底下这两个值还未经过标定，只是个模糊值
-#define MAX_CHASSIS_SPEED   1000.0f // 最大底盘速度
+#define MAX_CHASSIS_SPEED   3000.0f // 最大底盘速度
 #define MAX_CHASSIS_W_RAD   5.0f // 最大底盘角速度，例如 5.0 rad/s
 
 rc_info_t rc;

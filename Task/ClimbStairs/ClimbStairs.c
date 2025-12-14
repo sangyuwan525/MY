@@ -5,7 +5,7 @@
 #include "ClimbStairs.h"
 
 #include <math.h>
-
+#include "gpio.h"
 #include "chassis_driver.h"
 #include "locator_driver.h"
 
@@ -66,7 +66,8 @@ void ClimbStairs(void)
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-
+            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
+            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
             if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
@@ -100,6 +101,8 @@ void ClimbStairs(void)
             Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
             Change_dji_loc(DJI_M_CLIMB_LB,back_up);
             Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
+            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
 
             if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up2)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up2)
                 &&is_motor_cplt(DJI_M_CLIMB_LB,back_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-back_up))

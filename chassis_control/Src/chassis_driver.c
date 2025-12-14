@@ -6,6 +6,7 @@
 #include "chassis_driver.h"
 #include <math.h>
 #include "dji_3508_2006_motor.h"
+#include "bsp_can.h"
 #define PI  3.1415926f
 // --- 1. 全局数据实例 ---
 // 用于存储轮子最终指令，由 speed_decompose 填充
@@ -186,3 +187,5 @@ void cha_remote(float vx, float vy, float vr)
 
 
 }
+
+

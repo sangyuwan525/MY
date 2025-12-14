@@ -439,4 +439,26 @@ void send_message(uint32_t id,uint8_t data)
 	    printf("no sb!\n");
     }
 }
+
+void Chassis_Send_Swerve_Command(int i,float vel,float angle)
+{
+	uint8_t data_byte[8];
+	memcpy(data_byte, &vel, 4);
+	memcpy(data_byte+4, &angle, 4);
+	FDCAN_TxHeaderTypeDef TxHeader;
+	TxHeader.Identifier = 0x11; //这里的0x22
+	TxHeader.IdType = FDCAN_STANDARD_ID;
+	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+	TxHeader.DataLength = FDCAN_DLC_BYTES_8;
+	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	TxHeader.BitRateSwitch = FDCAN_BRS_ON;
+	TxHeader.FDFormat = FDCAN_FD_CAN;
+	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	TxHeader.MessageMarker = 0;
+	// 发送数据
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, data_byte) != HAL_OK) {
+		// 错误处理
+		printf("no sb!\n");
+	}
+}
 #endif

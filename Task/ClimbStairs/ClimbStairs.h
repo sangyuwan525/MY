@@ -41,6 +41,10 @@ typedef enum
 #define back_up 305000
 #define front_up2 (-20000)
 
+#define CYLINDER_GPIO_PORT GPIOC
+#define CYLINDER_PIN1 GPIO_PIN_5
+#define CYLINDER_PIN2 GPIO_PIN_4
+
 //上下楼梯的函数
 void ClimbStairs(void);
 
