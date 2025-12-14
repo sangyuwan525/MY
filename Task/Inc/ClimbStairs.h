@@ -7,11 +7,12 @@
 
 #include "gpio.h"
 #include "dji_3508_2006_motor.h"
+#include "tgmath.h"
 
 //气缸电磁阀端口定义
-#define valve_port GPIOA
-#define valve_pin_l GPIO_PIN_1//左气缸 sync
-#define valve_pin_r GPIO_PIN_2//右气缸 sync
+#define valve_port GPIOC
+#define valve_pin_l GPIO_PIN_4//左气缸 sync
+#define valve_pin_r GPIO_PIN_5//右气缸 sync
 
 //上下台阶所用的5个电机
 #define front_left_motor_id 0//3508 sync

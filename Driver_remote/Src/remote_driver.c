@@ -5,11 +5,19 @@
 #define RC_CHANNEL_MAX      660.0f
 #define RC_CHANNEL_MID      0.0f
 //目前底下这两个值还未经过标定，只是个模糊值
-#define MAX_CHASSIS_SPEED   1000.0f // 最大底盘速度
+#define MAX_CHASSIS_SPEED   3000.0f // 最大底盘速度
+#define MAX_CIRCLE_SPEED   10.0f // 最大自转速度
 #define MAX_CHASSIS_W_RAD   5.0f // 最大底盘角速度，例如 5.0 rad/s
 
 rc_info_t rc;
 remote_engineer_t remote_engineer;
+
+//上次速度
+int16_t vx_last=0;
+int16_t vy_last=0;
+int16_t vw_last=0;
+
+int16_t vel_threshold =200;
 
 /**
  * @brief  对遥控器数据进行解算并**保护性**更新全局结构体
@@ -54,15 +62,34 @@ void code_unzipread(uint8_t *code){
  * @note   该函数负责数据的归一化、速度标定和模式切换逻辑。
  */
 void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_data) {
+
     // 归一化：将通道值映射到 [-1.0, 1.0]
     float ch1_norm = (float)rc_data->ch1 / RC_CHANNEL_MAX; // ch1 范围: [-660, 660]
     float ch2_norm = (float)rc_data->ch2 / RC_CHANNEL_MAX; // ch2 范围: [-660, 660]
     float cir_norm = (float)rc_data->cir / RC_CHANNEL_MAX; // cir 范围: [-660, 660]
 
+    int16_t vx_tmp=ch1_norm * MAX_CHASSIS_SPEED;
+    int16_t vy_tmp=ch2_norm * MAX_CHASSIS_SPEED;
+    int16_t vw_tmp=cir_norm * MAX_CIRCLE_SPEED;
+
+    if(vx_tmp-vx_last>vel_threshold) vx_tmp=vx_last+vel_threshold;
+    else if (vx_tmp-vx_last<-vel_threshold) vx_tmp=vx_last-vel_threshold;
+    if(vy_tmp-vy_last>vel_threshold) vy_tmp=vy_last+vel_threshold;
+    else if (vy_tmp-vy_last<-vel_threshold) vy_tmp=vy_last-vel_threshold;
+    if(vw_tmp-vw_last>vel_threshold) vw_tmp=vw_last+vel_threshold;
+    else if (vw_tmp-vw_last<-vel_threshold) vw_tmp=vw_last-vel_threshold;
+
+    vx_last=vx_tmp;
+    vy_last=vy_tmp;
+    vw_last=vw_tmp;
+
     // 转换为实际工程量速度
-    engineer_data->vx = (int16_t)(ch1_norm * MAX_CHASSIS_SPEED);
-    engineer_data->vy = (int16_t)(ch2_norm * MAX_CHASSIS_SPEED);
-    engineer_data->vw = (int16_t)(cir_norm * MAX_CHASSIS_W_RAD);
+    // engineer_data->vx = (int16_t)(ch1_norm * MAX_CHASSIS_SPEED);
+    // engineer_data->vy = (int16_t)(ch2_norm * MAX_CHASSIS_SPEED);
+    // engineer_data->vw = (int16_t)(cir_norm * MAX_CHASSIS_W_RAD);
+    engineer_data->vx = vx_tmp;
+    engineer_data->vy =vy_tmp;
+    engineer_data->vw =vw_tmp;
 
     // 模式和比例因子判断（由开关控制）
     if (rc_data->sw1 == 1 && rc_data->sw2 == 1)  {

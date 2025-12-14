@@ -2,7 +2,7 @@
 // Created by lcf on 2025/12/1.
 //
 
-#include "ClimbStairs.h"
+#include "../Inc/ClimbStairs.h"
 
 #include <math.h>
 
