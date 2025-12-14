@@ -446,7 +446,7 @@ void Chassis_Send_Swerve_Command(int i,float vel,float angle)
 	memcpy(data_byte, &vel, 4);
 	memcpy(data_byte+4, &angle, 4);
 	FDCAN_TxHeaderTypeDef TxHeader;
-	TxHeader.Identifier = 0x11; //这里的0x22
+	TxHeader.Identifier = 0x11+i; //这里的0x22
 	TxHeader.IdType = FDCAN_STANDARD_ID;
 	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
 	TxHeader.DataLength = FDCAN_DLC_BYTES_8;

@@ -6,8 +6,17 @@
 #include "Task_chassis.h"
 #include "dji_3508_2006_motor.h"
 #include "ClimbStairs.h"
+#include "SEGGER_RTT.h"
+#include "stdio.h"
+#include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
+#include "usart.h"
 
 int chassis_control_cnt;
+// 重定向printf
+int __io_putchar(int ch) {
+    HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+    return ch;
+}
 
 
 void StartTask_chassis(void *argument)
@@ -40,6 +49,9 @@ void StartTask_chassis(void *argument)
                     cha_remote(rc_engineer_data.vx,
                                rc_engineer_data.vy,
                                rc_engineer_data.vw);
+                    // printf("vx=%f   vy=%f   vw=%f\n",rc_engineer_data.vx,
+                    //            rc_engineer_data.vy,
+                    //            rc_engineer_data.vw );
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {

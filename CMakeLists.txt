@@ -52,8 +52,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Task/Src/Task_dji_control.c
         Task/Inc/Task_dji_control.h
         Task/Src/ClimbStairs.c
-
-
+        SEGGER_RTT/RTT/SEGGER_RTT.c
+        SEGGER_RTT/RTT/SEGGER_RTT_printf.c
 )
 
 # Add STM32CubeMX generated sources
@@ -78,6 +78,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Driver_Motor/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Math_User/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Task/Inc
+        ${CMAKE_CURRENT_SOURCE_DIR}/SEGGER_RTT/Config
+        ${CMAKE_CURRENT_SOURCE_DIR}/SEGGER_RTT/RTT
         # Add user defined include paths
 )
 

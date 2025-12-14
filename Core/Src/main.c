@@ -30,6 +30,7 @@
 #include "Task_command.h"
 #include "bsp_can.h"
 #include "pid.h"
+#include "SEGGER_RTT.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,13 +63,10 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+volatile uint8_t RTT_BufferUp0[1024] = {0,};
+volatile uint8_t RTT_BufferDown0[1024] = {0,};
 
 
-// 重定向printf
-int __io_putchar(int ch) {
-  HAL_UART_Transmit(&huart3, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
-}
 /* USER CODE END 0 */
 
 /**
@@ -114,7 +112,20 @@ int main(void)
   FDCAN2_RxFilter_Config();
   FDCAN3_RxFilter_Config();
   Dji_Motor_Registry_Init();
-  // Pid_parameter_init();
+  SEGGER_RTT_Init();
+  SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
+                            "Buffer0Up",                    // 通道名字
+                            (uint8_t*)&RTT_BufferUp0[0],    // 缓存地址
+                            sizeof(RTT_BufferUp0),          // 缓存大小
+                            SEGGER_RTT_MODE_NO_BLOCK_SKIP); // 非阻塞
+  SEGGER_RTT_ConfigDownBuffer(0,                                // 通道0
+                              "Buffer0Down",                    // 通道名字
+                              (uint8_t*)&RTT_BufferDown0[0],    // 缓存地址
+                              sizeof(RTT_BufferDown0),          // 缓存大小
+                              SEGGER_RTT_MODE_NO_BLOCK_SKIP);   // 非阻塞
+
+  SEGGER_RTT_SetTerminal(0);                           // 设置终端0
+  SEGGER_RTT_printf(0, "OK!\n"); // 往通道0写入消息
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -157,8 +168,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
-  RCC_OscInitStruct.PLL.PLLN = 85;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV5;
+  RCC_OscInitStruct.PLL.PLLN = 68;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
