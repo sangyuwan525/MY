@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
+#include <tgmath.h>
 /*-- Remote control data structure --*/
 typedef struct
 {

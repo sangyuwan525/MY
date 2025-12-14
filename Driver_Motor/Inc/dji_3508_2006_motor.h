@@ -117,6 +117,7 @@ typedef struct
 	int16_t              current_set;   // 最终计算出的电流控制量
 	bool                 is_enabled;    // 是否启用控制
 	bool                 is_online;     // 是否在线 (通过反馈消息计数判断)
+
 } Dji_Motor_t;
 
 /**************USER_begin**************/

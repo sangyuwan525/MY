@@ -51,7 +51,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Task/Inc/Task_chassis.h
         Task/Src/Task_dji_control.c
         Task/Inc/Task_dji_control.h
-        Task/ClimbStairs/ClimbStairs.c
+        Task/Src/ClimbStairs.c
 
 
 )
@@ -78,7 +78,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Driver_Motor/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Math_User/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/Task/Inc
-        Task/ClimbStairs
         # Add user defined include paths
 )
 

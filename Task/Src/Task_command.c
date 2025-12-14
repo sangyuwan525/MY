@@ -8,6 +8,7 @@
 #include "remote_driver.h"
 #include "usart.h"
 #include "queue.h"
+#include "Task_chassis.h"
 
 /* Definitions ---------------------------------------------------------------*/
 
@@ -248,7 +249,7 @@ void StartTaskcommand(void *argument)
 // 串口接收完成回调函数
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     if (huart->Instance == UART5) {
-
+        chassis_control_cnt=0;
         UartRxMessage_t rx_msg;
         uint16_t data_size = (Size < sizeof(rx_msg.data)) ? Size : sizeof(rx_msg.data);
         BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 调度标志
