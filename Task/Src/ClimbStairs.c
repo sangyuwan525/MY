@@ -82,7 +82,7 @@ void ClimbStairs(void)
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
             cha_remote(0,100,0);
-            if (fabs(lcResult.y-ForestEdge)<10 )
+            if (fabsf(lcResult.y-ForestEdge)<10 )
             {
                 // 停止向前移动
                 cha_remote(0,0,0);
@@ -119,7 +119,7 @@ void ClimbStairs(void)
             Change_dji_speed(DJI_2006_L, 2500);
             Change_dji_speed(DJI_2006_R, -2500);
 
-            if (fabs(lcResult.y+800-ForestEdge)<10)
+            if (fabsf(lcResult.y+800-ForestEdge)<10)
             {
                  // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);
