@@ -10,6 +10,7 @@
 #include "locator_driver.h"
 
 #define  ForestEdge 100  //  梅林边界
+int climb_cnt = 0;
 
 // 状态变量
 Climb_State_e current_climb_state = CLIMB_IDLE;
@@ -48,6 +49,7 @@ void ClimbStairs(void)
     {
         // 触发一键攀爬，开始第一步
         //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
+        if (climb_cnt == 1)
         current_climb_state = CLIMB_STEP1_FRONT_UP;
     }
 
@@ -57,6 +59,10 @@ void ClimbStairs(void)
         case CLIMB_IDLE:
         {
             // 保持空闲，等待触发
+            Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+            Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+            Change_dji_loc(DJI_M_CHASSIS_RB,10000);
+            Change_dji_loc(DJI_M_CHASSIS_LB,-10000);
             break;
         }
 
@@ -66,11 +72,14 @@ void ClimbStairs(void)
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
-            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
+            Change_dji_loc(DJI_M_CHASSIS_RB,0);
+            Change_dji_loc(DJI_M_CHASSIS_LB,0);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
-            if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
+            // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up)&&climb_cnt == 2)
             {
                 current_climb_state = CLIMB_STEP2_BASE_FORWARD;
             }
@@ -81,8 +90,8 @@ void ClimbStairs(void)
         case CLIMB_STEP2_BASE_FORWARD:
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-            cha_remote(0,100,0);
-            if (fabs(lcResult.y-ForestEdge)<10 )
+            //cha_remote(0,100,0);
+            if (fabsf(lcResult.y-ForestEdge)<10 || climb_cnt == 3)
             {
                 // 停止向前移动
                 cha_remote(0,0,0);
@@ -101,11 +110,11 @@ void ClimbStairs(void)
             Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
             Change_dji_loc(DJI_M_CLIMB_LB,back_up);
             Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
-            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
 
             if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up2)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up2)
-                &&is_motor_cplt(DJI_M_CLIMB_LB,back_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-back_up))
+                &&is_motor_cplt(DJI_M_CLIMB_LB,back_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-back_up)&&climb_cnt == 4)
             {
                 current_climb_state = CLIMB_STEP4_REAR_FORWARD;
             }
@@ -119,7 +128,7 @@ void ClimbStairs(void)
             Change_dji_speed(DJI_2006_L, 2500);
             Change_dji_speed(DJI_2006_R, -2500);
 
-            if (fabs(lcResult.y+800-ForestEdge)<10)
+            if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 5)
             {
                  // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);
@@ -151,6 +160,7 @@ void ClimbStairs(void)
         case CLIMB_COMPLETE:
         {
             current_climb_state = CLIMB_IDLE;
+            climb_cnt = 0;
             break;
         }
 

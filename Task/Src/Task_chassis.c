@@ -12,6 +12,7 @@
 #include "usart.h"
 
 int chassis_control_cnt;
+int button_flag=0;
 // 重定向printf
 int __io_putchar(int ch) {
     HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -39,6 +40,8 @@ void StartTask_chassis(void *argument)
         }else
         {
             chassis_control_cnt++;
+            SEGGER_RTT_SetTerminal(0);
+            SEGGER_RTT_printf(0,"%d\r\n",climb_cnt);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
@@ -86,10 +89,24 @@ void StartTask_chassis(void *argument)
                     // Change_dji_speed(DJI_2006_L,2500);
                     // Change_dji_speed(DJI_2006_R,-2500);
                     //气缸测试 放
-                    HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
-                    HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
+                    // HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
+                    // HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
+                    if (button_flag==0)
+                    {
+                        climb_cnt++;
+                        button_flag=1;
+                    }
+                    if (climb_cnt==1)
+                    {
+                        Change_dji_speed(DJI_2006_R,2500);
+                    }
+                    else Change_dji_speed(DJI_2006_R,0);
                 }
-                else if (rc_engineer_data.button4 == 1)
+                else
+                {
+                    button_flag=0;
+                }
+                if (rc_engineer_data.button4 == 1)
                 {
                     // 按钮4被按下，下楼梯时2006向相反方向运动
                     Change_dji_speed(DJI_2006_L,-2500);

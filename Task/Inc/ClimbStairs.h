@@ -45,6 +45,7 @@ typedef enum
 #define CYLINDER_GPIO_PORT GPIOC
 #define CYLINDER_PIN1 GPIO_PIN_5
 #define CYLINDER_PIN2 GPIO_PIN_4
+extern int climb_cnt;
 
 //上下楼梯的函数
 void ClimbStairs(void);
