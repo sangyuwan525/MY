@@ -49,9 +49,6 @@ void StartTask_chassis(void *argument)
                     cha_remote(rc_engineer_data.vx,
                                rc_engineer_data.vy,
                                rc_engineer_data.vw);
-                    // printf("vx=%f   vy=%f   vw=%f\n",rc_engineer_data.vx,
-                    //            rc_engineer_data.vy,
-                    //            rc_engineer_data.vw );
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
