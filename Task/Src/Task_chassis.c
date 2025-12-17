@@ -42,6 +42,7 @@ void StartTask_chassis(void *argument)
             chassis_control_cnt++;
             // SEGGER_RTT_SetTerminal(0);
             printf("climb_cnt = %d\n",climb_cnt);
+            printf("current_state = %d\n",current_climb_state);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {

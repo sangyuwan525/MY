@@ -46,6 +46,7 @@ typedef enum
 #define CYLINDER_PIN1 GPIO_PIN_5
 #define CYLINDER_PIN2 GPIO_PIN_4
 extern int climb_cnt;
+extern Climb_State_e current_climb_state;
 
 //上下楼梯的函数
 void ClimbStairs(void);

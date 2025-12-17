@@ -61,8 +61,8 @@ void ClimbStairs(void)
             // 保持空闲，等待触发
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-            Change_dji_loc(DJI_M_CHASSIS_RB,10000);
-            Change_dji_loc(DJI_M_CHASSIS_LB,-10000);
+            Change_dji_loc(DJI_M_CLIMB_RB,100000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-100000);
             break;
         }
 
@@ -72,8 +72,8 @@ void ClimbStairs(void)
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-            Change_dji_loc(DJI_M_CHASSIS_RB,0);
-            Change_dji_loc(DJI_M_CHASSIS_LB,0);
+            Change_dji_loc(DJI_M_CLIMB_RB,0);
+            Change_dji_loc(DJI_M_CLIMB_LB,0);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
             // 判断电机是否到达目标位置 (或等待气缸伸长)
