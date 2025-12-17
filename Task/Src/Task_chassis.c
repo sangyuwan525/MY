@@ -109,11 +109,11 @@ void StartTask_chassis(void *argument)
                     Change_dji_speed(DJI_2006_L,-2500);
                     Change_dji_speed(DJI_2006_R,2500);
                 }
-               else
-                {
-                    Change_dji_speed(DJI_2006_L,0);
-                    Change_dji_speed(DJI_2006_R,0);
-                }
+            //    else
+            //     {
+            //         Change_dji_speed(DJI_2006_L,0);
+            //         Change_dji_speed(DJI_2006_R,0);
+            //     }
                 if (rc_engineer_data.button5 == 1)
                 {
                     // 按钮5被按下，四个3508一起抬升底盘

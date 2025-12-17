@@ -18,7 +18,7 @@ uint32_t step_start_time = 0; // 用于计时延时步骤
 
 bool is_motor_cplt(int motor_id,int dis)
 {
-    return fabs(Get_dji_information(motor_id).total_angle-dis)<10;
+    return fabs(Get_dji_information(motor_id).total_angle-dis)<100;
 }
 //距离转换为编码数
 int DisToEncoder(float dis,int motor_id)
@@ -79,7 +79,7 @@ void ClimbStairs(void)
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
             // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
-            if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up)&&climb_cnt == 2)
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))//&&climb_cnt == 2)
             {
                 current_climb_state = CLIMB_STEP2_BASE_FORWARD;
             }
@@ -90,8 +90,8 @@ void ClimbStairs(void)
         case CLIMB_STEP2_BASE_FORWARD:
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-            //cha_remote(0,100,0);
-            if (fabsf(lcResult.y-ForestEdge)<10 || climb_cnt == 3)
+            cha_remote(0,-500,0);
+            if (fabsf(lcResult.y-ForestEdge)<10 || climb_cnt == 2)
             {
                 // 停止向前移动
                 cha_remote(0,0,0);
@@ -114,7 +114,7 @@ void ClimbStairs(void)
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
 
             if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up2)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up2)
-                &&is_motor_cplt(DJI_M_CLIMB_LB,back_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-back_up)&&climb_cnt == 4)
+                &&is_motor_cplt(DJI_M_CLIMB_LB,back_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-back_up))//&&climb_cnt == 4)
             {
                 current_climb_state = CLIMB_STEP4_REAR_FORWARD;
             }
@@ -125,10 +125,10 @@ void ClimbStairs(void)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, 2500);
-            Change_dji_speed(DJI_2006_R, -2500);
+            Change_dji_speed(DJI_2006_L, -2500);
+            Change_dji_speed(DJI_2006_R, 2500);
 
-            if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 5)
+            if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 3)
             {
                  // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);
