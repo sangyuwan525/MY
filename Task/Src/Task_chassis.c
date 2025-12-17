@@ -15,7 +15,7 @@ int chassis_control_cnt;
 int button_flag=0;
 // 重定向printf
 int __io_putchar(int ch) {
-    HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+    HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
     return ch;
 }
 
@@ -40,8 +40,8 @@ void StartTask_chassis(void *argument)
         }else
         {
             chassis_control_cnt++;
-            SEGGER_RTT_SetTerminal(0);
-            SEGGER_RTT_printf(0,"%d\r\n",climb_cnt);
+            // SEGGER_RTT_SetTerminal(0);
+            printf("climb_cnt = %d\n",climb_cnt);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
@@ -52,6 +52,7 @@ void StartTask_chassis(void *argument)
                     cha_remote(rc_engineer_data.vx,
                                rc_engineer_data.vy,
                                rc_engineer_data.vw);
+                    ClimbStairs();
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
@@ -96,11 +97,6 @@ void StartTask_chassis(void *argument)
                         climb_cnt++;
                         button_flag=1;
                     }
-                    if (climb_cnt==1)
-                    {
-                        Change_dji_speed(DJI_2006_R,2500);
-                    }
-                    else Change_dji_speed(DJI_2006_R,0);
                 }
                 else
                 {
