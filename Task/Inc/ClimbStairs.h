@@ -33,6 +33,17 @@ typedef enum
     CLIMB_COMPLETE              // 攀爬完成
 } Climb_State_e;
 
+// 下楼状态枚举
+typedef enum
+{
+    DOWN_IDLE = 0,             // 初始/空闲状态
+    DOWN_STEP1_BASE_FORWARD,       // 第一步：底盘向前移动
+    DOWN_STEP2_FRONT_DOWN,   // 第二步：前侧3508下降
+    DOWN_STEP3_REAR_FORWARD,        // 第三步：后侧2006推动3508
+    DOWN_STEP4_DROP_DOWN,   // 第四步：降低车身
+    DOWN_STEP5_BASE_FORWARD,      // 第五步：再往前走一小段
+    DOWN_COMPLETE              // 攀爬完成
+} Down_State_e;
 //信号量（标志位）
 //int upstairs_flag;
 
@@ -46,9 +57,11 @@ typedef enum
 #define CYLINDER_PIN1 GPIO_PIN_5
 #define CYLINDER_PIN2 GPIO_PIN_4
 extern int climb_cnt;
+extern int down_cnt;
 extern Climb_State_e current_climb_state;
 
 //上下楼梯的函数
 void ClimbStairs(void);
+void DownStairs(void);
 
 #endif //R2_CHASSIS_CLIMBSTAIRS_H

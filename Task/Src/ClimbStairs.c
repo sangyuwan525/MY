@@ -11,9 +11,11 @@
 
 #define  ForestEdge 100  //  梅林边界
 int climb_cnt = 0;
+int down_cnt = 0;
 
 // 状态变量
 Climb_State_e current_climb_state = CLIMB_IDLE;
+Down_State_e current_down_state = DOWN_IDLE;
 uint32_t step_start_time = 0; // 用于计时延时步骤
 
 bool is_motor_cplt(int motor_id,int dis)
@@ -90,7 +92,7 @@ void ClimbStairs(void)
         case CLIMB_STEP2_BASE_FORWARD:
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-            cha_remote(0,-500,0);
+            cha_remote(0,-1000,0);
             if (fabsf(lcResult.y-ForestEdge)<10 || climb_cnt == 2)
             {
                 // 停止向前移动
@@ -125,8 +127,8 @@ void ClimbStairs(void)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, -2500);
-            Change_dji_speed(DJI_2006_R, 2500);
+            Change_dji_speed(DJI_2006_L, -8000);
+            Change_dji_speed(DJI_2006_R, 8000);
 
             if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 3)
             {
@@ -143,14 +145,14 @@ void ClimbStairs(void)
         case CLIMB_STEP5_RESET_ALL:
         {
             // 四个3508归位 (原图步骤7 + 原按钮2)
-            Change_dji_loc(DJI_M_CLIMB_LF,-10000);
-            Change_dji_loc(DJI_M_CLIMB_RF,10000);
-            Change_dji_loc(DJI_M_CLIMB_LB,-10000);
-            Change_dji_loc(DJI_M_CLIMB_RB,10000);
+            Change_dji_loc(DJI_M_CLIMB_LF,-300000);
+            Change_dji_loc(DJI_M_CLIMB_RF,300000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-100000);
+            Change_dji_loc(DJI_M_CLIMB_RB,100000);
 
             // 假设归位需要 TARGET_HOME_LOC 运行时间
-            if (is_motor_cplt(DJI_M_CLIMB_LF,-10000)&&is_motor_cplt(DJI_M_CLIMB_RF,10000)
-                &&is_motor_cplt(DJI_M_CLIMB_LB,-10000)&&is_motor_cplt(DJI_M_CLIMB_RB,10000))
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-300000)&&is_motor_cplt(DJI_M_CLIMB_RF,300000)
+                &&is_motor_cplt(DJI_M_CLIMB_LB,-100000)&&is_motor_cplt(DJI_M_CLIMB_RB,100000))
             {
                 current_climb_state = CLIMB_COMPLETE;
             }
@@ -169,4 +171,132 @@ void ClimbStairs(void)
             break;
     }
 }
+//下楼梯的函数
+void DownStairs(void)
+{
+    // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
+    if ( current_down_state == DOWN_IDLE)
+    {
+        // 触发一键攀爬，开始第一步
+        //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
+        if (down_cnt == 1)
+        current_down_state = DOWN_STEP1_BASE_FORWARD;
+    }
 
+
+    switch (current_down_state)
+    {
+        case DOWN_IDLE:
+        {
+            // 保持空闲，等待触发
+            Change_dji_loc(DJI_M_CLIMB_LF,-10000);
+            Change_dji_loc(DJI_M_CLIMB_RF,10000);
+            Change_dji_loc(DJI_M_CLIMB_RB,10000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-10000);
+            break;
+        }
+
+        // --- 步骤 1：底盘向前移动 ---
+        case DOWN_STEP1_BASE_FORWARD:
+                {
+                    // 底盘向前移动，前轮搭在台子上 (原图步骤3)
+                    cha_remote(0,-100,0);
+                    if (fabsf(lcResult.y-ForestEdge)<10 || down_cnt == 2)
+                    {
+                        // 停止向前移动
+                        cha_remote(0,0,0);
+
+                        current_down_state = DOWN_STEP2_FRONT_DOWN;
+                    }
+                    break;
+                }
+
+        // --- 步骤 2：前侧下降 ---
+        case DOWN_STEP2_FRONT_DOWN:
+        {
+            // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
+            Change_dji_loc(DJI_M_CLIMB_LF,back_up);
+            Change_dji_loc(DJI_M_CLIMB_RF,-back_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,0);
+            Change_dji_loc(DJI_M_CLIMB_LB,0);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
+            // 判断电机是否到达目标位置 (或等待气缸伸长)
+            // 假设我们使用一个简单的延时来等待气缸伸长完成
+            // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
+            if (is_motor_cplt(DJI_M_CLIMB_LF,back_up)&&is_motor_cplt(DJI_M_CLIMB_RF,-back_up))//&&climb_cnt == 2)
+            {
+                current_down_state = DOWN_STEP3_REAR_FORWARD;
+            }
+            break;
+        }
+
+
+
+        // --- 步骤 3：2006往前走 ---
+        case DOWN_STEP3_REAR_FORWARD:
+        {
+            // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
+            cha_remote(0,-500,0);
+            Change_dji_speed(DJI_2006_L, -8000);
+            Change_dji_speed(DJI_2006_R, 8000);
+
+            if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 3)
+            {
+                // 停止向前移动
+                Change_dji_speed(DJI_2006_L, 0);
+                Change_dji_speed(DJI_2006_R, 0);
+                cha_remote(0,0,0);
+
+                current_down_state = DOWN_STEP4_DROP_DOWN;
+            }
+            break;
+
+        }
+
+        // --- 步骤 4：车身下降 ---
+        case DOWN_STEP4_DROP_DOWN:
+        {
+            // 四个3508一起抬升底盘，将车身向上抬 (原按钮5)
+            // 此处抬升需要一个时间来完成，因为是速度控制或目标位置很远
+            Change_dji_loc(DJI_M_CLIMB_LF,0);
+            Change_dji_loc(DJI_M_CLIMB_RF,0);
+            Change_dji_loc(DJI_M_CLIMB_LB,-front_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,front_up);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
+
+            if (is_motor_cplt(DJI_M_CLIMB_LF,0)&&is_motor_cplt(DJI_M_CLIMB_RF,0)
+                &&is_motor_cplt(DJI_M_CLIMB_LB,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RB,front_up))//&&climb_cnt == 4)
+            {
+                current_down_state = DOWN_STEP5_BASE_FORWARD;
+            }
+            break;
+        }
+
+        // --- 步骤 5：电机归位 ---
+        case DOWN_STEP5_BASE_FORWARD:
+        {
+            cha_remote(0,-100,0);
+
+                if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 4)
+                {
+                    cha_remote(0,0,0);
+
+                    current_down_state = DOWN_COMPLETE;
+                }
+            break;
+        }
+
+        case DOWN_COMPLETE:
+        {
+            current_down_state = DOWN_IDLE;
+            down_cnt = 0;
+            break;
+        }
+
+        default:
+            current_down_state = DOWN_IDLE;
+            break;
+    }
+}

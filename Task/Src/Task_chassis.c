@@ -12,7 +12,8 @@
 #include "usart.h"
 
 int chassis_control_cnt;
-int button_flag=0;
+int button3_flag=0;
+int button4_flag=0;
 // 重定向printf
 int __io_putchar(int ch) {
     HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -53,12 +54,18 @@ void StartTask_chassis(void *argument)
                     cha_remote(rc_engineer_data.vx,
                                rc_engineer_data.vy,
                                rc_engineer_data.vw);
+                    if (rc_engineer_data.test_mode==CLIMB_MODE)
                     ClimbStairs();
+                    else if (rc_engineer_data.test_mode==DOWN_MODE) DownStairs();
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
                     // 停止底盘，发送 (0, 0, 0) 指令
                     cha_remote(0.0f, 0.0f, 0.0f);
+                    Change_dji_loc(DJI_M_CLIMB_LF,0);
+                    Change_dji_loc(DJI_M_CLIMB_RF,0);
+                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    Change_dji_loc(DJI_M_CLIMB_LB,0);
                 }
                 //前3508抬升
                 if (rc_engineer_data.button1 == 1)
@@ -93,21 +100,26 @@ void StartTask_chassis(void *argument)
                     //气缸测试 放
                     // HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
                     // HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
-                    if (button_flag==0)
+                    if (button3_flag==0)
                     {
                         climb_cnt++;
-                        button_flag=1;
+                        button3_flag=1;
                     }
                 }
                 else
                 {
-                    button_flag=0;
+                    button3_flag=0;
                 }
                 if (rc_engineer_data.button4 == 1)
                 {
-                    // 按钮4被按下，下楼梯时2006向相反方向运动
-                    Change_dji_speed(DJI_2006_L,-2500);
-                    Change_dji_speed(DJI_2006_R,2500);
+                    if (button4_flag==0)
+                    {
+                        down_cnt++;
+                        button4_flag=1;
+                    }
+                }else
+                {
+                    button4_flag=0;
                 }
             //    else
             //     {
