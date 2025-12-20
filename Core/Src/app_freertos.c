@@ -54,7 +54,7 @@ osThreadId_t Task_chassisHandle;
 const osThreadAttr_t Task_chassis_attributes = {
   .name = "Task_chassis",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 512 * 4
+  .stack_size = 1024 * 4
 };
 /* Definitions for Task_LED */
 osThreadId_t Task_LEDHandle;

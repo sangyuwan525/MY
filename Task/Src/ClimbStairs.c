@@ -59,8 +59,8 @@ void ClimbStairs(void)
         case CLIMB_IDLE:
         {
             // 保持空闲，等待触发
-            Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-            Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
             Change_dji_loc(DJI_M_CLIMB_RB,100000);
             Change_dji_loc(DJI_M_CLIMB_LB,-100000);
             break;
@@ -131,8 +131,8 @@ void ClimbStairs(void)
             if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 5)
             {
                  // 停止向前移动
-                Change_dji_speed(DJI_2006_L, 0);
-                Change_dji_speed(DJI_2006_R, 0);
+                // Change_dji_speed(DJI_2006_L, 0);
+                // Change_dji_speed(DJI_2006_R, 0);
 
                 current_climb_state = CLIMB_STEP5_RESET_ALL;
             }
