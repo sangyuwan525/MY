@@ -14,6 +14,8 @@
 int chassis_control_cnt;
 int button3_flag=0;
 int button4_flag=0;
+bool valve_state=0;
+
 // 重定向printf
 int __io_putchar(int ch) {
     HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -42,8 +44,10 @@ void StartTask_chassis(void *argument)
         {
             chassis_control_cnt++;
             // SEGGER_RTT_SetTerminal(0);
-            printf("climb_cnt = %d\n",down_cnt);
-            printf("current_state = %d\n",current_down_state);
+            printf("LeftFront:%d\n",Get_dji_information(DJI_M_CLIMB_LF).total_angle);
+            printf("RightFront:%d\n",Get_dji_information(DJI_M_CLIMB_RF).total_angle);
+            printf("LeftBack:%d\n",Get_dji_information(DJI_M_CLIMB_LB).total_angle);
+            printf("RightBack:%d\n",Get_dji_information(DJI_M_CLIMB_RB).total_angle);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
@@ -68,6 +72,8 @@ void StartTask_chassis(void *argument)
                     Change_dji_loc(DJI_M_CLIMB_RF,0);
                     Change_dji_loc(DJI_M_CLIMB_RB,0);
                     Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    climb_cnt=0;
+                    down_cnt=0;
                 }
                 //前3508抬升
                 if (rc_engineer_data.button1 == 1)
@@ -76,8 +82,13 @@ void StartTask_chassis(void *argument)
                     // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
                     // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
                     //气缸测试 收
-                    HAL_GPIO_WritePin(valve_port,valve_pin_l,0);
-                    HAL_GPIO_WritePin(valve_port,valve_pin_r,0);
+                    Change_dji_speed(DJI_2006_L,-2500);
+                    Change_dji_speed(DJI_2006_R,2500);
+                }
+                else
+                {
+                    Change_dji_speed(DJI_2006_L,0);
+                    Change_dji_speed(DJI_2006_R,0);
                 }
                 //
                 if (rc_engineer_data.button2 == 1)
@@ -89,10 +100,12 @@ void StartTask_chassis(void *argument)
                     // Change_dji_loc(DJI_M_CLIMB_RF,0);
                     // Change_dji_loc(DJI_M_CLIMB_LB,0);
                     // Change_dji_loc(DJI_M_CLIMB_RB,0);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-10000);
-                    Change_dji_loc(DJI_M_CLIMB_RF,10000);
-                    Change_dji_loc(DJI_M_CLIMB_LB,-10000);
-                    Change_dji_loc(DJI_M_CLIMB_RB,10000);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-10000);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,10000);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,-10000);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,10000);
+                    //HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
+                    //HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
                 }
                 if (rc_engineer_data.button3 == 1)
                 {
@@ -104,7 +117,14 @@ void StartTask_chassis(void *argument)
                     // HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
                     if (button3_flag==0)
                     {
-                        climb_cnt++;
+                        if (rc_engineer_data.test_mode==CLIMB_MODE)
+                        {
+                            climb_cnt++;
+                        }
+                        else if (rc_engineer_data.test_mode==DOWN_MODE)
+                        {
+                            down_cnt++;
+                        }
                         button3_flag=1;
                     }
                 }
@@ -116,7 +136,10 @@ void StartTask_chassis(void *argument)
                 {
                     if (button4_flag==0)
                     {
-                        down_cnt++;
+                        //if (rc_engineer_data.)down_cnt++;
+                        valve_state=!valve_state;
+                        HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
+                        HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
                         button4_flag=1;
                     }
                 }else

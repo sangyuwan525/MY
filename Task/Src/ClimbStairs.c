@@ -4,7 +4,7 @@
 
 #include "../Inc/ClimbStairs.h"
 
-#include <math.h>
+#include <stdlib.h>
 #include "gpio.h"
 #include "chassis_driver.h"
 #include "locator_driver.h"
@@ -20,7 +20,7 @@ uint32_t step_start_time = 0; // 用于计时延时步骤
 
 bool is_motor_cplt(int motor_id,int dis)
 {
-    return fabs(Get_dji_information(motor_id).total_angle-dis)<100;
+    return abs(Get_dji_information(motor_id).total_angle-dis)<100;
 }
 //距离转换为编码数
 int DisToEncoder(float dis,int motor_id)
@@ -54,7 +54,6 @@ void ClimbStairs(void)
         if (climb_cnt == 1)
         current_climb_state = CLIMB_STEP1_FRONT_UP;
     }
-
 
     switch (current_climb_state)
     {
@@ -92,7 +91,7 @@ void ClimbStairs(void)
         case CLIMB_STEP2_BASE_FORWARD:
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-            cha_remote(0,-1000,0);
+            cha_remote(0,1000,0);
             if (fabsf(lcResult.y-ForestEdge)<10 || climb_cnt == 2)
             {
                 // 停止向前移动
@@ -183,7 +182,6 @@ void DownStairs(void)
         current_down_state = DOWN_STEP1_BASE_FORWARD;
     }
 
-
     switch (current_down_state)
     {
         case DOWN_IDLE:
@@ -200,7 +198,7 @@ void DownStairs(void)
         case DOWN_STEP1_BASE_FORWARD:
                 {
                     // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-                    cha_remote(0,-100,0);
+                    cha_remote(0,200,0);
                     if (fabsf(lcResult.y-ForestEdge)<10 || down_cnt == 2)
                     {
                         // 停止向前移动
@@ -215,29 +213,27 @@ void DownStairs(void)
         case DOWN_STEP2_FRONT_DOWN:
         {
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
-            Change_dji_loc(DJI_M_CLIMB_LF,back_up);
-            Change_dji_loc(DJI_M_CLIMB_RF,-back_up);
-            Change_dji_loc(DJI_M_CLIMB_RB,0);
-            Change_dji_loc(DJI_M_CLIMB_LB,0);
+            Change_dji_loc(DJI_M_CLIMB_LF,back_up+30000);
+            Change_dji_loc(DJI_M_CLIMB_RF,-back_up-30000);
+            Change_dji_loc(DJI_M_CLIMB_RB,-30000);
+            Change_dji_loc(DJI_M_CLIMB_LB,30000);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
             // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
-            if (is_motor_cplt(DJI_M_CLIMB_LF,back_up)&&is_motor_cplt(DJI_M_CLIMB_RF,-back_up))//&&climb_cnt == 2)
+            if (is_motor_cplt(DJI_M_CLIMB_LF,back_up+30000)&&is_motor_cplt(DJI_M_CLIMB_RF,-back_up-30000))//&&climb_cnt == 2)
             {
                 current_down_state = DOWN_STEP3_REAR_FORWARD;
             }
             break;
         }
 
-
-
         // --- 步骤 3：2006往前走 ---
         case DOWN_STEP3_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            cha_remote(0,-500,0);
+            //cha_remote(0,500,0);
             Change_dji_speed(DJI_2006_L, -2000);
             Change_dji_speed(DJI_2006_R, 2000);
 
@@ -246,7 +242,7 @@ void DownStairs(void)
                 // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);
                 Change_dji_speed(DJI_2006_R, 0);
-                cha_remote(0,0,0);
+                //cha_remote(0,0,0);
 
                 current_down_state = DOWN_STEP4_DROP_DOWN;
             }
@@ -277,7 +273,7 @@ void DownStairs(void)
         // --- 步骤 5：电机归位 ---
         case DOWN_STEP5_BASE_FORWARD:
         {
-            cha_remote(0,-100,0);
+            cha_remote(0,100,0);
 
                 if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 4)
                 {
@@ -299,4 +295,19 @@ void DownStairs(void)
             current_down_state = DOWN_IDLE;
             break;
     }
+}
+
+//上400的台阶，可与ClimbStairs合并
+void UpStairs(void)
+{
+    //初始状态 前后均抬升一点（？）
+    //第一步，气缸伸长，前侧抬升
+    //第二步，底盘往前走，前侧放在台阶上，后侧放在地面上 upstairs_front_up upstairs_back_down
+    // LeftBack:599219
+    // RightBack:-565085
+    // LeftFront:-5087
+    // RightFront:-12602
+    //第三步，收气缸
+    //第四步，后侧2006走
+    //第五步，收回
 }

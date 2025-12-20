@@ -35,16 +35,16 @@ static void speed_decompose_quanxianglun(int motor_id, float vx, float vy, float
     switch(motor_id)
     {
         case 0: // 前左 (FL)
-            wheel_data[motor_id].vel = vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy;
             break;
         case 1: // 后左 (RL)
-            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy;
-            break;
-        case 2: // 前右 (FR)
             wheel_data[motor_id].vel = vel_r - SQRT_2_INV * vx + SQRT_2_INV * vy;
             break;
+        case 2: // 前右 (FR)
+            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy;
+            break;
         case 3: // 后右 (RR)
-            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy;
             break;
         default:
             break;
