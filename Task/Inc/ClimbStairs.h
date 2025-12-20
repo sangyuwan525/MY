@@ -59,6 +59,7 @@ typedef enum
 extern int climb_cnt;
 extern int down_cnt;
 extern Climb_State_e current_climb_state;
+extern Down_State_e current_down_state;
 
 //上下楼梯的函数
 void ClimbStairs(void);

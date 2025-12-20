@@ -19,6 +19,7 @@ void StartTask_LED(void *argument)
         // HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_7);
         // HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_6);
         // HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_15);
+        //printf("now_status:%d")
         osDelay(500);
     }
     /* USER CODE END StartTask_LED */

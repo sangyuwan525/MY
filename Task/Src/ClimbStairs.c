@@ -133,8 +133,8 @@ void ClimbStairs(void)
             if (fabsf(lcResult.y+800-ForestEdge)<10 || climb_cnt == 3)
             {
                  // 停止向前移动
-                // Change_dji_speed(DJI_2006_L, 0);
-                // Change_dji_speed(DJI_2006_R, 0);
+                Change_dji_speed(DJI_2006_L, 0);
+                Change_dji_speed(DJI_2006_R, 0);
 
                 current_climb_state = CLIMB_STEP5_RESET_ALL;
             }
@@ -189,10 +189,10 @@ void DownStairs(void)
         case DOWN_IDLE:
         {
             // 保持空闲，等待触发
-            Change_dji_loc(DJI_M_CLIMB_LF,-10000);
-            Change_dji_loc(DJI_M_CLIMB_RF,10000);
-            Change_dji_loc(DJI_M_CLIMB_RB,10000);
-            Change_dji_loc(DJI_M_CLIMB_LB,-10000);
+            Change_dji_loc(DJI_M_CLIMB_LF,-100000);
+            Change_dji_loc(DJI_M_CLIMB_RF,100000);
+            Change_dji_loc(DJI_M_CLIMB_RB,100000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-100000);
             break;
         }
 
@@ -238,8 +238,8 @@ void DownStairs(void)
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
             cha_remote(0,-500,0);
-            Change_dji_speed(DJI_2006_L, -8000);
-            Change_dji_speed(DJI_2006_R, 8000);
+            Change_dji_speed(DJI_2006_L, -2000);
+            Change_dji_speed(DJI_2006_R, 2000);
 
             if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 3)
             {
