@@ -49,6 +49,7 @@ typedef enum
 
 //上楼梯所用距离
 #define front_up 300000
+#define  front_up_400
 
 #define back_up 305000
 #define front_up2 (-20000)

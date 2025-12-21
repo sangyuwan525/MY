@@ -103,6 +103,8 @@ void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_d
         engineer_data->test_mode=CLIMB_MODE;
     } else if (rc_data->sw4==2) {
         engineer_data->test_mode=DOWN_MODE;
+    }else if (rc_data->sw4 == 3) {
+        engineer_data->test_mode=CLIMB_MODE_400;
     }
     engineer_data->button1 = rc_data->button1;
     engineer_data->button2 = rc_data->button2;
