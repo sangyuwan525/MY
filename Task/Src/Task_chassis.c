@@ -79,8 +79,7 @@ void StartTask_chassis(void *argument)
                 if (rc_engineer_data.button1 == 1)
                 {
                     // 按钮1被按下，前面两个3508抬升
-                    // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-                    // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+
                     //气缸测试 收
                     Change_dji_speed(DJI_2006_L,-2500);
                     Change_dji_speed(DJI_2006_R,2500);
@@ -94,18 +93,10 @@ void StartTask_chassis(void *argument)
                 if (rc_engineer_data.button2 == 1)
                 {
                     // 按钮2被按下，四个3508归位
-                    //Change_dji_loc(4,-front_up2);
-                    //Change_dji_loc(5,front_up2);
-                    // Change_dji_loc(DJI_M_CLIMB_LF,0);
-                    // Change_dji_loc(DJI_M_CLIMB_RF,0);
-                    // Change_dji_loc(DJI_M_CLIMB_LB,0);
-                    // Change_dji_loc(DJI_M_CLIMB_RB,0);
-                    // Change_dji_loc(DJI_M_CLIMB_LF,-10000);
-                    // Change_dji_loc(DJI_M_CLIMB_RF,10000);
-                    // Change_dji_loc(DJI_M_CLIMB_LB,-10000);
-                    // Change_dji_loc(DJI_M_CLIMB_RB,10000);
-                    //HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
-                    //HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
+                    Change_dji_loc(DJI_M_CLIMB_LF,10000);
+                    Change_dji_loc(DJI_M_CLIMB_RF,-10000);
+                    Change_dji_loc(DJI_M_CLIMB_LB,590000);
+                    Change_dji_loc(DJI_M_CLIMB_RB,-590000);
                 }
                 if (rc_engineer_data.button3 == 1)
                 {
@@ -157,8 +148,9 @@ void StartTask_chassis(void *argument)
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
                     //Change_dji_loc(5,front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
+                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                    Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+
                     Change_dji_loc(DJI_M_CLIMB_LB,back_up);
                     Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
                 }

@@ -107,7 +107,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 		.tx_index         = 0,
 		.target_spd       = 0,
 		.control_mode     = SPEED_MODE,
-		.is_enabled       = false,
+		.is_enabled       = true,
 	},
 
 	// ------------------------------------------------------------------------
@@ -120,7 +120,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 		.tx_index         = 1,
 		.target_spd       = 0,
 		.control_mode     = SPEED_MODE,
-		.is_enabled       = false,
+		.is_enabled       = true,
 	},
 
 	// ------------------------------------------------------------------------
@@ -133,7 +133,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 		.tx_index         = 2,
 		.target_spd       = 0,
 		.control_mode     = SPEED_MODE,
-		.is_enabled       = false,
+		.is_enabled       = true,
 	},
 
 	// ------------------------------------------------------------------------
@@ -146,7 +146,7 @@ Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 			.tx_index         = 3,
 			.target_spd       = 0,
 			.control_mode     = SPEED_MODE,
-			.is_enabled       = false,
+			.is_enabled       = true,
 		},
 
 	// ------------------------------------------------------------------------
