@@ -5,7 +5,7 @@
 #define RC_CHANNEL_MAX      660.0f
 #define RC_CHANNEL_MID      0.0f
 //目前底下这两个值还未经过标定，只是个模糊值
-#define MAX_CHASSIS_SPEED   3000.0f // 最大底盘速度
+#define MAX_CHASSIS_SPEED   10000.0f // 最大底盘速度
 #define MAX_CIRCLE_SPEED   5.0f // 最大自转速度
 
 rc_info_t rc;
@@ -103,8 +103,9 @@ void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_d
         engineer_data->test_mode=CLIMB_MODE;
     } else if (rc_data->sw4==2) {
         engineer_data->test_mode=DOWN_MODE;
-    }else if (rc_data->sw4 == 3) {
-        engineer_data->test_mode=CLIMB_MODE_400;
+    }else if (rc_data->sw4==3)
+    {
+        engineer_data->test_mode=UP_MODE;
     }
     engineer_data->button1 = rc_data->button1;
     engineer_data->button2 = rc_data->button2;

@@ -44,7 +44,7 @@ typedef enum {
 typedef enum {
     CLIMB_MODE = 0, // 待机模式 (通常对应开关中间或未定义状态)
     DOWN_MODE    = 1, // 自动模式 (例如：开关打到上/1)
-    CLIMB_MODE_400,
+    UP_MODE
 } test_mode_e;
 
 // 遥控器数据工程量结构体
