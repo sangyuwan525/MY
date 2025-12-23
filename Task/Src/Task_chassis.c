@@ -78,25 +78,34 @@ void StartTask_chassis(void *argument)
                 //前3508抬升
                 if (rc_engineer_data.button1 == 1)
                 {
-                    // 按钮1被按下，前面两个3508抬升
+                    // 按钮1被按下，后轮2006往前走
 
                     //气缸测试 收
-                    Change_dji_speed(DJI_2006_L,-2500);
-                    Change_dji_speed(DJI_2006_R,2500);
+                    if (rc_engineer_data.test_mode==UP_MODE)
+                    {
+                        Change_dji_speed(DJI_2006_L,-2500);
+                        Change_dji_speed(DJI_2006_R,2500);
+                    }
+
                 }
                 else
                 {
-                    Change_dji_speed(DJI_2006_L,0);
-                    Change_dji_speed(DJI_2006_R,0);
+                    if (rc_engineer_data.test_mode==UP_MODE)
+                    {
+                        Change_dji_speed(DJI_2006_L,0);
+                        Change_dji_speed(DJI_2006_R,0);
+                    }
+
                 }
                 //
                 if (rc_engineer_data.button2 == 1)
                 {
-                    // 按钮2被按下，四个3508归位
+                    // 按钮2,前侧和后侧将机身顶起
                     Change_dji_loc(DJI_M_CLIMB_LF,10000);
                     Change_dji_loc(DJI_M_CLIMB_RF,-10000);
                     Change_dji_loc(DJI_M_CLIMB_LB,590000);
                     Change_dji_loc(DJI_M_CLIMB_RB,-590000);
+
                 }
                 if (rc_engineer_data.button3 == 1)
                 {
@@ -106,6 +115,7 @@ void StartTask_chassis(void *argument)
                     //气缸测试 放
                     // HAL_GPIO_WritePin(valve_port,valve_pin_l,1);
                     // HAL_GPIO_WritePin(valve_port,valve_pin_r,1);
+                    //按钮3，在不同模式下状态机状态变换
                     if (button3_flag==0)
                     {
                         if (rc_engineer_data.test_mode==CLIMB_MODE)
