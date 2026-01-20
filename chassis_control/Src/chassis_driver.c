@@ -15,6 +15,23 @@ static Wheel_Command_t wheel_data[WHEEL_NUM];
 // --- 2. 运动学解算函数 (speed_decompose) ---
 // 将函数名称规范化，并基于宏切换实现
 
+//  使用滑动窗口计数器用于分时复用can总线发送
+void Chassis_Control_Loop(void) {
+    static uint8_t offset = 0; // 记录本次从哪个轮子开始发
+
+    // 每次只发 3 条报文
+    for (int i = 0; i < 3; i++) {
+        int wheel_id = (offset + i) % 4; // 通过取模实现 0,1,2 -> 1,2,3 -> 2,3,0 -> 3,0,1 的轮转
+
+        Chassis_Send_Swerve_Command(wheel_id,
+                                    wheel_data[wheel_id].vel,
+                                    wheel_data[wheel_id].target_angle);
+    }
+
+    // 每次循环后偏移一位，保证每个轮子都有机会被发到
+    offset = (offset + 1) % 4;
+}
+
 #ifdef CHASSIS_TYPE_QUANXIANGLUN
 // ==========================================================
 // A. 全向轮运动学逆解算
@@ -180,9 +197,10 @@ void cha_remote(float vx, float vy, float vr)
         Change_dji_speed(i, wheel_data[i].vel);
 #elif defined(CHASSIS_TYPE_DUOLUN)
         // 舵轮需要发送转速和转向角
-        Chassis_Send_Swerve_Command(i,
-                                    wheel_data[i].vel,
-                                    wheel_data[i].target_angle);
+        Chassis_Control_Loop();
+        // Chassis_Send_Swerve_Command(i,
+        //                             wheel_data[i].vel,
+        //                             wheel_data[i].target_angle);
 #endif
     }
 

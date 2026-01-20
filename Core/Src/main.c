@@ -108,9 +108,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 
-  FDCAN1_RxFilter_Config();
-  FDCAN2_RxFilter_Config();
-  FDCAN3_RxFilter_Config();
+
   Dji_Motor_Registry_Init();
   SEGGER_RTT_Init();
   SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
