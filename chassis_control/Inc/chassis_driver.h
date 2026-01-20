@@ -5,9 +5,17 @@
 #ifndef R1_CHASSIS_CHASSIS_DRIVER_H
 #define R1_CHASSIS_CHASSIS_DRIVER_H
 
+#include "fdcan.h"
+#include "stm32g4xx.h"
+#include <stdio.h>
+#include <string.h>
+
 // --- 1. 底盘类型宏定义 ---
  #define CHASSIS_TYPE_DUOLUN
  //#define CHASSIS_TYPE_QUANXIANGLUN
+
+// --- 2. can发送类型宏定义 ---
+ //#define BUFFERS_SEND
 
 // 注意:以下这些值目前纯数瞎给，需要根据实际底盘参数进行调整
 #define WHEEL_NUM       4
@@ -26,5 +34,6 @@ typedef struct {
 } Wheel_Command_t;
 
 void cha_remote(float vx, float vy, float vr);
+void Chassis_Send_Swerve_Command(int i,float vel,float angle);
 
 #endif //R1_CHASSIS_CHASSIS_DRIVER_H

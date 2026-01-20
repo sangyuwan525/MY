@@ -16,22 +16,11 @@ float distance_can_r1=0;
 float distance_can_basket=0;
 	
 /**************内部宏定义与重命名begin**************/
-#define CAN_TX_BUF_SIZE 16
+
 /**************内部宏定义与重命名end**************/
 
 /**************内部变量与函数begin**************/
-// typedef struct {
-// 	FDCAN_TxHeaderTypeDef header;
-// 	uint8_t data[8];
-// } FDCAN_Packet_t;
-//
-// typedef struct {
-// 	FDCAN_Packet_t packets[CAN_TX_BUF_SIZE];
-// 	volatile uint16_t head;
-// 	volatile uint16_t tail;
-// } FDCAN_TX_FIFO;
-//
-// static FDCAN_TX_FIFO Swerve_Buffer = {0};
+
 /**************内部变量与函数end**************/
 
 /**************外部接口begin**************/
@@ -457,99 +446,4 @@ void send_message(uint32_t id,uint8_t data)
     }
 }
 
-void Chassis_Send_Swerve_Command(int i,float vel,float angle)
-{
-	uint8_t data_byte[8];
-	memcpy(data_byte, &vel, 4);
-	memcpy(data_byte+4, &angle, 4);
-	FDCAN_TxHeaderTypeDef TxHeader;
-	TxHeader.Identifier = 0x100+i; //这里的0x22
-	TxHeader.IdType = FDCAN_STANDARD_ID;
-	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	TxHeader.BitRateSwitch = FDCAN_BRS_ON;
-	TxHeader.FDFormat = FDCAN_FD_CAN;
-	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	TxHeader.MessageMarker = 0;
-	// 发送数据
-	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &TxHeader, data_byte) != HAL_OK) {
-		// 错误处理
-		printf("no sb!\n");
-	}
-}
-
-// /**
-//  * @brief 检查并从软件FIFO移动数据到硬件TX FIFO
-//  */
-// void Check_And_Transmit_From_Swerve_FIFO(FDCAN_HandleTypeDef *hfdcan) {
-// 	// 只要软件缓冲区不空，且硬件TX FIFO有空间（FDCAN_GetTxFifoFreeLevel > 0）
-// 	while ((Swerve_Buffer.head != Swerve_Buffer.tail) &&
-// 		   (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) > 0)) {
-//
-// 		FDCAN_Packet_t *pPacket = &Swerve_Buffer.packets[Swerve_Buffer.tail];
-//
-// 		if (HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &pPacket->header, pPacket->data) == HAL_OK) {
-// 			Swerve_Buffer.tail = (Swerve_Buffer.tail + 1) % CAN_TX_BUF_SIZE;
-// 		} else {
-// 			break;
-// 		}
-// 		   }
-// }
-//
-// /**
-//  * @brief 改造后的发送函数
-//  */
-// void Chassis_Send_Swerve_Command(int i, float vel, float angle) {
-// 	// 1. 进入临界区：保护缓冲区指针
-// 	uint32_t primask_bit = __get_PRIMASK();
-// 	__disable_irq();
-// 	uint16_t next_head = (Swerve_Buffer.head + 1) % CAN_TX_BUF_SIZE;
-//
-// 	//  如果软件缓冲区满了，报错退出
-// 	if (next_head == Swerve_Buffer.tail) {
-// 		printf("Software Buffer Full!\n");
-// 		return;
-// 	}
-//
-// 	//  构造报文并存入软件缓冲区
-// 	FDCAN_Packet_t *pNewPacket = &Swerve_Buffer.packets[Swerve_Buffer.head];
-// 	pNewPacket->header.Identifier = 0x100 + i;
-// 	pNewPacket->header.IdType = FDCAN_STANDARD_ID;
-// 	pNewPacket->header.TxFrameType = FDCAN_DATA_FRAME;
-// 	pNewPacket->header.DataLength = FDCAN_DLC_BYTES_8;
-// 	pNewPacket->header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-// 	pNewPacket->header.BitRateSwitch = FDCAN_BRS_ON;
-// 	pNewPacket->header.FDFormat = FDCAN_FD_CAN;
-// 	pNewPacket->header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-// 	pNewPacket->header.MessageMarker = 0;
-//
-// 	memcpy(pNewPacket->data, &vel, 4);
-// 	memcpy(pNewPacket->data + 4, &angle, 4);
-//
-// 	Swerve_Buffer.head = next_head;
-//
-// 	// 2. 退出临界区
-// 	__set_PRIMASK(primask_bit);
-// 	__enable_irq();
-//
-// 	// 3. 尝试触发发送
-// 	Check_And_Transmit_From_Swerve_FIFO(&hfdcan2);
-// }
-//
-// /**
-//  * @brief FDCAN 发送完成回调函数
-//  */
-// void HAL_FDCAN_TxFifoEmptyCallback(FDCAN_HandleTypeDef *hfdcan) {
-// 	if (hfdcan->Instance == hfdcan2.Instance) {
-// 		Check_And_Transmit_From_Swerve_FIFO(hfdcan);
-// 	}
-// }
-
-// // 注意：如果你的 HAL 版本较老，可能需要使用这个回调：
-// void HAL_FDCAN_TxEventFifoCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t BufferIndex) {
-// 	if (hfdcan->Instance == hfdcan2.Instance) {
-// 		Check_And_Transmit_From_Swerve_FIFO(hfdcan);
-// 	}
-// }
 #endif

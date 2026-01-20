@@ -51,5 +51,5 @@ extern uint8_t can_data_num_g;//结构体数组can_database_g的大小，在Hash
 extern Can_Data can_database_g[];
 extern uint16_t hash_table[1000];
 // extern ak80_motor_measure_t ak80_motor_inf[8];
-void Chassis_Send_Swerve_Command(int i,float vel,float angle);
+
 #endif
