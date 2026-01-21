@@ -19,10 +19,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "fdcan.h"
-#include "bsp_can.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "bsp_can.h"
 /* USER CODE END 0 */
 
 FDCAN_HandleTypeDef hfdcan1;
