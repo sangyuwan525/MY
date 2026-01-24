@@ -11,8 +11,8 @@
 #include <string.h>
 
 // --- 1. 底盘类型宏定义 ---
- #define CHASSIS_TYPE_DUOLUN
- //#define CHASSIS_TYPE_QUANXIANGLUN
+ //#define CHASSIS_TYPE_DUOLUN
+ #define CHASSIS_TYPE_QUANXIANGLUN
 
 // --- 2. can发送类型宏定义 ---
  //#define BUFFERS_SEND

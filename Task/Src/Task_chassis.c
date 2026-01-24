@@ -4,23 +4,20 @@
 #include "remote_driver.h"
 #include "chassis_driver.h"
 #include "Task_chassis.h"
+
+#include "chassis_path.h"
 #include "dji_3508_2006_motor.h"
 #include "ClimbStairs.h"
 #include "SEGGER_RTT.h"
 #include "stdio.h"
 #include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
 #include "usart.h"
-
+int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
 int button3_flag=0;
 int button4_flag=0;
 bool valve_state=0;
 
-// 重定向printf
-int __io_putchar(int ch) {
-    HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-    return ch;
-}
 
 
 void StartTask_chassis(void *argument)
@@ -63,6 +60,8 @@ void StartTask_chassis(void *argument)
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
                         DownStairs();
                     }
+
+
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
