@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include "Task_command.h"
 #include "dji_3508_2006_motor.h"
+#include "locator_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -84,6 +85,13 @@ const osThreadAttr_t Task_dji_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 2048 * 4
 };
+/* Definitions for Task_loc_recv */
+osThreadId_t Task_loc_recvHandle;
+const osThreadAttr_t Task_loc_recv_attributes = {
+  .name = "Task_loc_recv",
+  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 128 * 4
+};
 /* Definitions for remote_queue */
 osMessageQueueId_t remote_queueHandle;
 const osMessageQueueAttr_t remote_queue_attributes = {
@@ -93,6 +101,16 @@ const osMessageQueueAttr_t remote_queue_attributes = {
 osMessageQueueId_t motorRxQueueHandle;
 const osMessageQueueAttr_t motorRxQueue_attributes = {
   .name = "motorRxQueue"
+};
+/* Definitions for locatorQueue_x_y */
+osMessageQueueId_t locatorQueue_x_yHandle;
+const osMessageQueueAttr_t locatorQueue_x_y_attributes = {
+  .name = "locatorQueue_x_y"
+};
+/* Definitions for locatorQueue_z_r */
+osMessageQueueId_t locatorQueue_z_rHandle;
+const osMessageQueueAttr_t locatorQueue_z_r_attributes = {
+  .name = "locatorQueue_z_r"
 };
 /* Definitions for rc_mutex */
 osMutexId_t rc_mutexHandle;
@@ -110,6 +128,7 @@ void StartTask_LED(void *argument);
 void StartTask_Printf(void *argument);
 void StartTaskcommand(void *argument);
 void StartTask_dji(void *argument);
+void StartTask_locator_recv(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -145,6 +164,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of motorRxQueue */
   motorRxQueueHandle = osMessageQueueNew (32, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
 
+  /* creation of locatorQueue_x_y */
+  locatorQueue_x_yHandle = osMessageQueueNew (16, sizeof(Locator_Rx_Queue_t), &locatorQueue_x_y_attributes);
+
+  /* creation of locatorQueue_z_r */
+  locatorQueue_z_rHandle = osMessageQueueNew (16, sizeof(Locator_Rx_Queue_t), &locatorQueue_z_r_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
 
   /* add queues, ... */
@@ -165,6 +190,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of Task_dji */
   Task_djiHandle = osThreadNew(StartTask_dji, NULL, &Task_dji_attributes);
+
+  /* creation of Task_loc_recv */
+  Task_loc_recvHandle = osThreadNew(StartTask_locator_recv, NULL, &Task_loc_recv_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -264,6 +292,24 @@ __weak void StartTask_dji(void *argument)
     osDelay(1);
   }
   /* USER CODE END StartTask_dji */
+}
+
+/* USER CODE BEGIN Header_StartTask_locator_recv */
+/**
+* @brief Function implementing the Task_loc_recv thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask_locator_recv */
+__weak void StartTask_locator_recv(void *argument)
+{
+  /* USER CODE BEGIN StartTask_locator_recv */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartTask_locator_recv */
 }
 
 /* Private application code --------------------------------------------------*/

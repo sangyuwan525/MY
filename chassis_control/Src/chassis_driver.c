@@ -15,6 +15,7 @@ static Wheel_Command_t wheel_data[WHEEL_NUM];
 // --- 2. 运动学解算函数 (speed_decompose) ---
 // 将函数名称规范化，并基于宏切换实现
 
+#ifdef CHASSIS_TYPE_DUOLUN
 #ifdef BUFFERS_SEND
 #define CAN_TX_BUF_SIZE 16
 
@@ -138,6 +139,7 @@ void Chassis_Control_Loop(void) {
     // 每次循环后偏移一位，保证每个轮子都有机会被发到
     offset = (offset + 1) % 4;
 }
+#endif
 #endif
 
 

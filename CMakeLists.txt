@@ -54,6 +54,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Task/Src/ClimbStairs.c
         SEGGER_RTT/RTT/SEGGER_RTT.c
         SEGGER_RTT/RTT/SEGGER_RTT_printf.c
+        Task/Inc/Task_locator_recv.h
+        Task/Src/Task_locator_recv.c
 )
 
 # Add STM32CubeMX generated sources

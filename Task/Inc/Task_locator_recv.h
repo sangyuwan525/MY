@@ -1,0 +1,8 @@
+//
+// Created by Lenovo on 2026/1/24.
+//
+
+#ifndef R1_CHASSIS_TASK_LOCATOR_RECV_H
+#define R1_CHASSIS_TASK_LOCATOR_RECV_H
+
+#endif //R1_CHASSIS_TASK_LOCATOR_RECV_H
