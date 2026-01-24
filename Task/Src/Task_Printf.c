@@ -6,6 +6,9 @@
 #include "cmsis_os2.h"
 #include "Task_Printf.h"
 
+#include "cmsis_gcc.h"
+#include "locator_driver.h"
+
 void StartTask_Printf(void *argument)
 {
     /* USER CODE BEGIN StartTask_Printf */
@@ -23,7 +26,12 @@ void StartTask_Printf(void *argument)
             // printf("desired_vx = %f\n", 1000*desired_vx);
 
         }
-        osDelay(80);
+        uint32_t primask_bit = __get_PRIMASK();
+        //printf("x=%f\n\r",lcResult.x);
+        //printf("y=%f\n\r",lcResult.y);
+        printf("yaw=%f\n\r",lcResult.r);
+        __set_PRIMASK(primask_bit);
+        osDelay(500);
     }
     /* USER CODE END StartTask_Printf */
 }

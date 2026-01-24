@@ -6,6 +6,7 @@
 #include <string.h>
 #include "cmsis_os2.h"
 #include "FreeRTOS.h"
+#include "locator_driver.h"
 #include "queue.h"
 #include "string.h"
 #include "stdbool.h"
@@ -368,10 +369,35 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 	uint8_t rx_data[8];
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	//if (hfdcan==&hfdcan3) printf("6");
+
+
 
 	while (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK)
 	{
+			if(hfdcan==&hfdcan3) {
+			Locator_Rx_Queue_t rx_msg;
+			rx_msg.msg_identifier = rx_header.Identifier;
+			memcpy(rx_msg.rx_data, rx_data, 8);
+			if (rx_msg.msg_identifier == 0x12)//表示存放X坐标和Y坐标的报文帧头
+			{
+				//printf("ok1111\n");
+				//存入队列，在外部处理
+				if (xQueueSendFromISR(locatorQueue_x_yHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS)
+				{
+
+					// 队列已满
+				}
+			}
+			else if (rx_header.Identifier == 0x13)//表示存放Z坐标和yaw的报文帧头
+			{
+				if (xQueueSendFromISR(locatorQueue_z_rHandle, &rx_msg, &xHigherPriorityTaskWoken) != pdPASS){}
+			}
+
+			else {
+				//未知id
+			}
+
+		}
 		// 确保 ID 在我们关注的电机ID范围内 (0x201 - 0x208)
 		if(rx_header.Identifier >= CAN_3508_M1_ID && rx_header.Identifier <= CAN_3508_M8_ID)
 		{
