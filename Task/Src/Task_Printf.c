@@ -24,13 +24,11 @@ void StartTask_Printf(void *argument)
             // sprintf(message,"desired_vx: %.2f, desired_vy: %.2f, desired_vw: %.2f\r\n",desired_vx, desired_vy, desired_vw);
             // printf("%s",message);
             // printf("desired_vx = %f\n", 1000*desired_vx);
-
         }
-        uint32_t primask_bit = __get_PRIMASK();
-        //printf("x=%f\n\r",lcResult.x);
-        //printf("y=%f\n\r",lcResult.y);
-        printf("yaw=%f\n\r",lcResult.r);
-        __set_PRIMASK(primask_bit);
+        //printf("x66 y55 z66\n");
+        printf("x%.1f",lcResult.x);
+        printf("y%.1f",lcResult.y);
+        printf("yaw%.3f\n",lcResult.r);
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */

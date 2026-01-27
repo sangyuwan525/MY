@@ -12,6 +12,10 @@
 #include "stdio.h"
 #include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
 #include "usart.h"
+#include "path.h"
+#include "Task_chassis.h"
+#include "chassis_pid.h"
+
 int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
 int button3_flag=0;
@@ -25,6 +29,14 @@ void StartTask_chassis(void *argument)
     /* USER CODE BEGIN StartTask_chassis */
     remote_engineer_t rc_engineer_data;
     chassis_control_cnt=0;
+
+    //go_path_test
+    PID_Approaching_Init(&chassis_kaojin_pid);
+    PID_Angle_Init(&chassis_yaw_pid);
+    PID_Correct_Init(&chassis_correct_pid);
+    path_init_test();
+    path_spd_data_t spd_test ={1000,5000,5000};
+
     /* Infinite loop */
     for(;;)
     {
@@ -41,10 +53,6 @@ void StartTask_chassis(void *argument)
         {
             chassis_control_cnt++;
             // SEGGER_RTT_SetTerminal(0);
-            printf("LeftFront:%d\n",Get_dji_information(DJI_M_CLIMB_LF).total_angle);
-            printf("RightFront:%d\n",Get_dji_information(DJI_M_CLIMB_RF).total_angle);
-            printf("LeftBack:%d\n",Get_dji_information(DJI_M_CLIMB_LB).total_angle);
-            printf("RightBack:%d\n",Get_dji_information(DJI_M_CLIMB_RB).total_angle);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
@@ -56,12 +64,14 @@ void StartTask_chassis(void *argument)
                                rc_engineer_data.vy,
                                rc_engineer_data.vw);
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
-                        ClimbStairs();
+                        ClimbStairs(2);
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
                         DownStairs();
                     }
-
-
+                }
+                else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
+                {
+                    go_path_control(&path_test,spd_test);
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
@@ -75,35 +85,43 @@ void StartTask_chassis(void *argument)
                     down_cnt=0;
                 }
                 //前3508抬升
+                // if (rc_engineer_data.button1 == 1)
+                // {
+                //     // 按钮1被按下，后轮2006往前走
+                //
+                //     //气缸测试 收
+                //     if (rc_engineer_data.test_mode==UP_MODE)
+                //     {
+                //         Change_dji_speed(DJI_2006_L,-2500);
+                //         Change_dji_speed(DJI_2006_R,2500);
+                //     }
+                //
+                // }
+                // else
+                // {
+                //     if (rc_engineer_data.test_mode==UP_MODE)
+                //     {
+                //         Change_dji_speed(DJI_2006_L,0);
+                //         Change_dji_speed(DJI_2006_R,0);
+                //     }
+                //
+                // }
+                //
+
+                //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
-                    // 按钮1被按下，后轮2006往前走
-
-                    //气缸测试 收
-                    if (rc_engineer_data.test_mode==UP_MODE)
-                    {
-                        Change_dji_speed(DJI_2006_L,-2500);
-                        Change_dji_speed(DJI_2006_R,2500);
-                    }
-
+                    climb_cnt =0;
+                    current_climb_state = CLIMB_IDLE;
                 }
-                else
-                {
-                    if (rc_engineer_data.test_mode==UP_MODE)
-                    {
-                        Change_dji_speed(DJI_2006_L,0);
-                        Change_dji_speed(DJI_2006_R,0);
-                    }
-
-                }
-                //
                 if (rc_engineer_data.button2 == 1)
                 {
-                    // 按钮2,前侧和后侧将机身顶起
-                    Change_dji_loc(DJI_M_CLIMB_LF,10000);
-                    Change_dji_loc(DJI_M_CLIMB_RF,-10000);
-                    Change_dji_loc(DJI_M_CLIMB_LB,590000);
-                    Change_dji_loc(DJI_M_CLIMB_RB,-590000);
+                    // // 按钮2,前侧和后侧将机身顶起
+                    // Change_dji_loc(DJI_M_CLIMB_LF,10000);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,590000);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,-590000);
+
 
                 }
                 if (rc_engineer_data.button3 == 1)

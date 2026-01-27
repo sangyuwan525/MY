@@ -20,13 +20,13 @@ PID_Approaching_t chassis_kaojin_pid;
 void PID_Angle_Init(PID_Angle_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 2500.545f;
+    pid->kp = 1.545f;
     pid->ki = 1.0f;
     pid->kd = 0.0f;
 
     // 限制与阈值
-    pid->output_limit = 4000.0f;        // abs_limit_pid_angle
-    pid->integral_limit = 2500.0f;      // abs_limit_pid_angle_ill
+    pid->output_limit = 400.0f;        // abs_limit_pid_angle
+    pid->integral_limit = 250.0f;      // abs_limit_pid_angle_ill
     pid->integral_separate_thr = 0.15f; // 积分分离阈值
 
     // 状态变量初始化
@@ -106,7 +106,7 @@ float PID_Angle_Calculate(PID_Angle_t *pid, float target_angle, float now_angle)
 void PID_Correct_Init(PID_Correct_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 10.0f;
+    pid->kp = 1.0f;
     pid->ki = 0.000005f;
     pid->kd = 0.0002f;
 
@@ -190,8 +190,8 @@ vec2 PID_Correct_Calculate(PID_Correct_t *pid, Point_struct now_point, Point_str
  */
 void PID_Approaching_Init(PID_Approaching_t *pid)
 {
-    pid->kp = 3.8f;
-    pid->ki = 0.79f;
+    pid->kp = 1.0f;
+    pid->ki = 0.59f;
     pid->kd = 0.0f; // 注意：原代码中 kd=0.0，但 D 项逻辑是存在的
 
     // 限制与阈值

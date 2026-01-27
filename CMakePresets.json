@@ -3,7 +3,7 @@
     "configurePresets": [
         {
             "name": "default",
-            "hidden": true,
+            "hidden": false,
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
 		    "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",

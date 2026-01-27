@@ -68,7 +68,7 @@ const osThreadAttr_t Task_LED_attributes = {
 osThreadId_t Task_PrintfHandle;
 const osThreadAttr_t Task_Printf_attributes = {
   .name = "Task_Printf",
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 256 * 4
 };
 /* Definitions for Taskcommand */

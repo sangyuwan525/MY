@@ -63,7 +63,16 @@ extern Climb_State_e current_climb_state;
 extern Down_State_e current_down_state;
 
 //上下楼梯的函数
-void ClimbStairs(void);
+void ClimbStairs(int stairs_id);
 void DownStairs(void);
+
+//台阶中心标记（以R2启动区为原点）
+typedef struct
+{
+    int x;
+    int y;
+    int z;
+}pos;
+
 
 #endif //R2_CHASSIS_CLIMBSTAIRS_H

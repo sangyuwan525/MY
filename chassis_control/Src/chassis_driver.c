@@ -285,6 +285,8 @@ void cha_remote(float vx, float vy, float vr)
         velx = vx;
         vely = vy;
     }
+    if (vr>SPEED_LIMIT_R) vr=SPEED_LIMIT_R;
+    else if (vr<-SPEED_LIMIT_R) vr=-SPEED_LIMIT_R;
     vela = vr; // 旋转速度不与线速度联动限幅
 
     // 2. 运动学解算

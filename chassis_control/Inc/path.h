@@ -8,6 +8,6 @@
 #include "chassis_path.h"
 extern Path_struct path_test;
 
-
+void path_init_test();
 
 #endif //R1_CHASSIS_PATH_H

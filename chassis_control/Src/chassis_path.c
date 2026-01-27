@@ -360,7 +360,7 @@ vec2 get_spd_on_path_calculate(path_spd_data_t path_spd, float path_pos, float l
 
         // 减速曲线的起始点应该在 path_spd.max_speed，终点在 v_min。
         // 速度差为 (path_spd.max_speed - v_min)
-        abs_spd = v_min + (path_spd.max_speed - v_min) * (1.0f - 1.0f / (1.0f + expf(-k * (path_remain - path_spd.down_stage / 2.0f))));
+        abs_spd = v_min + (path_spd.max_speed - v_min) / (1.0f + expf(-k * (path_remain - path_spd.down_stage / 2.0f)));
 
         // 边界处理：确保速度不低于 v_min
         if (abs_spd < v_min) abs_spd = v_min;
@@ -458,7 +458,7 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, tar_ang_kaojin, now_pos);
 
             // 路径完成判断
-            if (distance < 10.0f && fabsf((*path).end_angle - now_pos) < 0.1f &&
+            if (distance < 50.0f && fabsf((*path).end_angle - now_pos) < 0.1f &&
                 fabsf(lcResult.vx) < 50.0f && fabsf(lcResult.vy) < 50.0f && fabsf(lcResult.vr) < 50.0f) {
                 cha_remote(0.0f, 0.0f, 0.0f);
                 return 1; // 路径完成
