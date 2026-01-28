@@ -109,4 +109,6 @@ float get_length(Point_struct a, Point_struct b);
 vec2 change_world_to_local(vec2 src, float angle);
 int go_path_control(Path_struct* path, path_spd_data_t path_spd);
 
+extern float test_angle;
+
 #endif //R1_CHASSIS_CHASSIS_PATH_H

@@ -45,8 +45,8 @@ void path_init() {
 void path_init_test() {
     Trajectory trajectory_data[2] = {
         //trace                                     //traceType          //point_end                            //point_start                           //length             //ifvoid
-        {{0.0f, 1.0f, 0.0f, 0.0f},      line,        {-1000.0f, 0.0f},          {0.0f, 0.0f},        1000.0f,       full},
-        {{0.0f, 1.0f, 0.0f, 0.0f},    line,        {0.0f, 0.0f},      {-1000.0f, 0.0f},       1000.0f,       empty}
+        {{0.0f, 1.0f, 0.0f, 0.0f},      line,        {-2000.0f, 0.0f},          {0.0f, 0.0f},        2000.0f,       full},
+        {{0.0f, 1.0f, 0.0f, 0.0f},    line,        {0.0f, 0.0f},      {-2000.0f, 0.0f},       2000.0f,       empty}
     };
     //1.计算轨迹段数
     const uint8_t TRAJECTORY_COUNT = sizeof(trajectory_data) / sizeof(Trajectory);
@@ -70,6 +70,6 @@ void path_init_test() {
     path_test.length = total_length;
     //3.给定初始角度和终末角度
     path_test.start_angle = 0.0f;
-    path_test.end_angle = 0.0f;
+    path_test.end_angle = 1.57f;
 
 }

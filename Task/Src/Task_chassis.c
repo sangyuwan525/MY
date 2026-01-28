@@ -15,6 +15,7 @@
 #include "path.h"
 #include "Task_chassis.h"
 #include "chassis_pid.h"
+#include "locator_driver.h"
 
 int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
@@ -59,9 +60,13 @@ void StartTask_chassis(void *argument)
                 // 模式 2 为手动模式
                 if (rc_engineer_data.mode == CHASSIS_MODE_MANUAL)
                 {
+                    vec2 v_world,remote;
+                    remote.x=rc_engineer_data.vx;
+                    remote.y=rc_engineer_data.vy;
+                   v_world= change_world_to_local(remote,lcResult.r);
                     // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
-                    cha_remote(rc_engineer_data.vx,
-                               rc_engineer_data.vy,
+                    cha_remote(v_world.x,
+                               v_world.y,
                                rc_engineer_data.vw);
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
                         ClimbStairs(2);

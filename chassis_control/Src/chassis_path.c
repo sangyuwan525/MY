@@ -409,10 +409,13 @@ vec2 change_world_to_local(vec2 src, float angle)
     return dst;
 }
 
+//测试target_angle
+float test_angle;
+
 int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 {
     const Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
-    const float now_pos = lcResult.yaw;                        // 机器人当前朝向角
+    const float now_pos = lcResult.r;                        // 机器人当前朝向角
     // 检查当前轨迹段是否有效，防止越界
     if ((*path).trajectory_count >= (*path).trajectory_num) {
         cha_remote(0.0f, 0.0f, 0.0f);
@@ -451,8 +454,8 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
             else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
 
             // 角度规划
-            float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) * (
-                                       1.0f - (distance / (*path).length));
+            float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) *
+                                       (distance / (*path).length);
 
             // 旋转速度计算，使用全局角度PID实例
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, tar_ang_kaojin, now_pos);
@@ -477,6 +480,7 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     // 2.2. 角度控制
 	float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
+    test_angle=target_angle;
 	float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);// 使用全局角度PID
 
 	vec2 spd_dir = get_spd_dir(foot_point, (*path).trajectories[(*path).trajectory_count]);

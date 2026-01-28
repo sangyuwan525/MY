@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "cmsis_os2.h"
 #include "Task_Printf.h"
+#include "chassis_path.h"
 
 #include "cmsis_gcc.h"
 #include "locator_driver.h"
@@ -26,9 +27,10 @@ void StartTask_Printf(void *argument)
             // printf("desired_vx = %f\n", 1000*desired_vx);
         }
         //printf("x66 y55 z66\n");
-        printf("x%.1f",lcResult.x);
-        printf("y%.1f",lcResult.y);
-        printf("yaw%.3f\n",lcResult.r);
+        printf("%.1f,",lcResult.x);
+        printf("%.1f,",lcResult.y);
+        printf("%.3f,",lcResult.r);
+        printf("%.3f\n",test_angle);
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */
