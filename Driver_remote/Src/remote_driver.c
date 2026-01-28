@@ -16,7 +16,7 @@ int16_t vx_last=0;
 int16_t vy_last=0;
 int16_t vw_last=0;
 
-int16_t vel_threshold =200;
+int16_t vel_threshold =500;
 
 /**
  * @brief  对遥控器数据进行解算并**保护性**更新全局结构体

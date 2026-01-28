@@ -36,7 +36,7 @@ void StartTask_chassis(void *argument)
     PID_Angle_Init(&chassis_yaw_pid);
     PID_Correct_Init(&chassis_correct_pid);
     path_init_test();
-    path_spd_data_t spd_test ={1000,5000,5000};
+    path_spd_data_t spd_test ={2000,5000,5000};
 
     /* Infinite loop */
     for(;;)
@@ -126,8 +126,12 @@ void StartTask_chassis(void *argument)
                     // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
                     // Change_dji_loc(DJI_M_CLIMB_LB,590000);
                     // Change_dji_loc(DJI_M_CLIMB_RB,-590000);
-
-
+                    Change_dji_speed(DJI_2006_L, -2000);
+                    Change_dji_speed(DJI_2006_R, 2000);
+                }else
+                {
+                    //Change_dji_speed(DJI_2006_L, 0);
+                    //Change_dji_speed(DJI_2006_R, 0);
                 }
                 if (rc_engineer_data.button3 == 1)
                 {
@@ -155,20 +159,20 @@ void StartTask_chassis(void *argument)
                 {
                     button3_flag=0;
                 }
-                if (rc_engineer_data.button4 == 1)
-                {
-                    if (button4_flag==0)
-                    {
-                        //if (rc_engineer_data.)down_cnt++;
-                        valve_state=!valve_state;
-                        HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
-                        HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
-                        button4_flag=1;
-                    }
-                }else
-                {
-                    button4_flag=0;
-                }
+                // if (rc_engineer_data.button4 == 1)
+                // {
+                //     if (button4_flag==0)
+                //     {
+                //         //if (rc_engineer_data.)down_cnt++;
+                //         valve_state=!valve_state;
+                //         HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
+                //         HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
+                //         button4_flag=1;
+                //     }
+                // }else
+                // {
+                //     button4_flag=0;
+                // }
             //    else
             //     {
             //         Change_dji_speed(DJI_2006_L,0);
@@ -180,11 +184,11 @@ void StartTask_chassis(void *argument)
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
                     //Change_dji_loc(5,front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-
-                    Change_dji_loc(DJI_M_CLIMB_LB,back_up);
-                    Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+                    //
+                    // Change_dji_loc(DJI_M_CLIMB_LB,back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
                 }
                 if (rc_engineer_data.button6 == 1)
                 {
@@ -192,10 +196,10 @@ void StartTask_chassis(void *argument)
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
                     //Change_dji_loc(5,front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-                    Change_dji_loc(DJI_M_CLIMB_LB,0);
-                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,0);
                 }
             }
             else

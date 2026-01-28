@@ -65,6 +65,7 @@ extern Down_State_e current_down_state;
 //上下楼梯的函数
 void ClimbStairs(int stairs_id);
 void DownStairs(void);
+bool is_on_stair_edge(int stair_id,int face);
 
 //台阶中心标记（以R2启动区为原点）
 typedef struct

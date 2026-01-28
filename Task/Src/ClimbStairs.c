@@ -16,9 +16,19 @@
 int climb_cnt = 0;
 int down_cnt = 0;
 
+//R2出发点为原点下台阶坐标
+// pos stairs_center[13]={
+//     {0,0,0},
+//     {2780,3340,400},{1600,3340,200},{400,3340,400},
+//     {2780,4540,200},{1600,4540,400},{400,4540,600},
+//     {2780,5720,400},{1600,5720,600},{400,5720,400},
+//     {2780,6900,200},{1600,6900,400},{400,6900,400}
+// };
+
+//自定义原点下台阶坐标 偏置为-2780，-1860
 pos stairs_center[13]={
     {0,0,0},
-    {2780,3340,400},{1600,3340,200},{400,3340,400},
+    {2780,3340,400},{-1180,1480,200},{400,3340,400},
     {2780,4540,200},{1600,4540,400},{400,4540,600},
     {2780,5720,400},{1600,5720,600},{400,5720,400},
     {2780,6900,200},{1600,6900,400},{400,6900,400}
@@ -45,7 +55,7 @@ int DisToEncoder(float dis,int motor_id)
 
 void motor_move(int encoder_counts,int motor_id)
 {
-    int   lower_lim[5]={};
+    int lower_lim[5]={};
     int upper_lim[5]={};
     //int now_loc=Get_dji_information(motor_id).angle;
     if (encoder_counts<lower_lim[motor_id]) encoder_counts=lower_lim[motor_id];
@@ -54,29 +64,30 @@ void motor_move(int encoder_counts,int motor_id)
     Change_dji_loc(motor_id,send_loc);
 }
 
-//判断上楼梯时是否走到台阶边缘
+//判断上楼梯时是否走到台阶中心边缘
 bool is_on_stair_edge(int stair_id,int face)
 {
     int center_threshold=20;//距离中心轴线的偏置阈值 单位mm
-    int edge_threshold=20;//距离台阶边缘的阈值 单位mm
+    int edge_threshold=50;//距离台阶边缘的阈值 单位mm
 
     switch (face)
     {
-        case 0:
-            if (fabsf(lcResult.x-stairs_center[stair_id].x)<center_threshold && fabsf(lcResult.y-stairs_center[stair_id].y+590)<edge_threshold) return true;
+        case 0://之前590
+            if ( fabsf(lcResult.y-stairs_center[stair_id].y+300)<edge_threshold) return true;
             break;
         case 1:
-            if (fabsf(lcResult.y-stairs_center[stair_id].y)<center_threshold && fabsf(lcResult.x-stairs_center[stair_id].x+590)<edge_threshold) return true;
+            if (fabsf(lcResult.x-stairs_center[stair_id].x+300)<edge_threshold) return true;
             break;
         case 2:
-            if (fabsf(lcResult.y-stairs_center[stair_id].y)<center_threshold && fabsf(lcResult.x-stairs_center[stair_id].x-590)<edge_threshold) return true;
+            if (fabsf(lcResult.x-stairs_center[stair_id].x-300)<edge_threshold) return true;
             break;
         case 3:
-            if (fabsf(lcResult.x-stairs_center[stair_id].x)<center_threshold && fabsf(lcResult.y-stairs_center[stair_id].y-590)<edge_threshold) return true;
+            if (fabsf(lcResult.y-stairs_center[stair_id].y-300)<edge_threshold) return true;
             break;
         default:
             return false;
     }
+    return false;
 }
 
 //判断上楼梯时是否走到台阶中心
@@ -97,19 +108,19 @@ Point_struct get_stair_edge(int stair_id,int face)
     {
     case 0:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y - 590;
+        end_point.y = stairs_center[stair_id].y - (590+290);
         break;
     case 1:
-        end_point.x = stairs_center[stair_id].x - 590;
+        end_point.x = stairs_center[stair_id].x - (590+290);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 2:
-        end_point.x = stairs_center[stair_id].x + 590;
+        end_point.x = stairs_center[stair_id].x + (590+290);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 3:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y + 590;
+        end_point.y = stairs_center[stair_id].y + (590+290);
         break;
     default:
         end_point.x = lcResult.x;
@@ -118,12 +129,24 @@ Point_struct get_stair_edge(int stair_id,int face)
     return end_point;
 }
 
+//朝向角对应角度
+float face_angle(int face)
+{
+    float tmp=0.0f;
+    if (face==0) tmp=0.0f;
+    else if (face==1) tmp=-1.57f;
+    else if (face==2) tmp=1.57f;
+    else if (face==3) tmp=3.14f;
+    return tmp;
+}
+
+
 //控制R2走向台阶边缘
 
+int face=0;
 //爬楼梯的函数 高度200mm
 void ClimbStairs(int stair_id)
 {
-    int face=0;
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_climb_state == CLIMB_IDLE)
     {
@@ -182,25 +205,34 @@ void ClimbStairs(int stair_id)
             // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
             Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
             float now_pos = lcResult.r;                        // 机器人当前朝向角
-
             Point_struct end_point =get_stair_edge(stair_id,face);
             float distance = get_length(now_point, end_point);
-            vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
-            // 速度转换到车身局部坐标系
-            vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
-            const float close_limit = 500.0f;
-            if (spd_local_temp.x > close_limit) spd_local_temp.x = close_limit;
-            else if (spd_local_temp.x < -close_limit) spd_local_temp.x = -close_limit;
-            if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
-            else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
-            cha_remote(spd_local_temp.x, spd_local_temp.y, 0); // 输出末端调整速度
 
-            if (is_on_stair_edge(stair_id,face) || climb_cnt == 2)
+            float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
+
+            if (fabsf(lcResult.r-face_angle(face))<0.1f)
             {
-                // 停止向前移动
-                cha_remote(0,0,0);
-                current_climb_state = CLIMB_STEP3_LIFT_UP;
+                vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
+                // 速度转换到车身局部坐标系
+                vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
+                const float close_limit = 500.0f;
+                if (spd_local_temp.x > close_limit) spd_local_temp.x = close_limit;
+                else if (spd_local_temp.x < -close_limit) spd_local_temp.x = -close_limit;
+                if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
+                else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
+                cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
+                if (distance<50.0f)
+                {
+                    // 停止向前移动
+                    cha_remote(0,0,0);
+                    current_climb_state = CLIMB_STEP3_LIFT_UP;
+                }
+            }else
+            {
+                cha_remote(0, 0, vr);
             }
+
+
             break;
         }
 
@@ -231,9 +263,10 @@ void ClimbStairs(int stair_id)
             Change_dji_speed(DJI_2006_L, -2000);
             Change_dji_speed(DJI_2006_R, 2000);
 
-            if (is_on_stair_center(stair_id) || climb_cnt == 3)
+            if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             {
                  // 停止向前移动
+                printf("step4_end\n");
                 Change_dji_speed(DJI_2006_L, 0);
                 Change_dji_speed(DJI_2006_R, 0);
 
@@ -255,7 +288,24 @@ void ClimbStairs(int stair_id)
             if (is_motor_cplt(DJI_M_CLIMB_LF,-300000)&&is_motor_cplt(DJI_M_CLIMB_RF,300000)
                 &&is_motor_cplt(DJI_M_CLIMB_LB,-100000)&&is_motor_cplt(DJI_M_CLIMB_RB,100000))
             {
-                current_climb_state = CLIMB_COMPLETE;
+                Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
+                float now_pos = lcResult.r;                        // 机器人当前朝向角
+                Point_struct end_point ={stairs_center[stair_id].x,stairs_center[stair_id].y};
+                float distance = get_length(now_point, end_point);
+                vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
+                // 速度转换到车身局部坐标系
+                vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
+                const float close_limit = 500.0f;
+                if (spd_local_temp.x > close_limit) spd_local_temp.x = close_limit;
+                else if (spd_local_temp.x < -close_limit) spd_local_temp.x = -close_limit;
+                if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
+                else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
+                cha_remote(spd_local_temp.x, spd_local_temp.y, 0); // 输出末端调整速度
+
+                if (is_on_stair_center(stair_id))
+                {
+                    current_climb_state = CLIMB_COMPLETE;
+                }
             }
             break;
         }
@@ -367,6 +417,7 @@ void DownStairs(void)
             if (is_motor_cplt(DJI_M_CLIMB_LF,0)&&is_motor_cplt(DJI_M_CLIMB_RF,0)
                 &&is_motor_cplt(DJI_M_CLIMB_LB,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RB,front_up))//&&climb_cnt == 4)
             {
+                printf("进入第5步\n");
                 current_down_state = DOWN_STEP5_BASE_FORWARD;
             }
             break;
@@ -536,3 +587,6 @@ void UpStairs(void)
             break;
     }
 }
+
+//580
+//320 (320 580)  (-1480,1180)-> (-1180,1480)

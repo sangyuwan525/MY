@@ -454,9 +454,9 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
             else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
 
             // 角度规划
-            float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) *
-                                       (distance / (*path).length);
-
+            // float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) *
+            //                            (distance / (*path).length);
+		    float tar_ang_kaojin =(*path).end_angle;
             // 旋转速度计算，使用全局角度PID实例
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, tar_ang_kaojin, now_pos);
 
