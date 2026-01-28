@@ -108,19 +108,19 @@ Point_struct get_stair_edge(int stair_id,int face)
     {
     case 0:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y - (590+290);
+        end_point.y = stairs_center[stair_id].y - (590+280);
         break;
     case 1:
-        end_point.x = stairs_center[stair_id].x - (590+290);
+        end_point.x = stairs_center[stair_id].x - (590+280);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 2:
-        end_point.x = stairs_center[stair_id].x + (590+290);
+        end_point.x = stairs_center[stair_id].x + (590+280);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 3:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y + (590+290);
+        end_point.y = stairs_center[stair_id].y + (590+280);
         break;
     default:
         end_point.x = lcResult.x;
@@ -155,11 +155,11 @@ void ClimbStairs(int stair_id)
         if (climb_cnt == 1)
         {
             //得出上楼梯的方向
-            if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
-            else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
-            else if (fabsf(lcResult.r-1.57)<0.1) face=2;//往x轴负方向上楼梯
-            else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
-            else face=4;
+            // if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
+            // else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
+            // else if (fabsf(lcResult.r-1.57)<0.1) face=2;//往x轴负方向上楼梯
+            // else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
+            // else face=4;
 
             current_climb_state = CLIMB_STEP1_FRONT_UP;
         }
@@ -260,8 +260,8 @@ void ClimbStairs(int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, -2000);
-            Change_dji_speed(DJI_2006_R, 2000);
+            Change_dji_speed(DJI_2006_L, -6000);
+            Change_dji_speed(DJI_2006_R, 6000);
 
             if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             {
