@@ -22,6 +22,7 @@ int chassis_control_cnt;
 int button3_flag=0;
 int button4_flag=0;
 bool valve_state=0;
+int climb_test_cnt=0;
 
 
 
@@ -69,7 +70,14 @@ void StartTask_chassis(void *argument)
                                v_world.y,
                                rc_engineer_data.vw);
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
-                        ClimbStairs(2);
+                        if (climb_test_cnt==0)
+                        {
+                            ClimbStairs(2,0);
+                        }
+                        else if (climb_test_cnt==1)
+                        {
+                            ClimbStairs(3,2);
+                        }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
                         DownStairs();
                     }
@@ -121,13 +129,15 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
+                    climb_test_cnt++;
                     // // 按钮2,前侧和后侧将机身顶起
                     // Change_dji_loc(DJI_M_CLIMB_LF,10000);
                     // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
                     // Change_dji_loc(DJI_M_CLIMB_LB,590000);
                     // Change_dji_loc(DJI_M_CLIMB_RB,-590000);
-                    Change_dji_speed(DJI_2006_L, -2000);
-                    Change_dji_speed(DJI_2006_R, 2000);
+                    // Change_dji_speed(DJI_2006_L, -2000);
+                    // Change_dji_speed(DJI_2006_R, 2000);
+
                 }else
                 {
                     //Change_dji_speed(DJI_2006_L, 0);

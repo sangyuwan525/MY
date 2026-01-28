@@ -28,7 +28,7 @@ int down_cnt = 0;
 //自定义原点下台阶坐标 偏置为-2780，-1860
 pos stairs_center[13]={
     {0,0,0},
-    {2780,3340,400},{-1180,1480,200},{400,3340,400},
+    {2780,3340,400},{-1180,1480,200},{-2380,1480,400},
     {2780,4540,200},{1600,4540,400},{400,4540,600},
     {2780,5720,400},{1600,5720,600},{400,5720,400},
     {2780,6900,200},{1600,6900,400},{400,6900,400}
@@ -143,9 +143,9 @@ float face_angle(int face)
 
 //控制R2走向台阶边缘
 
-int face=0;
+
 //爬楼梯的函数 高度200mm
-void ClimbStairs(int stair_id)
+void ClimbStairs(int stair_id,int face)
 {
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_climb_state == CLIMB_IDLE)
