@@ -73,16 +73,16 @@ bool is_on_stair_edge(int stair_id,int face)
     switch (face)
     {
         case 0://之前590
-            if ( fabsf(lcResult.y-stairs_center[stair_id].y+300)<edge_threshold) return true;
+            if ( fabsf(lcResult.y-stairs_center[stair_id].y+290)<edge_threshold) return true;
             break;
         case 1:
-            if (fabsf(lcResult.x-stairs_center[stair_id].x+300)<edge_threshold) return true;
+            if (fabsf(lcResult.x-stairs_center[stair_id].x+290)<edge_threshold) return true;
             break;
         case 2:
-            if (fabsf(lcResult.x-stairs_center[stair_id].x-300)<edge_threshold) return true;
+            if (fabsf(lcResult.x-stairs_center[stair_id].x-290)<edge_threshold) return true;
             break;
         case 3:
-            if (fabsf(lcResult.y-stairs_center[stair_id].y-300)<edge_threshold) return true;
+            if (fabsf(lcResult.y-stairs_center[stair_id].y-290)<edge_threshold) return true;
             break;
         default:
             return false;
@@ -201,8 +201,8 @@ void ClimbStairs(int stair_id,int face)
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-            Change_dji_loc(DJI_M_CLIMB_RB,0);
-            Change_dji_loc(DJI_M_CLIMB_LB,0);
+            Change_dji_loc(DJI_M_CLIMB_RB,20000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-20000);
 
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
