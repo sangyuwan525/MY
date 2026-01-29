@@ -51,7 +51,8 @@ add_executable(${CMAKE_PROJECT_NAME}
         Task/Inc/Task_chassis.h
         Task/Src/Task_dji_control.c
         Task/Inc/Task_dji_control.h
-        Task/Src/ClimbStairs.c
+        chassis_control/Src/ClimbStairs.c
+        chassis_control/Src/Hfsm.c
         SEGGER_RTT/RTT/SEGGER_RTT.c
         SEGGER_RTT/RTT/SEGGER_RTT_printf.c
         Task/Inc/Task_locator_recv.h

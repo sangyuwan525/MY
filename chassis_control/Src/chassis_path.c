@@ -412,7 +412,7 @@ vec2 change_world_to_local(vec2 src, float angle)
 int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 {
     const Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
-    const float now_pos = lcResult.yaw;                        // 机器人当前朝向角
+    const float now_pos = lcResult.r;                        // 机器人当前朝向角
     // 检查当前轨迹段是否有效，防止越界
     if ((*path).trajectory_count >= (*path).trajectory_num) {
         cha_remote(0.0f, 0.0f, 0.0f);

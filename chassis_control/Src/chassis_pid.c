@@ -20,13 +20,13 @@ PID_Approaching_t chassis_kaojin_pid;
 void PID_Angle_Init(PID_Angle_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 2500.545f;
+    pid->kp = 2.545f;
     pid->ki = 1.0f;
     pid->kd = 0.0f;
 
     // 限制与阈值
-    pid->output_limit = 4000.0f;        // abs_limit_pid_angle
-    pid->integral_limit = 2500.0f;      // abs_limit_pid_angle_ill
+    pid->output_limit = 4.0f;        // abs_limit_pid_angle
+    pid->integral_limit = 2.0f;      // abs_limit_pid_angle_ill
     pid->integral_separate_thr = 0.15f; // 积分分离阈值
 
     // 状态变量初始化
@@ -290,4 +290,13 @@ vec2 PID_Approaching_Calculate(PID_Approaching_t *pid, Point_struct now_point, P
     pid->last_point.y = now_point.y;
 
     return spd;
+}
+
+void PID_Integral_Sum_Clear(void)
+{
+    chassis_yaw_pid.integral_sum = 0.0f;
+    chassis_correct_pid.integral_sum.x = 0.0f;
+    chassis_correct_pid.integral_sum.y = 0.0f;
+    chassis_kaojin_pid.integral_sum.x = 0.0f;
+    chassis_kaojin_pid.integral_sum.y = 0.0f;
 }

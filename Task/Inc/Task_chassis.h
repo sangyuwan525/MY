@@ -6,7 +6,7 @@
 #define R1_CHASSIS_TASK_CHASSIS_H
 #include <stdio.h>
 #include "cmsis_os2.h"
-#include "ClimbStairs.h"
+#include "../../chassis_control/Inc/ClimbStairs.h"
 /* Definitions ---------------------------------------------------------------*/
 // 任务循环延时时间，例如 10ms
 #define CHASSIS_TASK_PERIOD 10

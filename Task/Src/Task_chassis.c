@@ -4,10 +4,10 @@
 #include "remote_driver.h"
 #include "chassis_driver.h"
 #include "Task_chassis.h"
-
 #include "chassis_path.h"
 #include "dji_3508_2006_motor.h"
-#include "ClimbStairs.h"
+#include "../../chassis_control/Inc/ClimbStairs.h"
+#include "locator_driver.h"
 #include "SEGGER_RTT.h"
 #include "stdio.h"
 #include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
@@ -41,10 +41,10 @@ void StartTask_chassis(void *argument)
         {
             chassis_control_cnt++;
             // SEGGER_RTT_SetTerminal(0);
-            printf("LeftFront:%d\n",Get_dji_information(DJI_M_CLIMB_LF).total_angle);
-            printf("RightFront:%d\n",Get_dji_information(DJI_M_CLIMB_RF).total_angle);
-            printf("LeftBack:%d\n",Get_dji_information(DJI_M_CLIMB_LB).total_angle);
-            printf("RightBack:%d\n",Get_dji_information(DJI_M_CLIMB_RB).total_angle);
+            // printf("LeftFront:%d\n",Get_dji_information(DJI_M_CLIMB_LF).total_angle);
+            // printf("RightFront:%d\n",Get_dji_information(DJI_M_CLIMB_RF).total_angle);
+            // printf("LeftBack:%d\n",Get_dji_information(DJI_M_CLIMB_LB).total_angle);
+            // printf("RightBack:%d\n",Get_dji_information(DJI_M_CLIMB_RB).total_angle);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
@@ -52,13 +52,17 @@ void StartTask_chassis(void *argument)
                 if (rc_engineer_data.mode == CHASSIS_MODE_MANUAL)
                 {
                     // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
-                    cha_remote(rc_engineer_data.vx,
-                               rc_engineer_data.vy,
+                    vec2 remoter_speed;
+                    remoter_speed.x = rc_engineer_data.vx;
+                    remoter_speed.y = rc_engineer_data.vy;
+                    vec2 world_speed = change_world_to_local(remoter_speed,lcResult.r);
+                    cha_remote(world_speed.x,
+                               world_speed.y,
                                rc_engineer_data.vw);
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
                         ClimbStairs();
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
-                        DownStairs();
+                        //DownStairs();
                     }
 
 

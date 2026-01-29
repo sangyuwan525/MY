@@ -105,6 +105,9 @@ typedef struct {
     float down_stage;   ///< 曲线减速阶段对应的路径长度
 } path_spd_data_t;
 
+vec2 change_world_to_local(vec2 src, float angle);
+float get_length(Point_struct a, Point_struct b);
+int go_path_control(Path_struct* path, path_spd_data_t path_spd);
 
 
 #endif //R1_CHASSIS_CHASSIS_PATH_H

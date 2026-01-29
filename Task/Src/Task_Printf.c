@@ -26,11 +26,9 @@ void StartTask_Printf(void *argument)
             // printf("desired_vx = %f\n", 1000*desired_vx);
 
         }
-        uint32_t primask_bit = __get_PRIMASK();
         //printf("x=%f\n\r",lcResult.x);
         //printf("y=%f\n\r",lcResult.y);
-        printf("yaw=%f\n\r",lcResult.r);
-        __set_PRIMASK(primask_bit);
+        printf("x%.1f y%.1f yaw%.4f\n",lcResult.x,lcResult.y,lcResult.r);
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */
