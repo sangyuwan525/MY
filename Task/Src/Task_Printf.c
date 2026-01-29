@@ -33,7 +33,7 @@ void StartTask_Printf(void *argument)
         printf("%.3f,",lcResult.r);
         printf("%.3f\n",test_angle);
         printf("state:%d,cnt:%d\n",current_climb_state,climb_cnt);
-        printf("edge:%d\n",is_on_stair_edge(2,0));
+        printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */
