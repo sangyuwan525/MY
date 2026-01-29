@@ -33,9 +33,7 @@ void StartTask_chassis(void *argument)
     chassis_control_cnt=0;
 
     //go_path_test
-    PID_Approaching_Init(&chassis_kaojin_pid);
-    PID_Angle_Init(&chassis_yaw_pid);
-    PID_Correct_Init(&chassis_correct_pid);
+    PID_Init();
     path_init_test();
     path_spd_data_t spd_test ={2000,5000,5000};
 
@@ -129,6 +127,7 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
+                    PID_Init();
                     climb_cnt=0;
                     climb_test_cnt++;
                     // // 按钮2,前侧和后侧将机身顶起

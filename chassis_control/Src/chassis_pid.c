@@ -292,7 +292,9 @@ vec2 PID_Approaching_Calculate(PID_Approaching_t *pid, Point_struct now_point, P
     return spd;
 }
 
-void PID_Clear()
+void PID_Init(void)
 {
-
+    PID_Approaching_Init(&chassis_kaojin_pid);
+    PID_Angle_Init(&chassis_yaw_pid);
+    PID_Correct_Init(&chassis_correct_pid);
 }
