@@ -127,9 +127,7 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
-                    PID_Init();
-                    climb_cnt=0;
-                    climb_test_cnt++;
+
                     // // 按钮2,前侧和后侧将机身顶起
                     // Change_dji_loc(DJI_M_CLIMB_LF,10000);
                     // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
@@ -169,20 +167,23 @@ void StartTask_chassis(void *argument)
                 {
                     button3_flag=0;
                 }
-                // if (rc_engineer_data.button4 == 1)
-                // {
-                //     if (button4_flag==0)
-                //     {
-                //         //if (rc_engineer_data.)down_cnt++;
-                //         valve_state=!valve_state;
-                //         HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
-                //         HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
-                //         button4_flag=1;
-                //     }
-                // }else
-                // {
-                //     button4_flag=0;
-                // }
+                if (rc_engineer_data.button4 == 1)
+                {
+                    if (button4_flag==0)
+                    {
+                        //if (rc_engineer_data.)down_cnt++;
+                        // valve_state=!valve_state;
+                        // HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
+                        // HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
+                        PID_Init();
+                        climb_cnt=0;
+                        climb_test_cnt++;
+                        button4_flag=1;
+                    }
+                }else
+                {
+                    button4_flag=0;
+                }
             //    else
             //     {
             //         Change_dji_speed(DJI_2006_L,0);

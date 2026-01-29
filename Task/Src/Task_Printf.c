@@ -10,6 +10,7 @@
 
 #include "cmsis_gcc.h"
 #include "locator_driver.h"
+#include "Task_chassis.h"
 
 void StartTask_Printf(void *argument)
 {
@@ -30,9 +31,8 @@ void StartTask_Printf(void *argument)
         //printf("x66 y55 z66\n");
         printf("%.1f,",lcResult.x);
         printf("%.1f,",lcResult.y);
-        printf("%.3f,",lcResult.r);
-        printf("%.3f\n",test_angle);
-        printf("state:%d,cnt:%d\n",current_climb_state,climb_cnt);
+        printf("%.3f\n",lcResult.r);
+        printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         osDelay(500);
     }
