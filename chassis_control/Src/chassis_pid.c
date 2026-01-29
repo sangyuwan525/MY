@@ -190,7 +190,7 @@ vec2 PID_Correct_Calculate(PID_Correct_t *pid, Point_struct now_point, Point_str
  */
 void PID_Approaching_Init(PID_Approaching_t *pid)
 {
-    pid->kp = 2.2f;
+    pid->kp = 3.0f;
     pid->ki = 0.59f;
     pid->kd = 0.0f; // 注意：原代码中 kd=0.0，但 D 项逻辑是存在的
 

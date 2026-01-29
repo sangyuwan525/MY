@@ -233,6 +233,8 @@ void ClimbStairs(int stair_id,int face)
                 if (distance<50.0f && !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
                 {
                     // 停止向前移动
+                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    Change_dji_loc(DJI_M_CLIMB_LB,0);
                     cha_remote(0,0,0);
                     current_climb_state = CLIMB_STEP3_LIFT_UP;
                 }else
