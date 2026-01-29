@@ -20,7 +20,7 @@ PID_Approaching_t chassis_kaojin_pid;
 void PID_Angle_Init(PID_Angle_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 1.2f;
+    pid->kp = 2.0f;
     pid->ki = 0.01f;
     pid->kd = 0.0f;
 
@@ -190,12 +190,12 @@ vec2 PID_Correct_Calculate(PID_Correct_t *pid, Point_struct now_point, Point_str
  */
 void PID_Approaching_Init(PID_Approaching_t *pid)
 {
-    pid->kp = 2.0f;
+    pid->kp = 2.2f;
     pid->ki = 0.59f;
     pid->kd = 0.0f; // 注意：原代码中 kd=0.0，但 D 项逻辑是存在的
 
     // 限制与阈值
-    pid->output_limit = 2000.0f;        // abs_limit_kaojin
+    pid->output_limit = 2200.0f;        // abs_limit_kaojin
     pid->integral_limit = 200.0f;       // abs_limit_kaojin_ill
     pid->integral_separate_i_thr = 13.0f; // 积分项分离阈值 (原代码中直接判断 sum_err_spd > 13)
     pid->min_direction_thr = 1e-7f;     // min (使用浮点数常量的更小值)

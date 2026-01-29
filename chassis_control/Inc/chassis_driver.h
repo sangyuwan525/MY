@@ -20,7 +20,7 @@
 // 注意:以下这些值目前纯数瞎给，需要根据实际底盘参数进行调整
 #define WHEEL_NUM       4
 #define SPEED_LIMIT_XY  3000.0f  // XY轴合速度限幅 (MM/S)
-#define SPEED_LIMIT_R  3.0f  // 自转速度限幅 (MM/S)
+#define SPEED_LIMIT_R  5.0f  // 自转速度限幅 (MM/S)
 #define MOTOR_VEL_LIMIT 10000.0f  // 单个轮子转速限幅 (RPM 或自定义单位)
 #define CHASSIS_RADIUS  289.91f   // 底盘有效半径 (MM)
 #define WHEEL_CIRCUMFERENCE 314.16f // 轮子周长 (MM)
