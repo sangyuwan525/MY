@@ -133,13 +133,31 @@ Point_struct get_stair_edge(int stair_id,int face)
 float face_angle(int face)
 {
     float tmp=0.0f;
-    if (face==0) tmp=0.0f;
-    else if (face==1) tmp=-1.57f;
-    else if (face==2) tmp=1.57f;
-    else if (face==3) tmp=3.14f;
+    if (face==0) tmp=0.0f;//往y轴正方向上楼梯
+    else if (face==1) tmp=-1.57f;//往x轴正方向上楼梯
+    else if (face==2) tmp=1.57f;//往x轴负方向上楼梯
+    else if (face==3) tmp=3.14f;//往y轴负方向上楼梯
     return tmp;
 }
 
+//运动靠近目标点
+void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,float vr)
+{
+    vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
+    // 速度转换到车身局部坐标系
+    vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
+    const float close_limit = 500.0f;
+    float max_spd=spd_local_temp.x>spd_local_temp.y?spd_local_temp.x:spd_local_temp.y;
+    float min_spd=spd_local_temp.x<spd_local_temp.y?spd_local_temp.x:spd_local_temp.y;
+    float rating=1.0;
+    if (max_spd>close_limit) rating=close_limit/max_spd;
+    if (min_spd<-close_limit) rating=-close_limit/min_spd;
+
+    spd_local_temp.x*=rating;
+    spd_local_temp.y*=rating;
+
+    cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
+}
 
 //控制R2走向台阶边缘
 
@@ -212,20 +230,14 @@ void ClimbStairs(int stair_id,int face)
 
             if (fabsf(lcResult.r-face_angle(face))<0.1f)
             {
-                vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
-                // 速度转换到车身局部坐标系
-                vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
-                const float close_limit = 500.0f;
-                if (spd_local_temp.x > close_limit) spd_local_temp.x = close_limit;
-                else if (spd_local_temp.x < -close_limit) spd_local_temp.x = -close_limit;
-                if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
-                else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
-                cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
-                if (distance<50.0f)
+                if (distance<40.0f)
                 {
                     // 停止向前移动
                     cha_remote(0,0,0);
                     current_climb_state = CLIMB_STEP3_LIFT_UP;
+                }else
+                {
+                    move_approach(now_point,end_point,now_pos,vr);
                 }
             }else
             {
@@ -291,16 +303,8 @@ void ClimbStairs(int stair_id,int face)
                 Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
                 float now_pos = lcResult.r;                        // 机器人当前朝向角
                 Point_struct end_point ={stairs_center[stair_id].x,stairs_center[stair_id].y};
-                float distance = get_length(now_point, end_point);
-                vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
-                // 速度转换到车身局部坐标系
-                vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
-                const float close_limit = 500.0f;
-                if (spd_local_temp.x > close_limit) spd_local_temp.x = close_limit;
-                else if (spd_local_temp.x < -close_limit) spd_local_temp.x = -close_limit;
-                if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
-                else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
-                cha_remote(spd_local_temp.x, spd_local_temp.y, 0); // 输出末端调整速度
+
+                move_approach(now_point,end_point,now_pos,0);
 
                 if (is_on_stair_center(stair_id))
                 {

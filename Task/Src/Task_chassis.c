@@ -129,6 +129,7 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
+                    climb_cnt=0;
                     climb_test_cnt++;
                     // // 按钮2,前侧和后侧将机身顶起
                     // Change_dji_loc(DJI_M_CLIMB_LF,10000);
