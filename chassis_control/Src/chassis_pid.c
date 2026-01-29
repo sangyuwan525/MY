@@ -20,8 +20,8 @@ PID_Approaching_t chassis_kaojin_pid;
 void PID_Angle_Init(PID_Angle_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 1.0f;
-    pid->ki = 0.0f;
+    pid->kp = 1.2f;
+    pid->ki = 0.01f;
     pid->kd = 0.0f;
 
     // 限制与阈值
