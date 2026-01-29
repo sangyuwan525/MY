@@ -108,19 +108,19 @@ Point_struct get_stair_edge(int stair_id,int face)
     {
     case 0:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y - (590+280);
+        end_point.y = stairs_center[stair_id].y - (590+270);
         break;
     case 1:
-        end_point.x = stairs_center[stair_id].x - (590+280);
+        end_point.x = stairs_center[stair_id].x - (590+270);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 2:
-        end_point.x = stairs_center[stair_id].x + (590+280);
+        end_point.x = stairs_center[stair_id].x + (590+270);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 3:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y + (590+280);
+        end_point.y = stairs_center[stair_id].y + (590+270);
         break;
     default:
         end_point.x = lcResult.x;
@@ -228,7 +228,7 @@ void ClimbStairs(int stair_id,int face)
 
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
 
-            if (fabsf(lcResult.r-face_angle(face))<0.1f)
+            if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
                 if (distance<40.0f)
                 {
