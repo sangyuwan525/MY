@@ -113,7 +113,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 
-  plan_route();
+  PlanResult best = plan_route();
   Dji_Motor_Registry_Init();
   // SEGGER_RTT_Init();
   // SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
@@ -171,8 +171,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV5;
-  RCC_OscInitStruct.PLL.PLLN = 68;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 85;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;

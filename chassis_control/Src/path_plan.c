@@ -202,7 +202,7 @@ void reconstruct(
 
 // ================= 主函数 =================
 // 构造一个示例地图，寻找最优的两个目标 R2 的取货顺序与路径
-int plan_route(){
+PlanResult plan_route(){
     // 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
     KFS_Type map[TOTAL_NODES]={
         KFS_R1, KFS_NONE, KFS_R2,
@@ -234,33 +234,5 @@ int plan_route(){
             }
         }
     }
-
-    // 输出结果
-    if(best<INF){
-        printf("=== Plan Success ===\n");
-        printf("Cost: %d\n",best_res.cost);
-
-        printf("R2 Taken: %d %d\n",
-               best_res.r2_taken[0]+1,
-               best_res.r2_taken[1]+1);
-
-        printf("R2 Removed: ");
-        for(int i=0;i<best_res.r2r_cnt;i++)
-            printf("%d ",best_res.r2_removed[i]+1);
-
-        printf("\nR1 Removed: ");
-        for(int i=0;i<best_res.r1_cnt;i++)
-            printf("%d ",best_res.r1_removed[i]+1);
-
-        printf("\nPath: ");
-        for(int i=0;i<best_res.path_len;i++){
-            if(best_res.path[i]==ENTRY_NODE) printf("Entry ");
-            else if(best_res.path[i]==EXIT_NODE) printf("Exit ");
-            else printf("%d ",best_res.path[i]+1);
-        }
-        printf("\n");
-    }else{
-        printf("No valid path\n");
-    }
-    return 0;
+    return best_res;
 }

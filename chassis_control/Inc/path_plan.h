@@ -59,6 +59,6 @@ typedef struct {
     int16_t cost;       // 最终代价
 } PlanResult;
 
-int plan_route();
+PlanResult plan_route();
 
 #endif
