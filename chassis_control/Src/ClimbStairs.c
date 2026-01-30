@@ -163,7 +163,11 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
 
 
 //爬楼梯的函数 高度200mm
-void ClimbStairs(int stair_id,int face)
+/**
+ * @brief 爬楼梯控制函数
+ * @return int 状态反馈：0-正在爬升，1-爬升完成并到位
+ */
+int ClimbStairs(int stair_id,int face)
 {
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_climb_state == CLIMB_IDLE)
@@ -180,6 +184,7 @@ void ClimbStairs(int stair_id,int face)
             // else face=4;
 
             current_climb_state = CLIMB_STEP1_FRONT_UP;
+            return 0;
         }
     }
 
@@ -320,6 +325,7 @@ void ClimbStairs(int stair_id,int face)
         {
             current_climb_state = CLIMB_IDLE;
             climb_cnt = 0;
+            return 1;
             break;
         }
 
@@ -327,6 +333,7 @@ void ClimbStairs(int stair_id,int face)
             current_climb_state = CLIMB_IDLE;
             break;
     }
+    return 0
 }
 //下楼梯的函数
 void DownStairs(void)
