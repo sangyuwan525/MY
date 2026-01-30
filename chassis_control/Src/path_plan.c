@@ -256,7 +256,7 @@ PlanResult plan_route(){
         for(int i=0;i<best_res.path_len;i++){
             if(best_res.path[i]==ENTRY_NODE) printf("Entry ");
             else if(best_res.path[i]==EXIT_NODE) printf("Exit ");
-            else printf("%d ",best_res.path[i]+1);
+            else printf("%d ",best_res.path[i]);
         }
         printf("\n");
     }else{

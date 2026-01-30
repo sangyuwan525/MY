@@ -66,6 +66,7 @@ extern Down_State_e current_down_state;
 int ClimbStairs(int stairs_id,int face);
 void DownStairs(void);
 bool is_on_stair_edge(int stair_id,int face);
+float face_angle(int face);
 
 //台阶中心标记（以R2启动区为原点）
 typedef struct

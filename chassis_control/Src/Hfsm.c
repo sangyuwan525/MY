@@ -1,7 +1,4 @@
 #include "Hfsm.h"
-#include "chassis_path.h"
-#include "path.h"
-#include "path_plan.h"
 
 #define TOTAL_STICK  1  // 一区总共拿取的杆数量
 
@@ -61,49 +58,78 @@ void Handle_MC_Logic(R2_Context_t *r2) {
 
 //  二区逻辑
 void Handle_MF_Logic(R2_Context_t *r2) {
-    static int target_block_id = 0;
-
     switch (r2->sub_state.mf) {
-        case MF_ENTRY:
-            // 规则4.4.13: 必须通过R2入口进入
-            if (go_path_control(&path_test,spd_test) == 1) {  // 走到梅林入口
-                r2->sub_state.mf = MF_SCAN_PATH;
+        case MF_ENTRY: // 进入树林入口
+            // 规则：从入口方块(1,2,3)进入，假设此处调用路径控制前往入口
+            if (go_path_control(&path_test, spd_test) == 1) {
+                // 进入成功后，调用 path_plan.c 中的算法进行全局规划
+                // 假设输入地图数据 map，获取最优路径
+                r2->plan = plan_route();
+                r2->current_step = 1;
+                r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 
-        case MF_SCAN_PATH:
-            // 视觉扫描KFS，排除假KFS (规则3.6.3)
-            // 规划路径：必须基于“相邻”关系移动 [cite: 85]
-            PlanResult best = plan_route();  // 暂时放在这里，后面可以放到main函数初始化里或者其他什么地方
-            if (target_block_id != best.path[best.path_len-1]) {
-                r2->sub_state.mf = MF_MOVE_TO_BLOCK;
-            } else {
-                // 如果没有KFS可捡或者已满，准备离开
+        case MF_ACTION_JUDGE: // 决策下一步动作
+            if (r2->current_step >= r2->plan.path_len) {
+                // 如果目标格子是出口，路径走完，准备退出
                 r2->sub_state.mf = MF_EXIT_NAV;
+            } else {
+                // 获取当前路径点的目标
+                r2->target_stair_id = r2->plan.path[r2->current_step];
+                r2->approach_face = 0;  //calculate_face(r2->target_stair_id); // 根据位置计算朝向
+                // 根据 path_plan.h 中的规划结果判断
+                if (is_target_kfs(r2->target_stair_id)) {
+                    r2->sub_state.mf = MF_PICK_ADJACENT;
+                } else if (is_obstacle_kfs(r2->target_stair_id)) {
+                    r2->sub_state.mf = MF_REMOVE_KFS;
+                } else {
+                    r2->current_step++;
+                    r2->sub_state.mf = MF_MOVE_TO_BLOCK;
+                }
             }
             break;
 
-        case MF_MOVE_TO_BLOCK:
-            // 移动到底盘控制算法计算出的相邻方块
-            if (Hardware_MoveToBlock(target_block_id)) {
-                r2->sub_state.mf = MF_PICK_ADJACENT;
+        case MF_MOVE_TO_BLOCK: // 爬楼梯移动
+            // 调用您修改后的 int 返回值类型的 ClimbStairs
+            int climb_status = ClimbStairs(r2->target_stair_id, r2->approach_face);
+            if (climb_status == 1) {
+                // 爬坡并定位完成后，判断该位置是要拿取 KFS 还是移除障碍
+                // 根据 path_plan.h 中的规划结果判断
+                if (is_target_kfs(r2->target_stair_id)) {
+                    r2->sub_state.mf = MF_PICK_ADJACENT;
+                } else if (is_obstacle_kfs(r2->target_stair_id)) {
+                    r2->sub_state.mf = MF_REMOVE_KFS;
+                } else {
+                    r2->current_step++;
+                    r2->sub_state.mf = MF_ACTION_JUDGE;
+                }
             }
             break;
 
-        case MF_PICK_ADJACENT:
-            // 规则4.4.14: R2只能拿取相邻方块上的R2 KFS
-            if (Hardware_PickKFS()) {
-                r2->kfs_count++;
-                r2->sub_state.mf = MF_SCAN_PATH; // 继续寻找下一个
+        case MF_PICK_ADJACENT: // 抓取相邻 KFS
+            // 执行机械臂抓取动作
+            if (Hardware_PickKFSAction()) {
+                r2->kfs_count++; // R2 秘籍计数
+                r2->current_step++;
+                r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 
-        case MF_EXIT_NAV:
-            // 规则4.4.19: 必须经由10, 11或12号方块之一离开 [cite: 133]
-            // 规则4.4.16: 离开前必须携带至少一个R2 KFS [cite: 133]
-            if (r2->kfs_count > 0 && Hardware_MoveToExitBlocks()) {
+        case MF_REMOVE_KFS: // 移除障碍 KFS
+            // 规则 4.4.4: R2 可以移除阻碍路径的非目标 KFS（不能放入储藏区）
+            if (Hardware_RemoveObstacleAction()) {
+                r2->current_step++;
+                r2->sub_state.mf = MF_ACTION_JUDGE;
+            }
+            break;
+
+        case MF_EXIT_NAV: // 导航至出口
+            // 规则：前往 10/11/12 号方块准备进入三区
+            if (go_path_control(&exit_path, spd_test) == 1) {
+                // 切换到顶级状态：三区对抗区
                 r2->current_top_state = STATE_CF_AREA;
-                r2->sub_state.cf = CF_CLIMB_RAMP;
+                r2->sub_state.cf = CF_INIT;
             }
             break;
     }
