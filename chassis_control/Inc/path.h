@@ -7,6 +7,7 @@
 
 #include "chassis_path.h"
 extern Path_struct path_test;
+extern path_spd_data_t spd_test;
 
 void path_init_test();
 

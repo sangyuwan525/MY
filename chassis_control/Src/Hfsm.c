@@ -1,48 +1,63 @@
-// #include "Hfsm.h"
-//
-//
-// //  一区逻辑
-// void Handle_MC_Logic(R2_Context_t *r2) {
-//     switch (r2->sub_state.mc) {
-//         case MC_INIT:
-//             // 初始化传感器，定位
-//             r2->sub_state.mc = MC_PICK_HEAD;
-//             break;
-//
-//         case MC_PICK_HEAD:
-//             // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
-//             if (Hardware_PickHeadAction()) {
-//                 r2->sub_state.mc = MC_ASSEMBLE_WAIT;
-//             }
-//             break;
-//
-//         case MC_ASSEMBLE_WAIT:
-//             // 移动到预定组装位置，视觉对准长杆
-//             if (Hardware_MoveToAssemblePoint()) {
-//                 r2->sub_state.mc = MC_ASSEMBLE_ACT;
-//             }
-//             break;
-//
-//         case MC_ASSEMBLE_ACT:
-//             // 规则4.3.6: 组装过程中R1与R2不得直接肢体接触
-//             // R2保持端头稳定，等待R1插入
-//             if (Sensors_DetectAssemblyComplete()) {
-//                 r2->weapon_ready = true;
-//                 r2->sub_state.mc = MC_WAIT_R1_EXIT;
-//             }
-//             break;
-//
-//         case MC_WAIT_R1_EXIT:
-//             // 规则4.3.10: 只有在R1完全离开武馆后，R2才能离开
-//             if (Sensors_IsR1LeftMC() || r2->r1_left_mc) {
-//                 // 切换到顶层状态：进入梅林
-//                 r2->current_top_state = STATE_MF_AREA;
-//                 r2->sub_state.mf = MF_ENTRY;
-//             }
-//             break;
-//     }
-// }
-//
+#include "Hfsm.h"
+#include "chassis_path.h"
+#include "path.h"
+
+#define TOTAL_STICK  1  // 一区总共拿取的杆数量
+
+//向上层发送信息
+void send_flag_to_up(int flag){}
+int receive_flag(){
+    return 1;
+}
+
+//  一区逻辑
+void Handle_MC_Logic(R2_Context_t *r2) {
+    switch (r2->sub_state.mc) {
+        case MC_INIT:  //  初始状态
+            // 初始化传感器，定位
+            r2->sub_state.mc = MC_PICK_HEAD;
+            break;
+
+        case MC_PICK_HEAD:  //  出发取杆
+            // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
+            if (go_path_control(&path_test,spd_test) == 1) {
+                r2->stick_count++;
+                r2->sub_state.mc = MC_ASSEMBLE_WAIT;
+            }
+            break;
+
+        case MC_ASSEMBLE_WAIT:  // 移动到组装位置并等待组装
+            // 移动到预定组装位置，视觉对准长杆
+            if (go_path_control(&path_test,spd_test) == 1) {
+                r2->sub_state.mc = MC_ASSEMBLE_ACT;
+            }
+            break;
+
+        case MC_ASSEMBLE_ACT:  // 执行组装动作
+            // 规则4.3.6: 组装过程中R1与R2不得直接肢体接触
+            // R2保持端头稳定，等待R1插入
+            send_flag_to_up(FLAG_ASSEMBLE);  // 向上层发送组装信号
+            if (receive_flag() == 1) {  // 收到组装完成的信号
+                if (r2->stick_count < TOTAL_STICK) {
+                    r2->sub_state.mc = MC_PICK_HEAD;
+                }else {
+                    r2->weapon_ready = true;
+                    r2->sub_state.mc = MC_WAIT_R1_EXIT;
+                }
+            }
+            break;
+
+        case MC_WAIT_R1_EXIT:
+            // 规则4.3.10: 只有在R1完全离开武馆后，R2才能离开
+            if (receive_flag()==1 || r2->r1_left_mc) {
+                // 切换到顶层状态：进入梅林
+                r2->current_top_state = STATE_MF_AREA;
+                r2->sub_state.mf = MF_ENTRY;
+            }
+            break;
+    }
+}
+
 // //  二区逻辑
 // void Handle_MF_Logic(R2_Context_t *r2) {
 //     static int target_block_id = 0;
@@ -150,40 +165,33 @@
 //     R2_Context_t robot_ctx = {0};
 //     robot_ctx.current_top_state = STATE_MC_AREA;
 //     robot_ctx.sub_state.mc = MC_INIT;
-//
-//     while (1) {
-//         // 全局安全检测
-//         if (Sensors_EmergencyStopPressed()) {
-//             robot_ctx.current_top_state = STATE_EMERGENCY;
-//         }
-//
-//         // 分层状态机调度
-//         switch (robot_ctx.current_top_state) {
-//             case STATE_MC_AREA:
-//                 Handle_MC_Logic(&robot_ctx);
-//                 break;
-//
-//             case STATE_MF_AREA:
-//                 Handle_MF_Logic(&robot_ctx);
-//                 break;
-//
-//             case STATE_CF_AREA:
-//                 Handle_CF_Logic(&robot_ctx);
-//                 break;
-//
-//             case STATE_FINISHED:
-//                 Hardware_StopAllMotors();
-//                 // 庆祝动作
-//                 break;
-//
-//             case STATE_EMERGENCY:
-//                 Hardware_StopAllMotors();
-//                 // 等待复位
-//                 break;
-//         }
-//
-//         // 维持控制频率 (e.g., 100Hz)
-//         Delay_ms(10);
+//     // 全局安全检测
+//     if (Sensors_EmergencyStopPressed()) {
+//         robot_ctx.current_top_state = STATE_EMERGENCY;
 //     }
+//
+//     // 分层状态机调度
+//     switch (robot_ctx.current_top_state) {
+//         case STATE_MC_AREA:
+//             Handle_MC_Logic(&robot_ctx);
+//             break;
+//
+//         case STATE_MF_AREA:
+//             Handle_MF_Logic(&robot_ctx);
+//             break;
+//
+//         case STATE_CF_AREA:
+//             Handle_CF_Logic(&robot_ctx);
+//             break;
+//
+//         case STATE_FINISHED:
+//             Hardware_StopAllMotors();
+//             // 庆祝动作
+//             break;
+//
+//         case STATE_EMERGENCY:
+//             Hardware_StopAllMotors();
+//             // 等待复位
+//             break;
 //     return 0;
 // }

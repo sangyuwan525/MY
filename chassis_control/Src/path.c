@@ -7,6 +7,7 @@
 
 
 Path_struct path_test;
+path_spd_data_t spd_test ={3000,5000,5000};
 
 void path_init() {
     Trajectory trajectory_data[4] = {

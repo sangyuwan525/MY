@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+// --- 向上层发送的动作指令 ---
+typedef enum {
+    FLAG_ASSEMBLE,   // 一区组装武器指令
+} FLAG_TO_UP;
+
 // --- 顶级状态：区域逻辑 (Top-Level States) ---
 typedef enum {
     STATE_MC_AREA,    // 一区：武馆 (Martial Arts Hall)
@@ -51,6 +56,7 @@ typedef struct {
     } sub_state;
 
     int kfs_count;        // 持有的KFS数量
+    int stick_count;      // 以取杆的数量
     bool weapon_ready;    // 兵器是否组装完成
     bool r1_left_mc;      // R1是否已离开武馆信号
     bool is_lifted;       // 是否被R1举起

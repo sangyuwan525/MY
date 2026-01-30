@@ -35,7 +35,6 @@ void StartTask_chassis(void *argument)
     //go_path_test
     PID_Init();
     path_init_test();
-    path_spd_data_t spd_test ={3000,5000,5000};
 
     /* Infinite loop */
     for(;;)
