@@ -15,7 +15,7 @@
 
 /* Global Variables ----------------------------------------------------------*/
 extern int chassis_control_cnt;//应对突发情况（如：遥控器失联）的自检变量
-
+extern int climb_test_cnt;
 /* Functions -----------------------------------------------------------------*/
 /**************外部接口begin**************/
 void Chassis_Task(void *argument);

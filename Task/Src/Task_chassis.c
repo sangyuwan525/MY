@@ -4,19 +4,25 @@
 #include "remote_driver.h"
 #include "chassis_driver.h"
 #include "Task_chassis.h"
+
 #include "chassis_path.h"
 #include "dji_3508_2006_motor.h"
-#include "../../chassis_control/Inc/ClimbStairs.h"
-#include "locator_driver.h"
+#include "ClimbStairs.h"
 #include "SEGGER_RTT.h"
 #include "stdio.h"
 #include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
 #include "usart.h"
+#include "path.h"
+#include "Task_chassis.h"
+#include "chassis_pid.h"
+#include "locator_driver.h"
+
 int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
 int button3_flag=0;
 int button4_flag=0;
 bool valve_state=0;
+int climb_test_cnt=0;
 
 
 
@@ -25,6 +31,12 @@ void StartTask_chassis(void *argument)
     /* USER CODE BEGIN StartTask_chassis */
     remote_engineer_t rc_engineer_data;
     chassis_control_cnt=0;
+
+    //go_path_test
+    PID_Init();
+    path_init_test();
+    path_spd_data_t spd_test ={3000,5000,5000};
+
     /* Infinite loop */
     for(;;)
     {
@@ -41,31 +53,36 @@ void StartTask_chassis(void *argument)
         {
             chassis_control_cnt++;
             // SEGGER_RTT_SetTerminal(0);
-            // printf("LeftFront:%d\n",Get_dji_information(DJI_M_CLIMB_LF).total_angle);
-            // printf("RightFront:%d\n",Get_dji_information(DJI_M_CLIMB_RF).total_angle);
-            // printf("LeftBack:%d\n",Get_dji_information(DJI_M_CLIMB_LB).total_angle);
-            // printf("RightBack:%d\n",Get_dji_information(DJI_M_CLIMB_RB).total_angle);
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
                 // 模式 2 为手动模式
                 if (rc_engineer_data.mode == CHASSIS_MODE_MANUAL)
                 {
+                    vec2 v_world,remote;
+                    remote.x=rc_engineer_data.vx;
+                    remote.y=rc_engineer_data.vy;
+                   v_world= change_world_to_local(remote,lcResult.r);
                     // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
-                    vec2 remoter_speed;
-                    remoter_speed.x = rc_engineer_data.vx;
-                    remoter_speed.y = rc_engineer_data.vy;
-                    vec2 world_speed = change_world_to_local(remoter_speed,lcResult.r);
-                    cha_remote(world_speed.x,
-                               world_speed.y,
+                    cha_remote(v_world.x,
+                               v_world.y,
                                rc_engineer_data.vw);
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
-                        ClimbStairs();
+                        if (climb_test_cnt==0)
+                        {
+                            ClimbStairs(2,0);
+                        }
+                        else if (climb_test_cnt==1)
+                        {
+                            ClimbStairs(3,2);
+                        }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
-                        //DownStairs();
+                        DownStairs();
                     }
-
-
+                }
+                else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
+                {
+                    go_path_control(&path_test,spd_test);
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
@@ -79,36 +96,50 @@ void StartTask_chassis(void *argument)
                     down_cnt=0;
                 }
                 //前3508抬升
+                // if (rc_engineer_data.button1 == 1)
+                // {
+                //     // 按钮1被按下，后轮2006往前走
+                //
+                //     //气缸测试 收
+                //     if (rc_engineer_data.test_mode==UP_MODE)
+                //     {
+                //         Change_dji_speed(DJI_2006_L,-2500);
+                //         Change_dji_speed(DJI_2006_R,2500);
+                //     }
+                //
+                // }
+                // else
+                // {
+                //     if (rc_engineer_data.test_mode==UP_MODE)
+                //     {
+                //         Change_dji_speed(DJI_2006_L,0);
+                //         Change_dji_speed(DJI_2006_R,0);
+                //     }
+                //
+                // }
+                //
+
+                //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
-                    // 按钮1被按下，后轮2006往前走
-
-                    //气缸测试 收
-                    if (rc_engineer_data.test_mode==UP_MODE)
-                    {
-                        Change_dji_speed(DJI_2006_L,-2500);
-                        Change_dji_speed(DJI_2006_R,2500);
-                    }
-
+                    climb_cnt =0;
+                    current_climb_state = CLIMB_IDLE;
                 }
-                else
-                {
-                    if (rc_engineer_data.test_mode==UP_MODE)
-                    {
-                        Change_dji_speed(DJI_2006_L,0);
-                        Change_dji_speed(DJI_2006_R,0);
-                    }
-
-                }
-                //
                 if (rc_engineer_data.button2 == 1)
                 {
-                    // 按钮2,前侧和后侧将机身顶起
-                    Change_dji_loc(DJI_M_CLIMB_LF,10000);
-                    Change_dji_loc(DJI_M_CLIMB_RF,-10000);
-                    Change_dji_loc(DJI_M_CLIMB_LB,590000);
-                    Change_dji_loc(DJI_M_CLIMB_RB,-590000);
 
+                    // // 按钮2,前侧和后侧将机身顶起
+                    // Change_dji_loc(DJI_M_CLIMB_LF,10000);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,590000);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,-590000);
+                    // Change_dji_speed(DJI_2006_L, -2000);
+                    // Change_dji_speed(DJI_2006_R, 2000);
+
+                }else
+                {
+                    //Change_dji_speed(DJI_2006_L, 0);
+                    //Change_dji_speed(DJI_2006_R, 0);
                 }
                 if (rc_engineer_data.button3 == 1)
                 {
@@ -141,9 +172,12 @@ void StartTask_chassis(void *argument)
                     if (button4_flag==0)
                     {
                         //if (rc_engineer_data.)down_cnt++;
-                        valve_state=!valve_state;
-                        HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
-                        HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
+                        // valve_state=!valve_state;
+                        // HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
+                        // HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
+                        PID_Init();
+                        climb_cnt=0;
+                        climb_test_cnt++;
                         button4_flag=1;
                     }
                 }else
@@ -161,11 +195,11 @@ void StartTask_chassis(void *argument)
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
                     //Change_dji_loc(5,front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-
-                    Change_dji_loc(DJI_M_CLIMB_LB,back_up);
-                    Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+                    //
+                    // Change_dji_loc(DJI_M_CLIMB_LB,back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
                 }
                 if (rc_engineer_data.button6 == 1)
                 {
@@ -173,10 +207,10 @@ void StartTask_chassis(void *argument)
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
                     //Change_dji_loc(5,front_up2);
-                    Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RF,front_up);
-                    Change_dji_loc(DJI_M_CLIMB_LB,0);
-                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,0);
                 }
             }
             else

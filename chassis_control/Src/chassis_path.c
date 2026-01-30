@@ -360,7 +360,7 @@ vec2 get_spd_on_path_calculate(path_spd_data_t path_spd, float path_pos, float l
 
         // 减速曲线的起始点应该在 path_spd.max_speed，终点在 v_min。
         // 速度差为 (path_spd.max_speed - v_min)
-        abs_spd = v_min + (path_spd.max_speed - v_min) * (1.0f - 1.0f / (1.0f + expf(-k * (path_remain - path_spd.down_stage / 2.0f))));
+        abs_spd = v_min + (path_spd.max_speed - v_min) / (1.0f + expf(-k * (path_remain - path_spd.down_stage / 2.0f)));
 
         // 边界处理：确保速度不低于 v_min
         if (abs_spd < v_min) abs_spd = v_min;
@@ -409,6 +409,9 @@ vec2 change_world_to_local(vec2 src, float angle)
     return dst;
 }
 
+//测试target_angle
+float test_angle;
+
 int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 {
     const Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
@@ -451,14 +454,14 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
             else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
 
             // 角度规划
-            float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) * (
-                                       1.0f - (distance / (*path).length));
-
+            // float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) *
+            //                            (distance / (*path).length);
+		    float tar_ang_kaojin =(*path).end_angle;
             // 旋转速度计算，使用全局角度PID实例
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, tar_ang_kaojin, now_pos);
 
             // 路径完成判断
-            if (distance < 10.0f && fabsf((*path).end_angle - now_pos) < 0.1f &&
+            if (distance < 50.0f && fabsf((*path).end_angle - now_pos) < 0.1f &&
                 fabsf(lcResult.vx) < 50.0f && fabsf(lcResult.vy) < 50.0f && fabsf(lcResult.vr) < 50.0f) {
                 cha_remote(0.0f, 0.0f, 0.0f);
                 return 1; // 路径完成
@@ -477,6 +480,7 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     // 2.2. 角度控制
 	float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
+    test_angle=target_angle;
 	float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);// 使用全局角度PID
 
 	vec2 spd_dir = get_spd_dir(foot_point, (*path).trajectories[(*path).trajectory_count]);

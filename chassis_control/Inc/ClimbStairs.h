@@ -51,8 +51,8 @@ typedef enum
 #define front_up 300000
 #define  front_up_400
 
-#define back_up 305000
-#define front_up2 (-20000)
+#define back_up 325000//305000
+#define front_up2 (-40000)//-20000
 
 #define CYLINDER_GPIO_PORT GPIOC
 #define CYLINDER_PIN1 GPIO_PIN_5
@@ -63,7 +63,17 @@ extern Climb_State_e current_climb_state;
 extern Down_State_e current_down_state;
 
 //上下楼梯的函数
-void ClimbStairs(void);
+void ClimbStairs(int stairs_id,int face);
 void DownStairs(void);
+bool is_on_stair_edge(int stair_id,int face);
+
+//台阶中心标记（以R2启动区为原点）
+typedef struct
+{
+    int x;
+    int y;
+    int z;
+}pos;
+
 
 #endif //R2_CHASSIS_CLIMBSTAIRS_H

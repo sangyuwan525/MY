@@ -90,7 +90,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   __disable_irq();
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -109,7 +108,6 @@ int main(void)
   MX_LPUART1_UART_Init();
   MX_UART4_Init();
   MX_UART5_Init();
-  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 

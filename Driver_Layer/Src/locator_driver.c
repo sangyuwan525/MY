@@ -27,7 +27,7 @@ void analysis_locator_X_Y(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* 
                      ((uint32_t)rx_msg_tmp->rx_data[0]);
 
         // 内存强转：将32位整数的二进制解析为float
-        lcResult->x = 1000 * (*(float*)(&database_x));
+        lcResult->x = 1000*(*(float*)(&database_x));
 
         // 后4字节（rx_data[4-7]）拼接为Y的32位整数（大端序）
         database_y = ((uint32_t)rx_msg_tmp->rx_data[7] << 24) |

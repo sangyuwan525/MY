@@ -5,9 +5,12 @@
 #include <stdio.h>
 #include "cmsis_os2.h"
 #include "Task_Printf.h"
+#include "chassis_path.h"
+#include "ClimbStairs.h"
 
 #include "cmsis_gcc.h"
 #include "locator_driver.h"
+#include "Task_chassis.h"
 
 void StartTask_Printf(void *argument)
 {
@@ -24,11 +27,13 @@ void StartTask_Printf(void *argument)
             // sprintf(message,"desired_vx: %.2f, desired_vy: %.2f, desired_vw: %.2f\r\n",desired_vx, desired_vy, desired_vw);
             // printf("%s",message);
             // printf("desired_vx = %f\n", 1000*desired_vx);
-
         }
-        //printf("x=%f\n\r",lcResult.x);
-        //printf("y=%f\n\r",lcResult.y);
-        printf("x%.1f y%.1f yaw%.4f\n",lcResult.x,lcResult.y,lcResult.r);
+        //printf("x66 y55 z66\n");
+        printf("%.1f,",lcResult.x);
+        printf("%.1f,",lcResult.y);
+        printf("%.3f\n",lcResult.r);
+        printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
+        printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */
