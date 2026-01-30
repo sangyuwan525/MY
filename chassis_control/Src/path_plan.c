@@ -234,5 +234,33 @@ PlanResult plan_route(){
             }
         }
     }
+
+    // 输出结果
+    if(best<INF){
+        printf("=== Plan Success ===\n");
+        printf("Cost: %d\n",best_res.cost);
+
+        printf("R2 Taken: %d %d\n",
+               best_res.r2_taken[0],
+               best_res.r2_taken[1]);
+
+        printf("R2 Removed: ");
+        for(int i=0;i<best_res.r2r_cnt;i++)
+            printf("%d ",best_res.r2_removed[i]);
+
+        printf("\nR1 Removed: ");
+        for(int i=0;i<best_res.r1_cnt;i++)
+            printf("%d ",best_res.r1_removed[i]);
+
+        printf("\nPath: ");
+        for(int i=0;i<best_res.path_len;i++){
+            if(best_res.path[i]==ENTRY_NODE) printf("Entry ");
+            else if(best_res.path[i]==EXIT_NODE) printf("Exit ");
+            else printf("%d ",best_res.path[i]+1);
+        }
+        printf("\n");
+    }else{
+        printf("No valid path\n");
+    }
     return best_res;
 }
