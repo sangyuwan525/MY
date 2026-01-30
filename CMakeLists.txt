@@ -38,6 +38,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         chassis_control/Src/chassis_pid.c
         Driver_Layer/Src/locator_driver.c
         chassis_control/Src/chassis_driver.c
+        chassis_control/Src/path_plan.c
         Driver_remote/Src/remote_driver.c
         Driver_Motor/Src/dji_3508_2006_motor.c
         Driver_Motor/Src/vesc.c
@@ -48,14 +49,11 @@ add_executable(${CMAKE_PROJECT_NAME}
         Math_User/Src/pid.c
         Task/Src/Task_command.c
         Task/Src/Task_chassis.c
-        Task/Inc/Task_chassis.h
         Task/Src/Task_dji_control.c
-        Task/Inc/Task_dji_control.h
         chassis_control/Src/ClimbStairs.c
         chassis_control/Src/Hfsm.c
         SEGGER_RTT/RTT/SEGGER_RTT.c
         SEGGER_RTT/RTT/SEGGER_RTT_printf.c
-        Task/Inc/Task_locator_recv.h
         Task/Src/Task_locator_recv.c
 )
 
