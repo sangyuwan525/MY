@@ -184,7 +184,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
 
         case MF_REMOVE_KFS: // 移除障碍 KFS
             // 规则 4.4.4: R2 可以移除阻碍路径的非目标 KFS（不能放入储藏区）
-            if (Move_to_Edge(r2->current_stair_id,r2->target_stair_id)) {
+            if (Move_to_Edge(r2->current_stair_id,r2->current_stair_id+3)) {
                 send_flag_to_up(FLAG_REMOVE_KFS);
                 if (receive_flag()) {
                     r2->sub_state.mf = MF_MOVE_TO_BLOCK;
