@@ -75,7 +75,7 @@ extern Down_State_e current_down_state;
 int ClimbStairs(int curr_id, int stair_id);
 int Move_to_Edge(int curr_id, int stair_id);
 int Move_back_to_Center(int stair_id);
-int DownStairs(void);
+int DownStairs(int curr_id, int target_id);
 bool is_on_stair_edge(int stair_id,int face);
 float face_angle(int face);
 

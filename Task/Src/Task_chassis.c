@@ -76,7 +76,7 @@ void StartTask_chassis(void *argument)
                             ClimbStairs(1,2);
                         }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
-                        DownStairs();
+                        //DownStairs();
                     }
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)

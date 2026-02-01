@@ -130,7 +130,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0) {
                 climb_status = ClimbStairs(r2->current_stair_id, r2->target_stair_id);
             }else {
-                down_status = DownStairs();
+                down_status = DownStairs(r2->current_stair_id,r2->target_stair_id);
             }
             if (climb_status == 1 || down_status == 1) {
                 // 上楼梯完成，step++，返回判断阶段
@@ -193,7 +193,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             break;
 
         case MF_EXIT_NAV: // 导航至出口
-            if (DownStairs()) {
+            if (DownStairs(r2->current_stair_id,r2->target_stair_id)) {
                 // 切换到顶级状态：三区对抗区
                 r2->current_top_state = STATE_CF_AREA;
                 r2->sub_state.cf = CF_CLIMB_RAMP;

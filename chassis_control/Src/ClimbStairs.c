@@ -476,8 +476,9 @@ int Move_to_Edge(int curr_id, int stair_id)
 }
 
 //下楼梯的函数
-int DownStairs(void)
+int DownStairs(int curr_id, int stair_id)
 {
+    int face = get_face(curr_id,stair_id);
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_down_state == DOWN_IDLE)
     {
@@ -503,13 +504,29 @@ int DownStairs(void)
         case DOWN_STEP1_BASE_FORWARD:
                 {
                     // 底盘向前移动，前轮搭在台子上 (原图步骤3)
-                    cha_remote(0,200,0);
-                    if (fabsf(lcResult.y-ForestEdge)<10 || down_cnt == 2)
-                    {
-                        // 停止向前移动
-                        cha_remote(0,0,0);
+                    // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
+                    Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
+                    float now_pos = lcResult.r;                        // 机器人当前朝向角
+                    Point_struct end_point =get_stair_edge(stair_id,face);
+                    float distance = get_length(now_point, end_point);
 
-                        current_down_state = DOWN_STEP2_FRONT_DOWN;
+                    float vr = PID_Angle_Calculate(&chassis_yaw_pid,face_angle(face),now_pos);
+                    if (fabsf(lcResult.r-face_angle(face))<0.05f)
+                    {
+                        if (distance<50.0f || !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
+                        {
+                            // 停止向前移动
+                            Change_dji_loc(DJI_M_CLIMB_RB,0);
+                            Change_dji_loc(DJI_M_CLIMB_LB,0);
+                            cha_remote(0,0,0);
+                            current_down_state = DOWN_STEP2_FRONT_DOWN;
+                        }else
+                        {
+                            move_approach(now_point,end_point,now_pos,vr);
+                        }
+                    }else
+                    {
+                        cha_remote(0, 0, vr);
                     }
                     break;
                 }
@@ -539,10 +556,10 @@ int DownStairs(void)
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
             //cha_remote(0,500,0);
-            Change_dji_speed(DJI_2006_L, -2000);
-            Change_dji_speed(DJI_2006_R, 2000);
+            Change_dji_speed(DJI_2006_L, -6000);
+            Change_dji_speed(DJI_2006_R, 6000);
 
-            if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 3)
+            if (is_on_stair_edge(stair_id,face) || down_cnt == 3)
             {
                 // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);
@@ -579,14 +596,16 @@ int DownStairs(void)
         // --- 步骤 5：电机归位 ---
         case DOWN_STEP5_BASE_FORWARD:
         {
-            cha_remote(0,100,0);
+            Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
+            float now_pos = lcResult.r;                        // 机器人当前朝向角
+            Point_struct end_point ={stairs_center[stair_id].x,stairs_center[stair_id].y};
 
-                if (fabsf(lcResult.y+800-ForestEdge)<10 || down_cnt == 4)
-                {
-                    cha_remote(0,0,0);
+            move_approach(now_point,end_point,now_pos,0);
 
-                    current_down_state = DOWN_COMPLETE;
-                }
+            if (is_on_stair_center(stair_id))
+            {
+                current_down_state = DOWN_COMPLETE;
+            }
             break;
         }
 
