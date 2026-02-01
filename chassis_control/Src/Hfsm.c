@@ -11,8 +11,8 @@ int receive_flag(){
 }
 
 // 判断在该节点是否要拿取目标KFS
-bool is_target_kfs(int current_id, PlanResult res) {
-    return (is_adjacent(current_id,res.r2_taken[1]) || is_adjacent(current_id,res.r2_taken[0]));
+bool is_target_kfs(int8_t current_id, int8_t r2_taken_id) {
+    return is_adjacent(current_id,r2_taken_id);
     //return (target_id == res.r2_taken[0] || target_id == res.r2_taken[1]);
 }
 
@@ -93,9 +93,12 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                 r2->sub_state.mf = MF_EXIT_NAV;
             } else {
                 // 根据 path_plan.h 中的规划结果判断
-                if (is_target_kfs(r2->current_stair_id,r2->plan)) {
-                    // 如果当前节点是要执行拿取的 R2 KFS 的动作
-                    r2->sub_state.mf = MF_PICK_ADJACENT;
+                if (is_target_kfs(r2->current_stair_id,r2->plan.r2_taken[0])&&r2->already_taken!=0&&r2->already_taken!=2) {     // r2_taken[0]没被拿
+                    // 如果当前节点是要执行拿取的 R2 KFS 0 的动作
+                    r2->sub_state.mf = MF_PICK_ADJACENT_0;
+                } else if (is_target_kfs(r2->current_stair_id,r2->plan.r2_taken[1])&&r2->already_taken!=1&&r2->already_taken!=2) {  //r2_taken[1]没被拿
+                    // 如果当前节点是要执行拿取的 R2 KFS 1 的动作
+                    r2->sub_state.mf = MF_PICK_ADJACENT_1;
                 } else if (is_obstacle_kfs(r2->target_stair_id,r2->plan)) {
                     // 如果目标节点是要移出的 R2 KFS
                     r2->sub_state.mf = MF_REMOVE_KFS;
@@ -123,25 +126,57 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             //     }
             // }
             // 调用您修改后的 int 返回值类型的 ClimbStairs
-            int climb_status = ClimbStairs(r2->current_stair_id, r2->target_stair_id);
-            if (climb_status == 1) {
+            int climb_status=0,down_status=0;
+            if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0) {
+                climb_status = ClimbStairs(r2->current_stair_id, r2->target_stair_id);
+            }else {
+                down_status = DownStairs();
+            }
+            if (climb_status == 1 || down_status == 1) {
                 // 上楼梯完成，step++，返回判断阶段
                 r2->current_step++;
                 r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 
-        case MF_PICK_ADJACENT: // 抓取相邻 KFS
+        case MF_PICK_ADJACENT_0: // 抓取相邻 KFS r2_taken[0]
             // 执行机械臂抓取动作
-            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[r2->kfs_count])) {
+            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
                 send_flag_to_up(FLAG_GRAB_KFS);
                 if (receive_flag()) {  // 抓取成功
-                    r2->kfs_count++; // R2 秘籍计数
-                    if (r2->plan.r2_taken[r2->kfs_count-1]==r2->target_stair_id) {
-                        r2->sub_state.cf = MF_MOVE_TO_BLOCK;
+                    r2->kfs_count++;
+                    if (r2->already_taken==1) {
+                        r2->already_taken = 2;  // 两个都已抓取
+                    }else {
+                        r2->already_taken = 0;  // 已抓取r2_taken[0]
                     }
-                    else{
-                        if ()   r2->sub_state.mf = MF_ACTION_JUDGE;
+                    if (r2->plan.r2_taken[0]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
+                        r2->sub_state.cf = MF_MOVE_TO_BLOCK;
+                    }else{
+                        if (Move_back_to_Center(r2->current_stair_id)) {    // 如果kfs所在方块不是要移动的目标方块，返回中心进行判断
+                            r2->sub_state.mf = MF_ACTION_JUDGE;
+                        }
+                    }
+                }
+            }
+            break;
+        case MF_PICK_ADJACENT_1: // 抓取相邻 KFS r2_taken[1]
+            // 执行机械臂抓取动作
+            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[1])) {
+                send_flag_to_up(FLAG_GRAB_KFS);
+                if (receive_flag()) {  // 抓取成功
+                    r2->kfs_count++;
+                    if (r2->already_taken==0) {
+                        r2->already_taken = 2;  // 两个都已抓取
+                    }else {
+                        r2->already_taken = 1;  // 已抓取r2_taken[1]
+                    }
+                    if (r2->plan.r2_taken[1]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
+                        r2->sub_state.cf = MF_MOVE_TO_BLOCK;
+                    }else{
+                        if (Move_back_to_Center(r2->current_stair_id)) {    // 如果kfs所在方块不是要移动的目标方块，返回中心进行判断
+                            r2->sub_state.mf = MF_ACTION_JUDGE;
+                        }
                     }
                 }
             }
@@ -149,18 +184,19 @@ void Handle_MF_Logic(R2_Context_t *r2) {
 
         case MF_REMOVE_KFS: // 移除障碍 KFS
             // 规则 4.4.4: R2 可以移除阻碍路径的非目标 KFS（不能放入储藏区）
-            if (Hardware_RemoveObstacleAction()) {
-                r2->current_step++;
-                r2->sub_state.mf = MF_ACTION_JUDGE;
+            if (Move_to_Edge(r2->current_stair_id,r2->target_stair_id)) {
+                send_flag_to_up(FLAG_REMOVE_KFS);
+                if (receive_flag()) {
+                    r2->sub_state.mf = MF_MOVE_TO_BLOCK;
+                }
             }
             break;
 
         case MF_EXIT_NAV: // 导航至出口
-            // 规则：前往 10/11/12 号方块准备进入三区
-            if (go_path_control(&exit_path, spd_test) == 1) {
+            if (DownStairs()) {
                 // 切换到顶级状态：三区对抗区
                 r2->current_top_state = STATE_CF_AREA;
-                r2->sub_state.cf = CF_INIT;
+                r2->sub_state.cf = CF_CLIMB_RAMP;
             }
             break;
     }
@@ -171,42 +207,54 @@ void Handle_CF_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.cf) {
         case CF_CLIMB_RAMP:
             // 爬坡进入对抗区
-            if (Hardware_ClimbRamp()) {
+            if (go_path_control(&path_test, spd_test) == 1) {   // 移动到决策位置
                 r2->sub_state.cf = CF_DECISION;
             }
             break;
 
         case CF_DECISION:
             // 根据场上局势决定策略
-            if (Algorithm_NeedTopLayer()) {
-                r2->sub_state.cf = CF_WAIT_LIFT;
-            } else {
-                r2->sub_state.cf = CF_PLACE_MID;
+            if (go_path_control(&path_test, spd_test) == 1) {   // 写一条从当前位置移动到决策位置的路径，然后移动到决策位置
+                if (receive_flag()) {   // 收到放顶层的决策
+                    r2->sub_state.cf = CF_WAIT_LIFT;
+                } else {
+                    r2->sub_state.cf = CF_PLACE_MID;
+                }
+                if (r2->kfs_count == 0) {
+                    r2->current_top_state = STATE_FINISHED;     //暂时不考虑回到梅林区
+                }
             }
             break;
 
         case CF_PLACE_MID:
             // 规则4.5.13: R2把KFS放到九宫格中层
-            if (Hardware_PlaceKFS_Middle()) {
-                r2->kfs_count--;
-                r2->sub_state.cf = CF_DECISION; // 循环决策，直到放完
+            if (go_path_control(&path_test, spd_test) == 1) {
+                send_flag_to_up(FLAG_PUT_KFS_MID);
+                if (receive_flag()){
+                    r2->kfs_count--;
+                    r2->sub_state.cf = CF_DECISION; // 循环决策，直到放完
+                }
             }
             break;
 
         case CF_WAIT_LIFT:
             // 规则3.8(3): R1举起R2 [cite: 121]
             // R2检测自身IMU或高度传感器确认被举起
-            if (Sensors_IsLifted()) {
-                r2->sub_state.cf = CF_PLACE_TOP;
+            if (go_path_control(&path_test, spd_test) == 1) {   // 移动到被抬起的位置
+                send_flag_to_up(FLAG_LIFT);
+                if (receive_flag()){
+                    r2->sub_state.cf = CF_PLACE_TOP;
+                }
             }
             break;
 
         case CF_PLACE_TOP:
             // 规则4.5.16: 被R1举起后放置顶层
-            if (Hardware_PlaceKFS_Top()) {
-                r2->kfs_count--;
+            if (receive_flag()) {   // 收到r1移动到位指令
+                send_flag_to_up(FLAG_PUT_KFS_TOP);     //向上层发送放置KFS到顶层的指令
                 // 放置完成后等待R1放下
-                if (Sensors_IsOnGround()) {
+                if (receive_flag()) {
+                    r2->kfs_count--;
                     r2->sub_state.cf = CF_DECISION;
                 }
             }
@@ -214,19 +262,19 @@ void Handle_CF_Logic(R2_Context_t *r2) {
     }
 
     // 规则3.9: 如果获得“武术大师”，立即获胜 [cite: 121]
-    if (Referee_IsMartialArtsMaster()) {
+    if (receive_flag()) {   // 收到大胜指令
         r2->current_top_state = STATE_FINISHED;
     }
 }
 
-int main_loop() {
+int chassis_auto_control() {
     R2_Context_t robot_ctx = {0};
     robot_ctx.current_top_state = STATE_MC_AREA;
     robot_ctx.sub_state.mc = MC_INIT;
     // 全局安全检测
-    if (Sensors_EmergencyStopPressed()) {
-        robot_ctx.current_top_state = STATE_EMERGENCY;
-    }
+    // if (Sensors_EmergencyStopPressed()) {
+    //     robot_ctx.current_top_state = STATE_EMERGENCY;
+    // }
 
     // 分层状态机调度
     switch (robot_ctx.current_top_state) {
@@ -243,13 +291,15 @@ int main_loop() {
             break;
 
         case STATE_FINISHED:
-            Hardware_StopAllMotors();
             // 庆祝动作
+            return 1;
             break;
 
         case STATE_EMERGENCY:
-            Hardware_StopAllMotors();
+            //执行重试路径
+            //Hardware_StopAllMotors();
             // 等待复位
             break;
+    }
     return 0;
 }

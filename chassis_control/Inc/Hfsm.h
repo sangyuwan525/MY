@@ -10,8 +10,12 @@
 
 // --- 向上层发送的动作指令 ---
 typedef enum {
-    FLAG_ASSEMBLE,   // 一区组装武器指令
-    FLAG_GRAB_KFS,   // 二区抓取KFS指令
+    FLAG_ASSEMBLE,      // 一区组装武器指令
+    FLAG_GRAB_KFS,      // 二区抓取KFS指令
+    FLAG_REMOVE_KFS,    // 二区移出KFS指令
+    FLAG_PUT_KFS_MID,   // 三区放置KFS到中层指令
+    FLAG_PUT_KFS_TOP,   // 三区放置KFS到顶层指令
+    FLAG_LIFT,          // 三区爬上R1指令
 } FLAG_TO_UP;
 
 // --- 顶级状态：区域逻辑 (Top-Level States) ---
@@ -37,7 +41,8 @@ typedef enum {
     MF_ENTRY,           // 进入树林入口
     MF_ACTION_JUDGE,    // 下一步动作判断，移动还是拿取还是移出
     MF_MOVE_TO_BLOCK,   // 移动到目标方块
-    MF_PICK_ADJACENT,   // 抓取相邻方块的KFS
+    MF_PICK_ADJACENT_0,   // 抓取相邻方块的KFS r2_taken[0]
+    MF_PICK_ADJACENT_1,   // 抓取相邻方块的KFS r2_taken[1]
     MF_REMOVE_KFS,      // 移除相邻方块上的KFS
     MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
     MF_EXIT_NAV         // 导航至出口 (10/11/12号方块) [cite: 133]
@@ -62,7 +67,6 @@ typedef struct {
         CFSubState_t cf;
     } sub_state;
 
-    int kfs_count;        // 持有的KFS数量
     int stick_count;      // 已取杆的数量
     bool weapon_ready;    // 兵器是否组装完成
     bool r1_left_mc;      // R1是否已离开武馆信号
@@ -71,6 +75,8 @@ typedef struct {
     int current_step;      // 当前执行到规划路径的第几步
     int target_stair_id;   // 当前目标方块ID
     int current_stair_id;     // 当前方块ID
+    int already_taken;    // 已经取得kfs方块id，-1表示未取，0表示取r2_taken[0],1表示取r2_taken[1],2表示都已取得，初始为-1
+    int kfs_count;        // 持有的kfs数量，初始为0
 } R2_Context_t;
 
 #endif

@@ -74,7 +74,8 @@ extern Down_State_e current_down_state;
 //上下楼梯的函数
 int ClimbStairs(int curr_id, int stair_id);
 int Move_to_Edge(int curr_id, int stair_id);
-void DownStairs(void);
+int Move_back_to_Center(int stair_id);
+int DownStairs(void);
 bool is_on_stair_edge(int stair_id,int face);
 float face_angle(int face);
 

@@ -476,7 +476,7 @@ int Move_to_Edge(int curr_id, int stair_id)
 }
 
 //下楼梯的函数
-void DownStairs(void)
+int DownStairs(void)
 {
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_down_state == DOWN_IDLE)
@@ -594,6 +594,7 @@ void DownStairs(void)
         {
             current_down_state = DOWN_IDLE;
             down_cnt = 0;
+            return 1;
             break;
         }
 
@@ -601,6 +602,7 @@ void DownStairs(void)
             current_down_state = DOWN_IDLE;
             break;
     }
+    return 0;
 }
 
 //上400的台阶，可与ClimbStairs合并
