@@ -333,7 +333,7 @@ int ClimbStairs(int stair_id,int face)
             current_climb_state = CLIMB_IDLE;
             break;
     }
-    return 0
+    return 0;
 }
 //下楼梯的函数
 void DownStairs(void)

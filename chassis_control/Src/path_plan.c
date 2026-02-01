@@ -12,6 +12,15 @@ const uint16_t HEIGHT_MAP[TOTAL_NODES] = {
     0,0
 };
 
+// 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
+KFS_Type map[TOTAL_NODES]={
+    KFS_R1, KFS_NONE, KFS_R2,
+    KFS_R1, KFS_NONE, KFS_R2,
+    KFS_R1, KFS_FAKE, KFS_R2,
+    KFS_NONE, KFS_NONE, KFS_R2,
+    KFS_NONE, KFS_NONE
+};
+
 // ================= 邻接判断辅助函数 =================
 // 判断两个节点是否在网格上物理相邻（考虑入口与出口的特殊连接）
 // static inline bool adjacent(int8_t a, int8_t b){
@@ -203,14 +212,6 @@ void reconstruct(
 // ================= 主函数 =================
 // 构造一个示例地图，寻找最优的两个目标 R2 的取货顺序与路径
 PlanResult plan_route(){
-    // 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
-    KFS_Type map[TOTAL_NODES]={
-        KFS_R1, KFS_NONE, KFS_R2,
-        KFS_R1, KFS_NONE, KFS_R2,
-        KFS_R1, KFS_FAKE, KFS_R2,
-        KFS_NONE, KFS_NONE, KFS_R2,
-        KFS_NONE, KFS_NONE
-    };
 
     // 收集所有 R2 节点，用于枚举两两组合作为任务目标
     int8_t r2s[4],cnt=0;
@@ -264,3 +265,57 @@ PlanResult plan_route(){
     }
     return best_res;
 }
+
+// PlanResult plan_route(int8_t start, int8_t target, KFS_Type map[]){
+//     // 收集所有 R2 节点，用于枚举两两组合作为任务目标
+//     int8_t r2s[4],cnt=0;
+//     for(int i=0;i<GRID_NODES;i++) if(map[i]==KFS_R2) r2s[cnt++]=i;
+//
+//     int best=INF;
+//     State best_end;
+//     static State parent[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4];
+//     PlanResult best_res;
+//
+//     // 枚举所有两两组合（不重复的顺序对）作为 t1,t2
+//     for(int i=0;i<cnt;i++)for(int j=i+1;j<cnt;j++){
+//         State end;
+//         // 运行 Dijkstra（在状态空间中搜索）
+//         if(run_dijkstra(start, target,r2s[i],r2s[j],map,&end,parent)){
+//             if(end.cost<best){
+//                 best=end.cost;
+//                 best_end=end;
+//                 // 回溯得到具体路径与被移除的 KFS 列表
+//                 reconstruct(end,parent,map,r2s[i],r2s[j],&best_res);
+//             }
+//         }
+//     }
+//
+//     // 输出结果
+//     if(best<INF){
+//         printf("=== Plan Success ===\n");
+//         printf("Cost: %d\n",best_res.cost);
+//
+//         printf("R2 Taken: %d %d\n",
+//                best_res.r2_taken[0],
+//                best_res.r2_taken[1]);
+//
+//         printf("R2 Removed: ");
+//         for(int i=0;i<best_res.r2r_cnt;i++)
+//             printf("%d ",best_res.r2_removed[i]);
+//
+//         printf("\nR1 Removed: ");
+//         for(int i=0;i<best_res.r1_cnt;i++)
+//             printf("%d ",best_res.r1_removed[i]);
+//
+//         printf("\nPath: ");
+//         for(int i=0;i<best_res.path_len;i++){
+//             if(best_res.path[i]==ENTRY_NODE) printf("Entry ");
+//             else if(best_res.path[i]==EXIT_NODE) printf("Exit ");
+//             else printf("%d ",best_res.path[i]);
+//         }
+//         printf("\n");
+//     }else{
+//         printf("No valid path\n");
+//     }
+//     return best_res;
+// }
