@@ -59,7 +59,10 @@ typedef struct {
     int16_t cost;       // 最终代价
 } PlanResult;
 
-extern KFS_Type map[TOTAL_NODES];
-PlanResult plan_route();
+extern const uint16_t HEIGHT_MAP[TOTAL_NODES];
+extern KFS_Type initial_map[TOTAL_NODES];
+PlanResult plan_route(KFS_Type map[]);
+bool is_adjacent(int8_t a, int8_t b);
+
 
 #endif

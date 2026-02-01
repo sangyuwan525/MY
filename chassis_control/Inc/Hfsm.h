@@ -38,6 +38,7 @@ typedef enum {
     MF_MOVE_TO_BLOCK,   // 移动到目标方块
     MF_PICK_ADJACENT,   // 抓取相邻方块的KFS
     MF_REMOVE_KFS,      // 移除相邻方块上的KFS
+    MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
     MF_EXIT_NAV         // 导航至出口 (10/11/12号方块) [cite: 133]
 } MFSubState_t;
 
@@ -61,14 +62,14 @@ typedef struct {
     } sub_state;
 
     int kfs_count;        // 持有的KFS数量
-    int stick_count;      // 以取杆的数量
+    int stick_count;      // 已取杆的数量
     bool weapon_ready;    // 兵器是否组装完成
     bool r1_left_mc;      // R1是否已离开武馆信号
     bool is_lifted;       // 是否被R1举起
     PlanResult plan;       // 存储 path_plan.c 生成的全局规划结果
     int current_step;      // 当前执行到规划路径的第几步
     int target_stair_id;   // 当前目标方块ID
-    int approach_face;     // 上楼梯的方向
+    int current_stair_id;     // 当前方块ID
 } R2_Context_t;
 
 #endif

@@ -4,9 +4,23 @@
 
 //向上层发送信息
 void send_flag_to_up(int flag){}
+
+// 接收信号
 int receive_flag(){
     return 1;
 }
+
+// 判断在该节点是否要拿取目标KFS
+bool is_target_kfs(int current_id, PlanResult res) {
+    return (is_adjacent(current_id,res.r2_taken[1]) || is_adjacent(current_id,res.r2_taken[0]));
+    //return (target_id == res.r2_taken[0] || target_id == res.r2_taken[1]);
+}
+
+// 判断是否是障碍KFS
+bool is_obstacle_kfs(int target_id, PlanResult res) {
+    return (target_id == res.r2_removed[0] || target_id == res.r2_removed[1]);
+}
+
 
 //  一区逻辑
 void Handle_MC_Logic(R2_Context_t *r2) {
@@ -64,46 +78,56 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             if (go_path_control(&path_test, spd_test) == 1) {
                 // 进入成功后，调用 path_plan.c 中的算法进行全局规划
                 // 假设输入地图数据 map，获取最优路径
-                r2->plan = plan_route();
-                r2->current_step = 1;
+                r2->plan = plan_route(initial_map);
+                r2->current_step = 1;  // 第一步为走到入口处
                 r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 
         case MF_ACTION_JUDGE: // 决策下一步动作
-            if (r2->current_step >= r2->plan.path_len) {
-                // 如果目标格子是出口，路径走完，准备退出
+            if (r2->current_step >= r2->plan.path_len-1) {
+                // 如果当前走到了倒数第二步，即目标格子是出口，路径走完，准备退出
                 r2->sub_state.mf = MF_EXIT_NAV;
             } else {
                 // 获取当前路径点的目标
                 r2->target_stair_id = r2->plan.path[r2->current_step];
-                r2->approach_face = 0;  //calculate_face(r2->target_stair_id); // 根据位置计算朝向
+                r2->current_stair_id = r2->plan.path[r2->current_step-1];
                 // 根据 path_plan.h 中的规划结果判断
-                if (is_target_kfs(r2->target_stair_id)) {
+                if (is_target_kfs(r2->current_stair_id,r2->plan)) {
+                    // 如果当前节点是要执行拿取的 R2 KFS 的动作
                     r2->sub_state.mf = MF_PICK_ADJACENT;
-                } else if (is_obstacle_kfs(r2->target_stair_id)) {
+                } else if (is_obstacle_kfs(r2->target_stair_id,r2->plan)) {
+                    // 如果目标节点是要移出的 R2 KFS
                     r2->sub_state.mf = MF_REMOVE_KFS;
                 } else {
-                    r2->current_step++;
+                    // 如果目标节点是 KFS_NONE 或 R1_KFS
                     r2->sub_state.mf = MF_MOVE_TO_BLOCK;
                 }
             }
             break;
 
         case MF_MOVE_TO_BLOCK: // 爬楼梯移动
+            // // 获取路径中下一个要去的节点
+            // int8_t next_node = r2->plan.path[r2->current_step];
+            //
+            // // --- 局部修正检查 ---
+            // // 假设通过视觉或通信获取 R1 当前位置
+            // int8_t r1_current_pos = Get_R1_Position_Via_Comm();
+            // if (next_node == r1_current_pos) {
+            //     // 如果 R1 挡住了路，调用新的修正函数重规划，绕开 r1_current_pos
+            //     State new_res;
+            //     if (Path_Replan_With_Obstacles(r2->current_node, r2->target_node, r1_current_pos, &new_res, parents)) {
+            //         r2->path_count = reconstruct_path(r2->current_node, r2->target_node, parents, r2->planned_path);
+            //         r2->current_step_idx = 1; // 重新开始新路径
+            //         break; // 退出当前 switch，等待下一帧处理新路径
+            //     }
+            // }
             // 调用您修改后的 int 返回值类型的 ClimbStairs
-            int climb_status = ClimbStairs(r2->target_stair_id, r2->approach_face);
+            int climb_status = ClimbStairs(r2->current_stair_id, r2->target_stair_id);
             if (climb_status == 1) {
-                // 爬坡并定位完成后，判断该位置是要拿取 KFS 还是移除障碍
-                // 根据 path_plan.h 中的规划结果判断
-                if (is_target_kfs(r2->target_stair_id)) {
-                    r2->sub_state.mf = MF_PICK_ADJACENT;
-                } else if (is_obstacle_kfs(r2->target_stair_id)) {
-                    r2->sub_state.mf = MF_REMOVE_KFS;
-                } else {
-                    r2->current_step++;
-                    r2->sub_state.mf = MF_ACTION_JUDGE;
-                }
+                // 上楼梯完成，step++，返回判断阶段
+                r2->current_step++;
+                r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 

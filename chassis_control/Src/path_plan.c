@@ -1,5 +1,6 @@
 
 #include "path_plan.h"
+#include "string.h"
 
 // ================= 高度 =================
 // HEIGHT_MAP 表示每个节点的绝对高度（单位任意，例如毫米）。
@@ -13,7 +14,7 @@ const uint16_t HEIGHT_MAP[TOTAL_NODES] = {
 };
 
 // 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
-KFS_Type map[TOTAL_NODES]={
+KFS_Type initial_map[TOTAL_NODES]={
     KFS_R1, KFS_NONE, KFS_R2,
     KFS_R1, KFS_NONE, KFS_R2,
     KFS_R1, KFS_FAKE, KFS_R2,
@@ -22,20 +23,41 @@ KFS_Type map[TOTAL_NODES]={
 };
 
 // ================= 邻接判断辅助函数 =================
-// 判断两个节点是否在网格上物理相邻（考虑入口与出口的特殊连接）
-// static inline bool adjacent(int8_t a, int8_t b){
-//     // 入口与网格顶部三个节点相连
-//     if (a==ENTRY_NODE) return b>=0 && b<=2;
-//     if (b==ENTRY_NODE) return a>=0 && a<=2;
-//     // 出口与网格底部三个节点相连
-//     if (a==EXIT_NODE) return b>=9 && b<=11;
-//     if (b==EXIT_NODE) return a>=9 && a<=11;
-//     // 非网格索引（入口/出口之外）视为不相邻
-//     if (a>=GRID_NODES || b>=GRID_NODES) return false;
-//     // 使用曼哈顿距离判断格子上下左右是否相邻
-//     int r1=a/COLS,c1=a%COLS,r2=b/COLS,c2=b%COLS;
-//     return abs(r1-r2)+abs(c1-c2)==1;
-// }
+/**
+ * @brief 判断两个节点是否在物理上相邻
+ * @param a 节点A编号 (0-13)
+ * @param b 节点B编号 (0-13)
+ * @return bool 如果相邻返回 true，否则返回 false
+ */
+bool is_adjacent(int8_t a, int8_t b) {
+    // 1. 同一节点不互为相邻
+    if (a == b) return false;
+
+    // 2. 处理入口 (ENTRY_NODE = 12) 的特殊连接
+    // 入口连接网格的第一行：0, 1, 2
+    if (a == ENTRY_NODE) return (b >= 0 && b <= 2);
+    if (b == ENTRY_NODE) return (a >= 0 && a <= 2);
+
+    // 3. 处理出口 (EXIT_NODE = 13) 的特殊连接
+    // 出口连接网格的最后一行：9, 10, 11
+    if (a == EXIT_NODE) return (b >= 9 && b <= 11);
+    if (b == EXIT_NODE) return (a >= 9 && a <= 11);
+
+    // 4. 处理标准 4x3 网格节点 (0-11)
+    if (a < GRID_NODES && b < GRID_NODES) {
+        int8_t row_a = a / COLS; // 行号 = 编号 / 3
+        int8_t col_a = a % COLS; // 列号 = 编号 % 3
+        int8_t row_b = b / COLS;
+        int8_t col_b = b % COLS;
+
+        // 计算曼哈顿距离：行差 + 列差
+        // 如果距离为 1，说明是上下或左右相邻（不包含斜对角）
+        int diff = abs(row_a - row_b) + abs(col_a - col_b);
+        return (diff == 1);
+    }
+
+    return false;
+}
 
 // ================= Dijkstra (带状态扩展) =================
 // 使用扩展的 Dijkstra 搜索，在状态空间中同时跟踪：
@@ -211,7 +233,7 @@ void reconstruct(
 
 // ================= 主函数 =================
 // 构造一个示例地图，寻找最优的两个目标 R2 的取货顺序与路径
-PlanResult plan_route(){
+PlanResult plan_route(KFS_Type map[]){
 
     // 收集所有 R2 节点，用于枚举两两组合作为任务目标
     int8_t r2s[4],cnt=0;
@@ -264,6 +286,39 @@ PlanResult plan_route(){
         printf("No valid path\n");
     }
     return best_res;
+}
+// ================= 【新增】局部修正逻辑函数 =================
+
+/**
+ * @brief 局部路径修正包装器
+ * @param start 当前位置
+ * @param target 最终目标
+ * @param t1, t2 目标KFS
+ * @param blocked_node 实时探测到的障碍物节点 (如R1所在位置)，若无则传-1
+ * @param final_res 存储规划出的新路径
+ */
+bool Path_Replan_Local_Update(int8_t start, int8_t target, int8_t t1, int8_t t2, int8_t blocked_node, PlanResult *final_res) {
+    // 1. 静态分配巨大的 ParentInfo 数组（避免栈溢出）
+    static State temp_parent[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4];
+
+    // 2. 创建临时地图副本，用于局部修正
+    KFS_Type temp_map[TOTAL_NODES];
+    memcpy(temp_map, initial_map, sizeof(temp_map));
+
+    // 3. 将 R1 当前占据的点临时设为不可通行 (FAKE)
+    if (blocked_node >= 0 && blocked_node < TOTAL_NODES) {
+        temp_map[blocked_node] = KFS_FAKE;
+    }
+
+    // 4. 调用原有的核心规划算法
+    State end_state;
+    if (run_dijkstra(start, target, t1, t2, temp_map, &end_state, temp_parent)) {
+        // 5. 如果规划成功，回溯路径
+        reconstruct(end_state, temp_parent, temp_map, t1, t2, final_res);
+        return true;
+    }
+
+    return false; // 无法绕过障碍物找到路径
 }
 
 // PlanResult plan_route(int8_t start, int8_t target, KFS_Type map[]){

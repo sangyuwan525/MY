@@ -33,6 +33,15 @@ typedef enum
     CLIMB_COMPLETE              // 攀爬完成
 } Climb_State_e;
 
+// 移动状态枚举
+typedef enum
+{
+    MOVE_IDLE = 0,             // 初始/空闲状态
+    MOVE_STEP1_FRONT_UP,       // 第一步：前侧3508抬升 (对应原按钮1)
+    MOVE_STEP2_BASE_FORWARD,   // 第二步：底盘向前移动 (对应原图步骤3)
+    MOVE_COMPLETE              // 移动完成
+} Move_State_e;
+
 // 下楼状态枚举
 typedef enum
 {
@@ -64,6 +73,7 @@ extern Down_State_e current_down_state;
 
 //上下楼梯的函数
 int ClimbStairs(int curr_id, int stair_id);
+int Move_to_Edge(int curr_id, int stair_id);
 void DownStairs(void);
 bool is_on_stair_edge(int stair_id,int face);
 float face_angle(int face);

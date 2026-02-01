@@ -36,6 +36,7 @@ pos stairs_center[12]={
 
 // 状态变量
 Climb_State_e current_climb_state = CLIMB_IDLE;
+Move_State_e current_move_state = MOVE_IDLE;
 Down_State_e current_down_state = DOWN_IDLE;
 uint32_t step_start_time = 0; // 用于计时延时步骤
 
@@ -355,6 +356,112 @@ int ClimbStairs(int curr_id, int stair_id)
     }
     return 0;
 }
+
+/**
+ * @brief 移动到目标格子边缘控制函数
+ * @return int 状态反馈：0-正在移动，1-到位
+ */
+int Move_to_Edge(int curr_id, int stair_id)
+{
+    int face = get_face(curr_id,stair_id);
+    // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
+    if ( current_move_state == MOVE_IDLE)
+    {
+        // 触发一键攀爬，开始第一步
+        //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
+        if (climb_cnt == 1)
+        {
+            //得出上楼梯的方向
+            // if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
+            // else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
+            // else if (fabsf(lcResult.r-1.57)<0.1) face=2;//往x轴负方向上楼梯
+            // else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
+            // else face=4;
+
+            current_move_state = MOVE_STEP1_FRONT_UP;
+            return 0;
+        }
+    }
+
+    switch (current_move_state)
+    {
+        case MOVE_IDLE:
+        {
+            // 保持空闲，等待触发
+             Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+             Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,100000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-100000);
+            break;
+        }
+
+        // --- 步骤 1：前侧抬升 ---
+        case MOVE_STEP1_FRONT_UP:
+        {
+            // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
+            Change_dji_loc(DJI_M_CLIMB_LF,-front_up);
+            Change_dji_loc(DJI_M_CLIMB_RF,front_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,20000);
+            Change_dji_loc(DJI_M_CLIMB_LB,-20000);
+
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
+            // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
+            // 判断电机是否到达目标位置 (或等待气缸伸长)
+            // 假设我们使用一个简单的延时来等待气缸伸长完成
+            // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))//&&climb_cnt == 2)
+            {
+                current_move_state = MOVE_STEP2_BASE_FORWARD;
+            }
+            break;
+        }
+
+        // --- 步骤 2：底盘向前移动 ---
+        case MOVE_STEP2_BASE_FORWARD:
+        {
+            // 底盘向前移动，前轮搭在台子上 (原图步骤3)
+            // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
+            Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
+            float now_pos = lcResult.r;                        // 机器人当前朝向角
+            Point_struct end_point =get_stair_edge(stair_id,face);
+            float distance = get_length(now_point, end_point);
+
+            float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
+
+            if (fabsf(lcResult.r-face_angle(face))<0.05f)
+            {
+                if (distance<50.0f || !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
+                {
+                    // 停止向前移动
+                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    cha_remote(0,0,0);
+                    current_move_state = MOVE_COMPLETE;
+                }else
+                {
+                    move_approach(now_point,end_point,now_pos,vr);
+                }
+            }else
+            {
+                cha_remote(0, 0, vr);
+            }
+            break;
+        }
+        case MOVE_COMPLETE:
+        {
+            current_move_state = MOVE_IDLE;
+            climb_cnt = 0;
+            return 1;
+            break;
+        }
+
+        default:
+            current_climb_state = CLIMB_IDLE;
+            break;
+    }
+    return 0;
+}
+
 //下楼梯的函数
 void DownStairs(void)
 {
