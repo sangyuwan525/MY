@@ -79,4 +79,7 @@ typedef struct {
     int kfs_count;        // 持有的kfs数量，初始为0
 } R2_Context_t;
 
+extern int MF_flag;
+int chassis_auto_control();
+
 #endif

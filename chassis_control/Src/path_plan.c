@@ -14,7 +14,7 @@ const uint16_t HEIGHT_MAP[TOTAL_NODES] = {
 };
 
 // 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
-KFS_Type map[TOTAL_NODES]={
+KFS_Type initial_map[TOTAL_NODES]={
     KFS_R1, KFS_NONE, KFS_R2,
     KFS_R1, KFS_NONE, KFS_FAKE,
     KFS_R1, KFS_R2, KFS_R2,

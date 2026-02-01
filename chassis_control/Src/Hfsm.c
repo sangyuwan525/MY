@@ -2,12 +2,14 @@
 
 #define TOTAL_STICK  1  // 一区总共拿取的杆数量
 
+int MF_flag = 0;
+
 //向上层发送信息
 void send_flag_to_up(int flag){}
 
 // 接收信号
 int receive_flag(){
-    return 1;
+    return MF_flag;
 }
 
 // 判断在该节点是否要拿取目标KFS
@@ -184,7 +186,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
 
         case MF_REMOVE_KFS: // 移除障碍 KFS
             // 规则 4.4.4: R2 可以移除阻碍路径的非目标 KFS（不能放入储藏区）
-            if (Move_to_Edge(r2->current_stair_id,r2->current_stair_id+3)) {
+            if (Move_to_Edge(r2->current_stair_id,r2->target_stair_id)) {
                 send_flag_to_up(FLAG_REMOVE_KFS);
                 if (receive_flag()) {
                     r2->sub_state.mf = MF_MOVE_TO_BLOCK;
@@ -193,7 +195,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             break;
 
         case MF_EXIT_NAV: // 导航至出口
-            if (DownStairs(r2->current_stair_id,r2->target_stair_id)) {
+            if (DownStairs(r2->current_stair_id,r2->current_stair_id+3)) {
                 // 切换到顶级状态：三区对抗区
                 r2->current_top_state = STATE_CF_AREA;
                 r2->sub_state.cf = CF_CLIMB_RAMP;

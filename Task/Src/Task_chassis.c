@@ -16,6 +16,7 @@
 #include "Task_chassis.h"
 #include "chassis_pid.h"
 #include "locator_driver.h"
+#include "Hfsm.h"
 
 int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
@@ -81,7 +82,7 @@ void StartTask_chassis(void *argument)
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
                 {
-                    go_path_control(&path_test,spd_test);
+                    chassis_auto_control();
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
@@ -121,8 +122,9 @@ void StartTask_chassis(void *argument)
                 //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
-                    climb_cnt =0;
-                    current_climb_state = CLIMB_IDLE;
+                    MF_flag = 1;
+                }else {
+                    MF_flag = 0;
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
