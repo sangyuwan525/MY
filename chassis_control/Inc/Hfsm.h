@@ -11,6 +11,7 @@
 // --- 向上层发送的动作指令 ---
 typedef enum {
     FLAG_ASSEMBLE,   // 一区组装武器指令
+    FLAG_GRAB_KFS,   // 二区抓取KFS指令
 } FLAG_TO_UP;
 
 // --- 顶级状态：区域逻辑 (Top-Level States) ---

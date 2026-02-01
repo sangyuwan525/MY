@@ -85,13 +85,13 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             break;
 
         case MF_ACTION_JUDGE: // 决策下一步动作
+            // 获取当前路径点的目标
+            r2->target_stair_id = r2->plan.path[r2->current_step];
+            r2->current_stair_id = r2->plan.path[r2->current_step-1];
             if (r2->current_step >= r2->plan.path_len-1) {
                 // 如果当前走到了倒数第二步，即目标格子是出口，路径走完，准备退出
                 r2->sub_state.mf = MF_EXIT_NAV;
             } else {
-                // 获取当前路径点的目标
-                r2->target_stair_id = r2->plan.path[r2->current_step];
-                r2->current_stair_id = r2->plan.path[r2->current_step-1];
                 // 根据 path_plan.h 中的规划结果判断
                 if (is_target_kfs(r2->current_stair_id,r2->plan)) {
                     // 如果当前节点是要执行拿取的 R2 KFS 的动作
@@ -133,10 +133,17 @@ void Handle_MF_Logic(R2_Context_t *r2) {
 
         case MF_PICK_ADJACENT: // 抓取相邻 KFS
             // 执行机械臂抓取动作
-            if (Hardware_PickKFSAction()) {
-                r2->kfs_count++; // R2 秘籍计数
-                r2->current_step++;
-                r2->sub_state.mf = MF_ACTION_JUDGE;
+            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[r2->kfs_count])) {
+                send_flag_to_up(FLAG_GRAB_KFS);
+                if (receive_flag()) {  // 抓取成功
+                    r2->kfs_count++; // R2 秘籍计数
+                    if (r2->plan.r2_taken[r2->kfs_count-1]==r2->target_stair_id) {
+                        r2->sub_state.cf = MF_MOVE_TO_BLOCK;
+                    }
+                    else{
+                        if ()   r2->sub_state.mf = MF_ACTION_JUDGE;
+                    }
+                }
             }
             break;
 

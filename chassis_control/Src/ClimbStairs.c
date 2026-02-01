@@ -179,8 +179,20 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
     cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
 }
 
-//控制R2走向台阶边缘
-
+// 移动回方格中心
+int Move_back_to_Center(int stair_id)
+{
+    Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
+    Point_struct end_point = {stairs_center[stair_id].x,stairs_center[stair_id].y};
+    float distance = get_length(now_point, end_point);
+    if (distance<50.0f) {
+        cha_remote(0,0,0);
+        return 1;
+    }else {
+        move_approach(now_point,end_point,lcResult.r,0);
+    }
+    return 0;
+}
 
 //爬楼梯的函数 高度200mm
 /**
@@ -357,6 +369,7 @@ int ClimbStairs(int curr_id, int stair_id)
     return 0;
 }
 
+//控制R2走向台阶边缘
 /**
  * @brief 移动到目标格子边缘控制函数
  * @return int 状态反馈：0-正在移动，1-到位
