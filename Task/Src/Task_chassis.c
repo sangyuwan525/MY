@@ -69,11 +69,11 @@ void StartTask_chassis(void *argument)
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
                         if (climb_test_cnt==0)
                         {
-                            ClimbStairs(2,0);
+                            ClimbStairs(12,1);
                         }
                         else if (climb_test_cnt==1)
                         {
-                            ClimbStairs(3,2);
+                            ClimbStairs(1,2);
                         }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
                         DownStairs();

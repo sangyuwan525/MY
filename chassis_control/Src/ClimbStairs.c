@@ -3,15 +3,15 @@
 //
 
 #include "../Inc/ClimbStairs.h"
-
 #include <stdlib.h>
 #include "gpio.h"
 #include "chassis_driver.h"
 #include "locator_driver.h"
 #include "chassis_path.h"
 #include "chassis_pid.h"
+#include "path_plan.h"
 
-
+#define PI 3.1415926
 #define  ForestEdge 100  //  梅林边界
 int climb_cnt = 0;
 int down_cnt = 0;
@@ -26,8 +26,8 @@ int down_cnt = 0;
 // };
 
 //自定义原点下台阶坐标 偏置为-2780，-1860
-pos stairs_center[13]={
-    {0,0,0},
+pos stairs_center[12]={
+    //{0,0,0},
     {2780,3340,400},{-1180,1480,200},{-2380,1480,400},
     {2780,4540,200},{1600,4540,400},{400,4540,600},
     {2780,5720,400},{1600,5720,600},{400,5720,400},
@@ -140,6 +140,25 @@ float face_angle(int face)
     return tmp;
 }
 
+// 获取对应朝向
+int get_face(int curr_id, int target_id)
+{
+    int face = 0;
+    int curr_r=curr_id/COLS,curr_c=curr_id%COLS;
+    int target_r=target_id/COLS,target_c=target_id%COLS;
+    if (curr_id == ENTRY_NODE || target_id == EXIT_NODE)  face = 0;
+    if (curr_r-target_r==1&&curr_c-target_c==0) {
+        face = 3;
+    }else if (curr_r-target_r==-1&&curr_c-target_c==0) {
+        face = 0;
+    }else if (curr_r-target_r==0&&curr_c-target_c==-1) {
+        face = 2;
+    }else if (curr_r-target_r==1&&curr_c-target_c==1) {
+        face = 1;
+    }
+    return face;
+}
+
 //运动靠近目标点
 void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,float vr)
 {
@@ -167,8 +186,9 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
  * @brief 爬楼梯控制函数
  * @return int 状态反馈：0-正在爬升，1-爬升完成并到位
  */
-int ClimbStairs(int stair_id,int face)
+int ClimbStairs(int curr_id, int stair_id)
 {
+    int face = get_face(curr_id,stair_id);
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_climb_state == CLIMB_IDLE)
     {
