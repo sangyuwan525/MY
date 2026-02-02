@@ -80,7 +80,7 @@ void Pid_parameter_init(void){
 	Pid_increment_struct_init(&motor_3508_pid_g[7].spd,  15.0, 	0.98,	  0.035,   10000,  -10000);
 
     Pid_increment_struct_init(&motor_3508_pid_g[8].loc,  0.15, 	0.001,	0.03,  4000,    -4000);
-	Pid_increment_struct_init(&motor_3508_pid_g[8].spd,  24.0, 	1.2,	  0.035,   15000,  -15000);
+	Pid_increment_struct_init(&motor_3508_pid_g[8].spd,  20.0, 	1.2,	  0.035,   15000,  -15000);
 
 	Pid_increment_struct_init(&motor_3508_pid_g[9].loc,  0.15, 	0.001,	0.03,  4000,    -4000);
 	Pid_increment_struct_init(&motor_3508_pid_g[9].spd,  24.0, 	1.2,	  0.035,   15000,  -15000);

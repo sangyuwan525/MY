@@ -36,6 +36,10 @@ void StartTask_chassis(void *argument)
     //go_path_test
     PID_Init();
     path_init_test();
+    Change_dji_loc(DJI_M_CLIMB_LF,-100000);
+    Change_dji_loc(DJI_M_CLIMB_RF,100000);
+    Change_dji_loc(DJI_M_CLIMB_RB,100000);
+    Change_dji_loc(DJI_M_CLIMB_LB,-100000);
 
     /* Infinite loop */
     for(;;)
@@ -82,7 +86,7 @@ void StartTask_chassis(void *argument)
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
                 {
-                    chassis_auto_control();
+                    chassis_auto_control(&g_robot_ctx);
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {

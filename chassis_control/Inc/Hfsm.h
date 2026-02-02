@@ -44,7 +44,7 @@ typedef enum {
     MF_PICK_ADJACENT_0,   // 抓取相邻方块的KFS r2_taken[0]
     MF_PICK_ADJACENT_1,   // 抓取相邻方块的KFS r2_taken[1]
     MF_REMOVE_KFS,      // 移除相邻方块上的KFS
-    MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
+   // MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
     MF_EXIT_NAV         // 导航至出口 (10/11/12号方块) [cite: 133]
 } MFSubState_t;
 
@@ -55,7 +55,7 @@ typedef enum {
     CF_PLACE_MID,       // 放中层 [cite: 121]
     CF_WAIT_LIFT,       // 等待被R1举起 [cite: 123]
     CF_PLACE_TOP,       // 放顶层 [cite: 121]
-    CF_CELEBRATE        // 庆祝/待机
+   // CF_CELEBRATE        // 庆祝/待机
 } CFSubState_t;
 
 // --- 机器人数据上下文 ---
@@ -80,6 +80,7 @@ typedef struct {
 } R2_Context_t;
 
 extern int MF_flag;
-int chassis_auto_control();
+extern R2_Context_t g_robot_ctx;
+int chassis_auto_control(R2_Context_t *robot_ctx);
 
 #endif

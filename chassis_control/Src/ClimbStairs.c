@@ -278,7 +278,7 @@ int ClimbStairs(int curr_id, int stair_id)
 
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
-                if (distance<50.0f && !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
+                if (distance<50.0f && HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
                 {
                     // 停止向前移动
                     Change_dji_loc(DJI_M_CLIMB_RB,0);
@@ -322,8 +322,8 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, -6000);
-            Change_dji_speed(DJI_2006_R, 6000);
+            Change_dji_speed(DJI_2006_L, -7000);
+            Change_dji_speed(DJI_2006_R, 7000);
 
             if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             {

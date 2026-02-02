@@ -2,6 +2,10 @@
 
 #define TOTAL_STICK  1  // 一区总共拿取的杆数量
 
+R2_Context_t g_robot_ctx = {
+    .current_top_state = STATE_MC_AREA,
+    .sub_state.mc = MC_INIT
+};
 int MF_flag = 0;
 
 //向上层发送信息
@@ -36,7 +40,9 @@ void Handle_MC_Logic(R2_Context_t *r2) {
             // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
             if (go_path_control(&path_test,spd_test) == 1) {
                 r2->stick_count++;
-                r2->sub_state.mc = MC_ASSEMBLE_WAIT;
+                if (receive_flag()) {   // 收到上层信息
+                    r2->sub_state.mc = MC_ASSEMBLE_WAIT;
+                }
             }
             break;
 
@@ -197,8 +203,10 @@ void Handle_MF_Logic(R2_Context_t *r2) {
         case MF_EXIT_NAV: // 导航至出口
             if (DownStairs(r2->current_stair_id,r2->current_stair_id+3)) {
                 // 切换到顶级状态：三区对抗区
-                r2->current_top_state = STATE_CF_AREA;
-                r2->sub_state.cf = CF_CLIMB_RAMP;
+                if (receive_flag()) {
+                    r2->current_top_state = STATE_CF_AREA;
+                    r2->sub_state.cf = CF_CLIMB_RAMP;
+                }
             }
             break;
     }
@@ -269,27 +277,27 @@ void Handle_CF_Logic(R2_Context_t *r2) {
     }
 }
 
-int chassis_auto_control() {
-    R2_Context_t robot_ctx = {0};
-    robot_ctx.current_top_state = STATE_MC_AREA;
-    robot_ctx.sub_state.mc = MC_INIT;
+int chassis_auto_control(R2_Context_t *robot_ctx) {
+    // R2_Context_t robot_ctx = {0};
+    // robot_ctx.current_top_state = STATE_MC_AREA;
+    // robot_ctx.sub_state.mc = MC_INIT;
     // 全局安全检测
     // if (Sensors_EmergencyStopPressed()) {
     //     robot_ctx.current_top_state = STATE_EMERGENCY;
     // }
 
     // 分层状态机调度
-    switch (robot_ctx.current_top_state) {
+    switch (robot_ctx->current_top_state) {
         case STATE_MC_AREA:
-            Handle_MC_Logic(&robot_ctx);
+            Handle_MC_Logic(robot_ctx);
             break;
 
         case STATE_MF_AREA:
-            Handle_MF_Logic(&robot_ctx);
+            Handle_MF_Logic(robot_ctx);
             break;
 
         case STATE_CF_AREA:
-            Handle_CF_Logic(&robot_ctx);
+            Handle_CF_Logic(robot_ctx);
             break;
 
         case STATE_FINISHED:
