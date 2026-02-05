@@ -10,6 +10,7 @@
 
 #include "cmsis_gcc.h"
 #include "locator_driver.h"
+#include "Hfsm.h"
 #include "Task_chassis.h"
 
 void StartTask_Printf(void *argument)
@@ -33,7 +34,10 @@ void StartTask_Printf(void *argument)
         printf("%.1f,",lcResult.y);
         printf("%.3f\n",lcResult.r);
         printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
-        printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
+        //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
+        printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
+        printf("MC_flag:%d  MF_flag:%d  CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
+        printf("%d   %d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id);
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */

@@ -2,12 +2,15 @@
 // Created by 马皓然 on 2025/10/30.
 //
 #include "path.h"
+
+#include <math.h>
+
 #include "FreeRTOS.h"
 
 
 
 Path_struct path_test;
-path_spd_data_t spd_test ={3000,5000,5000};
+path_spd_data_t spd_test ={3000,500,500};
 
 void path_init() {
     Trajectory trajectory_data[4] = {
@@ -71,6 +74,66 @@ void path_init_test() {
     path_test.length = total_length;
     //3.给定初始角度和终末角度
     path_test.start_angle = 0.0f;
-    path_test.end_angle = 1.57f;
+    path_test.end_angle = 0.0f;
 
+}
+
+/**
+ * @brief  根据起点和终点生成直线轨迹参数
+ * @param  start  路径起点
+ * @param  end    路径终点
+ * @param  is_end 是否为整条路径的最后一段 (empty 为最后一段, full 为中间段)
+ * @return Trajectory 返回填充好的轨迹结构体
+ */
+Trajectory generate_line_trajectory(Point_struct start, Point_struct end, Ifvoid is_end) {
+    Trajectory tra;
+
+    // 1. 设置起终点和类型
+    tra.point_start = start;
+    tra.point_end = end;
+    tra.traceType = line;
+    tra.ifvoid = is_end;
+
+    // 2. 计算直线方程参数 Ax + By + C = 0
+    // 一般式方程推导: (y1 - y2)x + (x2 - x1)y + (x1y2 - x2y1) = 0
+    float A = start.y - end.y;
+    float B = end.x - start.x;
+    float C = start.x * end.y - end.x * start.y;
+
+    tra.trace[Line_A] = A;
+    tra.trace[Line_B] = B;
+    tra.trace[Line_C] = C;
+    tra.trace[3] = 0.0f; // 占位
+
+    // 3. 计算长度
+    tra.length = vec_module(end.x - start.x, end.y - start.y);
+
+    return tra;
+}
+
+/**
+ * @brief  初始化一个简单的两点直线路径
+ * @param  p_path 指向路径结构体的指针
+ * @param  start  起点坐标
+ * @param  end    终点坐标
+ * @param  start_angle  起点角度
+ * @param  end_angle    终点角度
+ */
+void init_single_line_path(Path_struct* p_path, Point_struct start, Point_struct end, float start_angle, float end_angle) {
+    // 1. 设置路径基本信息
+    p_path->trajectory_num = 1;
+    p_path->trajectory_count = 0;
+    p_path->start_angle = start_angle; // 可根据需要修改
+    p_path->end_angle = end_angle;   // 可根据需要修改
+
+    // 2. 分配内存 (使用 FreeRTOS 的内存分配，匹配你 path.c 的风格)
+    p_path->trajectories = (Trajectory *)pvPortMalloc(sizeof(Trajectory) * p_path->trajectory_num);
+
+    if (p_path->trajectories != NULL) {
+        // 3. 生成轨迹段 (由于只有一段，所以标记为 empty)
+        p_path->trajectories[0] = generate_line_trajectory(start, end, empty);
+
+        // 4. 更新路径总长度
+        p_path->length = p_path->trajectories[0].length;
+    }
 }

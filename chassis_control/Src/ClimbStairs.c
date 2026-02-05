@@ -145,9 +145,9 @@ float face_angle(int face)
 {
     float tmp=0.0f;
     if (face==0) tmp=0.0f;//往y轴正方向上楼梯
-    else if (face==1) tmp=-1.57f;//往x轴正方向上楼梯
-    else if (face==2) tmp=1.57f;//往x轴负方向上楼梯
-    else if (face==3) tmp=3.14f;//往y轴负方向上楼梯
+    else if (face==1) tmp=-1.57079632679f;//往x轴正方向上楼梯
+    else if (face==2) tmp=1.57079632679f;//往x轴负方向上楼梯
+    else if (face==3) tmp= 3.14159265359f;//往y轴负方向上楼梯
     return tmp;
 }
 
@@ -217,8 +217,6 @@ int ClimbStairs(int curr_id, int stair_id)
     {
         // 触发一键攀爬，开始第一步
         //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
-        if (climb_cnt == 1)
-        {
             //得出上楼梯的方向
             // if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
             // else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
@@ -226,9 +224,8 @@ int ClimbStairs(int curr_id, int stair_id)
             // else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
             // else face=4;
 
-            current_climb_state = CLIMB_STEP1_FRONT_UP;
-            return 0;
-        }
+        current_climb_state = CLIMB_STEP1_FRONT_UP;
+        return 0;
     }
 
     switch (current_climb_state)
@@ -322,8 +319,8 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, -7000);
-            Change_dji_speed(DJI_2006_R, 7000);
+            Change_dji_speed(DJI_2006_L, -10000);
+            Change_dji_speed(DJI_2006_R, 10000);
 
             if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             {
@@ -479,7 +476,7 @@ int Move_to_Edge(int curr_id, int stair_id)
         }
 
         default:
-            current_climb_state = CLIMB_IDLE;
+            current_move_state = MOVE_IDLE;
             break;
     }
     return 0;

@@ -80,6 +80,8 @@ typedef struct {
 } R2_Context_t;
 
 extern int MF_flag;
+extern int MC_flag;
+extern int CF_flag;
 extern R2_Context_t g_robot_ctx;
 int chassis_auto_control(R2_Context_t *robot_ctx);
 

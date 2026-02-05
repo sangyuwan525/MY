@@ -10,5 +10,6 @@ extern Path_struct path_test;
 extern path_spd_data_t spd_test;
 
 void path_init_test();
+void init_single_line_path(Path_struct* p_path, Point_struct start, Point_struct end, float start_angle, float end_angle);
 
 #endif //R1_CHASSIS_PATH_H

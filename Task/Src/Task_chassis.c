@@ -36,10 +36,6 @@ void StartTask_chassis(void *argument)
     //go_path_test
     PID_Init();
     path_init_test();
-    Change_dji_loc(DJI_M_CLIMB_LF,-100000);
-    Change_dji_loc(DJI_M_CLIMB_RF,100000);
-    Change_dji_loc(DJI_M_CLIMB_RB,100000);
-    Change_dji_loc(DJI_M_CLIMB_LB,-100000);
 
     /* Infinite loop */
     for(;;)
@@ -81,6 +77,7 @@ void StartTask_chassis(void *argument)
                             ClimbStairs(1,2);
                         }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
+
                         //DownStairs();
                     }
                 }
@@ -92,10 +89,17 @@ void StartTask_chassis(void *argument)
                 {
                     // 停止底盘，发送 (0, 0, 0) 指令
                     cha_remote(0.0f, 0.0f, 0.0f);
-                    Change_dji_loc(DJI_M_CLIMB_LF,0);
-                    Change_dji_loc(DJI_M_CLIMB_RF,0);
-                    Change_dji_loc(DJI_M_CLIMB_RB,0);
-                    Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    if (climb_test_cnt==0){
+                        Change_dji_loc(DJI_M_CLIMB_LF,0);
+                        Change_dji_loc(DJI_M_CLIMB_RF,0);
+                        Change_dji_loc(DJI_M_CLIMB_RB,0);
+                        Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    }else {
+                        Change_dji_loc(DJI_M_CLIMB_LF,-100000);
+                        Change_dji_loc(DJI_M_CLIMB_RF,100000);
+                        Change_dji_loc(DJI_M_CLIMB_RB,100000);
+                        Change_dji_loc(DJI_M_CLIMB_LB,-100000);
+                    }
                     climb_cnt=0;
                     down_cnt=0;
                 }
@@ -128,7 +132,7 @@ void StartTask_chassis(void *argument)
                 {
                     MF_flag = 1;
                 }else {
-                    MF_flag = 0;
+                    //MF_flag = 0;
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
@@ -165,6 +169,9 @@ void StartTask_chassis(void *argument)
                         {
                             down_cnt++;
                         }
+                        MF_flag++;
+                        MC_flag++;
+                        CF_flag++;
                         button3_flag=1;
                     }
                 }
@@ -182,7 +189,10 @@ void StartTask_chassis(void *argument)
                         // HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
                         PID_Init();
                         climb_cnt=0;
-                        climb_test_cnt++;
+                        climb_test_cnt=1-climb_test_cnt;
+                        MF_flag--;
+                        MC_flag--;
+                        CF_flag--;
                         button4_flag=1;
                     }
                 }else
