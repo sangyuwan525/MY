@@ -491,7 +491,6 @@ int DownStairs(int curr_id, int stair_id)
     {
         // 触发一键攀爬，开始第一步
         //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
-        if (down_cnt == 1)
         current_down_state = DOWN_STEP1_BASE_FORWARD;
     }
 

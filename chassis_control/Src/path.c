@@ -120,20 +120,28 @@ Trajectory generate_line_trajectory(Point_struct start, Point_struct end, Ifvoid
  * @param  end_angle    终点角度
  */
 void init_single_line_path(Path_struct* p_path, Point_struct start, Point_struct end, float start_angle, float end_angle) {
+    // --- 新增：安全释放旧内存 ---
+    if (p_path->trajectories != NULL) {
+        vPortFree(p_path->trajectories);
+        p_path->trajectories = NULL; // 置空防止误操作
+    }
+
     // 1. 设置路径基本信息
     p_path->trajectory_num = 1;
     p_path->trajectory_count = 0;
-    p_path->start_angle = start_angle; // 可根据需要修改
-    p_path->end_angle = end_angle;   // 可根据需要修改
+    p_path->start_angle = start_angle;
+    p_path->end_angle = end_angle;
 
-    // 2. 分配内存 (使用 FreeRTOS 的内存分配，匹配你 path.c 的风格)
+    // 2. 分配新内存
     p_path->trajectories = (Trajectory *)pvPortMalloc(sizeof(Trajectory) * p_path->trajectory_num);
 
     if (p_path->trajectories != NULL) {
-        // 3. 生成轨迹段 (由于只有一段，所以标记为 empty)
+        // 3. 生成轨迹段
         p_path->trajectories[0] = generate_line_trajectory(start, end, empty);
-
         // 4. 更新路径总长度
         p_path->length = p_path->trajectories[0].length;
+    } else {
+        // 异常处理：内存分配失败
+        p_path->trajectory_num = 0;
     }
 }
