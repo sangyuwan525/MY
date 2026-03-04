@@ -79,6 +79,12 @@ void StartTask_chassis(void *argument)
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
 
                         //DownStairs();
+                    }else if (rc_engineer_data.test_mode==UP_MODE) {
+                        Change_dji_loc(DJI_M_CLIMB_LF,100000);
+                        Change_dji_loc(DJI_M_CLIMB_RF,-100000);
+                        Change_dji_loc(DJI_M_CLIMB_RB,100000);
+                        Change_dji_loc(DJI_M_CLIMB_LB,-100000);
+
                     }
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
