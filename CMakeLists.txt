@@ -55,6 +55,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         SEGGER_RTT/RTT/SEGGER_RTT.c
         SEGGER_RTT/RTT/SEGGER_RTT_printf.c
         Task/Src/Task_locator_recv.c
+        Debug/debug.c
 )
 
 # Add STM32CubeMX generated sources
@@ -81,6 +82,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Task/Inc
         ${CMAKE_CURRENT_SOURCE_DIR}/SEGGER_RTT/Config
         ${CMAKE_CURRENT_SOURCE_DIR}/SEGGER_RTT/RTT
+        ${CMAKE_CURRENT_SOURCE_DIR}/Debug
         # Add user defined include paths
 )
 

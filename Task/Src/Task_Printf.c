@@ -7,11 +7,12 @@
 #include "Task_Printf.h"
 #include "chassis_path.h"
 #include "ClimbStairs.h"
-
+#include "debug.h"
 #include "cmsis_gcc.h"
 #include "locator_driver.h"
 #include "Hfsm.h"
 #include "Task_chassis.h"
+#include "remote_driver.h"
 
 void StartTask_Printf(void *argument)
 {
@@ -30,14 +31,15 @@ void StartTask_Printf(void *argument)
             // printf("desired_vx = %f\n", 1000*desired_vx);
         }
         //printf("x66 y55 z66\n");
-        printf("%.1f,",lcResult.x);
-        printf("%.1f,",lcResult.y);
-        printf("%.3f\n",lcResult.r);
-        printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
+        RTT_Printf("x=%.1f  ,",lcResult.x);
+        RTT_Printf("y=%.1f  ,",lcResult.y);
+        RTT_Printf("r=%.3f\n",lcResult.r);
+        RTT_Printf("vx=%f  vy=%f\n",remote_engineer.vx,remote_engineer.vy);
+        RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
-        printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
-        printf("MC_flag:%d  MF_flag:%d  CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
-        printf("%d   %d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id);
+        RTT_Printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
+        RTT_Printf("MC_flag:%d  MF_flag:%d  CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
+        RTT_Printf("%d   %d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id);
         osDelay(500);
     }
     /* USER CODE END StartTask_Printf */

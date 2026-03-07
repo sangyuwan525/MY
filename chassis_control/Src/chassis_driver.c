@@ -293,7 +293,7 @@ void cha_remote(float vx, float vy, float vr)
     for (int i = 0; i < WHEEL_NUM; i++)
     {
 #ifdef CHASSIS_TYPE_QUANXIANGLUN
-        speed_decompose_quanxianglun(i, velx, vely, vela);
+        speed_decompose_quanxianglun(i, -velx, -vely, vela);
 #elif defined(CHASSIS_TYPE_DUOLUN)
         speed_decompose_duolun(i, velx, vely, vela);
 #else

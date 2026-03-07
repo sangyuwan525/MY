@@ -113,6 +113,20 @@ int main(void)
   printf("Initial Success\r\n");
 
   Dji_Motor_Registry_Init();
+  SEGGER_RTT_Init();
+  SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
+                            "Buffer0Up",                    // 通道名字
+                            (uint8_t*)&RTT_BufferUp0[0],    // 缓存地址
+                            sizeof(RTT_BufferUp0),          // 缓存大小
+                            SEGGER_RTT_MODE_NO_BLOCK_SKIP); // 非阻塞
+  SEGGER_RTT_ConfigDownBuffer(0,                                // 通道0
+                              "Buffer0Down",                    // 通道名字
+                              (uint8_t*)&RTT_BufferDown0[0],    // 缓存地址
+                              sizeof(RTT_BufferDown0),          // 缓存大小
+                              SEGGER_RTT_MODE_NO_BLOCK_SKIP);   // 非阻塞
+
+  SEGGER_RTT_SetTerminal(0);                           // 设置终端0
+  SEGGER_RTT_printf(0, "OK!\n"); // 往通道0写入消息
   // SEGGER_RTT_Init();
   // SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
   //                           "Buffer0Up",                    // 通道名字
