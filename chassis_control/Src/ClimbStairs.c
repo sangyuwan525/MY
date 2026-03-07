@@ -10,11 +10,13 @@
 #include "chassis_path.h"
 #include "chassis_pid.h"
 #include "path_plan.h"
+#include "debug.h"
 
 #define PI 3.1415926
 #define  ForestEdge 100  //  梅林边界
 int climb_cnt = 0;
 int down_cnt = 0;
+
 
 //R2出发点为原点下台阶坐标
 // pos stairs_center[13]={
@@ -37,9 +39,9 @@ int down_cnt = 0;
 //
 pos stairs_center[15]={
     //{0,0,0},
-    {2690,3890,400},{1490,3890,200},{290,3890,400},
-    {2690,5090,200},{1490,5090,400},{290,5090,600},
-    {2690,6290,400},{1490,6290,600},{290,6290,400},
+    {2690,3290,400},{1490,3290,200},{290,3290,400},
+    {2690,4490,200},{1490,4490,400},{290,4490,600},
+    {2690,5690,400},{1490,5690,600},{290,5690,400},
     {2690,7490,200},{1490,7490,400},{290,7490,200},
     {2690,8690,0},  {0,0,0},        {290,8690,0}
 };
@@ -119,19 +121,19 @@ Point_struct get_stair_edge(int stair_id,int face)
     {
     case 0:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y - (590+270);
+        end_point.y = stairs_center[stair_id].y - (590+250);
         break;
     case 1:
-        end_point.x = stairs_center[stair_id].x - (590+270);
+        end_point.x = stairs_center[stair_id].x - (590+250);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 2:
-        end_point.x = stairs_center[stair_id].x + (590+270);
+        end_point.x = stairs_center[stair_id].x + (590+250);
         end_point.y = stairs_center[stair_id].y;
         break;
     case 3:
         end_point.x = stairs_center[stair_id].x;
-        end_point.y = stairs_center[stair_id].y + (590+270);
+        end_point.y = stairs_center[stair_id].y + (590+250);
         break;
     default:
         end_point.x = lcResult.x;
@@ -158,7 +160,7 @@ int get_face(int curr_id, int target_id)
     int curr_r=curr_id/COLS,curr_c=curr_id%COLS;
     int target_r=target_id/COLS,target_c=target_id%COLS;
     if (curr_id == ENTRY_NODE || target_id == EXIT_NODE)  face = 0;
-    if (curr_r-target_r==1&&curr_c-target_c==0) {
+    else if (curr_r-target_r==1&&curr_c-target_c==0) {
         face = 3;
     }else if (curr_r-target_r==-1&&curr_c-target_c==0) {
         face = 0;
@@ -270,7 +272,7 @@ int ClimbStairs(int curr_id, int stair_id)
             float now_pos = lcResult.r;                        // 机器人当前朝向角
             Point_struct end_point =get_stair_edge(stair_id,face);
             float distance = get_length(now_point, end_point);
-
+            RTT_Printf("%f\n",distance);
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
 
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
@@ -319,8 +321,8 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, -10000);
-            Change_dji_speed(DJI_2006_R, 10000);
+            Change_dji_speed(DJI_2006_L, 6000);
+            Change_dji_speed(DJI_2006_R, -6000);
 
             if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             {
@@ -338,13 +340,13 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP5_RESET_ALL:
         {
             // 四个3508归位 (原图步骤7 + 原按钮2)
-            Change_dji_loc(DJI_M_CLIMB_LF,-300000);
-            Change_dji_loc(DJI_M_CLIMB_RF,300000);
+            Change_dji_loc(DJI_M_CLIMB_LF,300000);
+            Change_dji_loc(DJI_M_CLIMB_RF,-300000);
             Change_dji_loc(DJI_M_CLIMB_LB,-100000);
             Change_dji_loc(DJI_M_CLIMB_RB,100000);
 
             // 假设归位需要 TARGET_HOME_LOC 运行时间
-            if (is_motor_cplt(DJI_M_CLIMB_LF,-300000)&&is_motor_cplt(DJI_M_CLIMB_RF,300000)
+            if (is_motor_cplt(DJI_M_CLIMB_LF,300000)&&is_motor_cplt(DJI_M_CLIMB_RF,-300000)
                 &&is_motor_cplt(DJI_M_CLIMB_LB,-100000)&&is_motor_cplt(DJI_M_CLIMB_RB,100000))
             {
                 Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
@@ -499,8 +501,8 @@ int DownStairs(int curr_id, int stair_id)
         case DOWN_IDLE:
         {
             // 保持空闲，等待触发
-            Change_dji_loc(DJI_M_CLIMB_LF,-100000);
-            Change_dji_loc(DJI_M_CLIMB_RF,100000);
+            Change_dji_loc(DJI_M_CLIMB_LF,100000);
+            Change_dji_loc(DJI_M_CLIMB_RF,-100000);
             Change_dji_loc(DJI_M_CLIMB_RB,100000);
             Change_dji_loc(DJI_M_CLIMB_LB,-100000);
             break;
@@ -541,8 +543,8 @@ int DownStairs(int curr_id, int stair_id)
         case DOWN_STEP2_FRONT_DOWN:
         {
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
-            Change_dji_loc(DJI_M_CLIMB_LF,back_up+30000);
-            Change_dji_loc(DJI_M_CLIMB_RF,-back_up-30000);
+            Change_dji_loc(DJI_M_CLIMB_LF,-back_up-30000);
+            Change_dji_loc(DJI_M_CLIMB_RF,back_up+30000);
             Change_dji_loc(DJI_M_CLIMB_RB,-30000);
             Change_dji_loc(DJI_M_CLIMB_LB,30000);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
@@ -550,7 +552,7 @@ int DownStairs(int curr_id, int stair_id)
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
             // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
-            if (is_motor_cplt(DJI_M_CLIMB_LF,back_up+30000)&&is_motor_cplt(DJI_M_CLIMB_RF,-back_up-30000))//&&climb_cnt == 2)
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-back_up-30000)&&is_motor_cplt(DJI_M_CLIMB_RF,back_up+30000))//&&climb_cnt == 2)
             {
                 current_down_state = DOWN_STEP3_REAR_FORWARD;
             }
@@ -562,8 +564,8 @@ int DownStairs(int curr_id, int stair_id)
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
             //cha_remote(0,500,0);
-            Change_dji_speed(DJI_2006_L, -6000);
-            Change_dji_speed(DJI_2006_R, 6000);
+            Change_dji_speed(DJI_2006_L, 6000);
+            Change_dji_speed(DJI_2006_R, -6000);
 
             if (is_on_stair_edge(stair_id,face) || down_cnt == 3)
             {
@@ -585,13 +587,13 @@ int DownStairs(int curr_id, int stair_id)
             // 此处抬升需要一个时间来完成，因为是速度控制或目标位置很远
             Change_dji_loc(DJI_M_CLIMB_LF,0);
             Change_dji_loc(DJI_M_CLIMB_RF,0);
-            Change_dji_loc(DJI_M_CLIMB_LB,-front_up);
-            Change_dji_loc(DJI_M_CLIMB_RB,front_up);
+            Change_dji_loc(DJI_M_CLIMB_LB,front_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,-front_up);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
 
             if (is_motor_cplt(DJI_M_CLIMB_LF,0)&&is_motor_cplt(DJI_M_CLIMB_RF,0)
-                &&is_motor_cplt(DJI_M_CLIMB_LB,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RB,front_up))//&&climb_cnt == 4)
+                &&is_motor_cplt(DJI_M_CLIMB_LB,front_up)&&is_motor_cplt(DJI_M_CLIMB_RB,-front_up))//&&climb_cnt == 4)
             {
                 printf("进入第5步\n");
                 current_down_state = DOWN_STEP5_BASE_FORWARD;
