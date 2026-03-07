@@ -78,6 +78,7 @@ int Move_back_to_Center(int stair_id);
 int DownStairs(int curr_id, int target_id);
 bool is_on_stair_edge(int stair_id,int face);
 float face_angle(int face);
+int get_face(int curr_id, int target_id);
 
 //台阶中心标记（以R2启动区为原点）
 typedef struct

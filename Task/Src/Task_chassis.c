@@ -70,11 +70,15 @@ void StartTask_chassis(void *argument)
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
                         if (climb_test_cnt==0)
                         {
-                            ClimbStairs(12,1);
+                            if (ClimbStairs(12,1)) {
+                                climb_test_cnt++;
+                            };
                         }
                         else if (climb_test_cnt==1)
                         {
-                            ClimbStairs(1,2);
+                            if (ClimbStairs(1,0)) {
+                                climb_test_cnt=-1;
+                            };
                         }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
 
@@ -95,14 +99,16 @@ void StartTask_chassis(void *argument)
                 {
                     // 停止底盘，发送 (0, 0, 0) 指令
                     cha_remote(0.0f, 0.0f, 0.0f);
+                    Change_dji_speed(DJI_2006_L, 0);
+                    Change_dji_speed(DJI_2006_R, 0);
                     if (climb_test_cnt==0){
                         Change_dji_loc(DJI_M_CLIMB_LF,0);
                         Change_dji_loc(DJI_M_CLIMB_RF,0);
                         Change_dji_loc(DJI_M_CLIMB_RB,0);
                         Change_dji_loc(DJI_M_CLIMB_LB,0);
                     }else {
-                        Change_dji_loc(DJI_M_CLIMB_LF,-100000);
-                        Change_dji_loc(DJI_M_CLIMB_RF,100000);
+                        Change_dji_loc(DJI_M_CLIMB_LF,100000);
+                        Change_dji_loc(DJI_M_CLIMB_RF,-100000);
                         Change_dji_loc(DJI_M_CLIMB_RB,100000);
                         Change_dji_loc(DJI_M_CLIMB_LB,-100000);
                     }
@@ -195,7 +201,8 @@ void StartTask_chassis(void *argument)
                         // HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
                         PID_Init();
                         climb_cnt=0;
-                        climb_test_cnt=1-climb_test_cnt;
+                        climb_test_cnt=0;//climb_test_cnt=1-climb_test_cnt;
+                        current_climb_state=0;
                         MF_flag--;
                         MC_flag--;
                         CF_flag--;

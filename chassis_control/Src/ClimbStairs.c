@@ -77,7 +77,7 @@ void motor_move(int encoder_counts,int motor_id)
     Change_dji_loc(motor_id,send_loc);
 }
 
-//判断上楼梯时是否走到台阶中心边缘
+//判断上楼梯时是否走到台阶中心边缘，用于判断是否需要把后轮升上去
 bool is_on_stair_edge(int stair_id,int face)
 {
     int center_threshold=20;//距离中心轴线的偏置阈值 单位mm
@@ -113,7 +113,7 @@ bool is_on_stair_center(int stair_id)
     else return false;
 }
 
-//获得台阶边缘坐标
+//获得台阶边缘坐标,用于上台阶前靠近台阶边缘
 Point_struct get_stair_edge(int stair_id,int face)
 {
     Point_struct end_point;
@@ -166,7 +166,7 @@ int get_face(int curr_id, int target_id)
         face = 0;
     }else if (curr_r-target_r==0&&curr_c-target_c==-1) {
         face = 2;
-    }else if (curr_r-target_r==1&&curr_c-target_c==1) {
+    }else if (curr_r-target_r==0&&curr_c-target_c==1) {
         face = 1;
     }
     return face;
@@ -189,6 +189,7 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
     spd_local_temp.y*=rating;
 
     cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
+    //RTT_Printf("spdx=%f, spdy=%f, vr=%f\n", spd_local_temp.x, spd_local_temp.y, vr);
 }
 
 // 移动回方格中心
@@ -274,16 +275,21 @@ int ClimbStairs(int curr_id, int stair_id)
             float distance = get_length(now_point, end_point);
             RTT_Printf("%f\n",distance);
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
-
+            //RTT_Printf("face=%d  face_angle=%f\n",face,face_angle(face));
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
-                if (distance<50.0f && HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
+
+                if (distance<90.0f)
                 {
-                    // 停止向前移动
-                    Change_dji_loc(DJI_M_CLIMB_RB,0);
-                    Change_dji_loc(DJI_M_CLIMB_LB,0);
-                    cha_remote(0,0,0);
-                    current_climb_state = CLIMB_STEP3_LIFT_UP;
+                    cha_remote(0,1000,vr);
+                    if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)) {
+                        // 停止向前移动
+                        Change_dji_loc(DJI_M_CLIMB_RB,0);
+                        Change_dji_loc(DJI_M_CLIMB_LB,0);
+                        cha_remote(0,0,0);
+                        current_climb_state = CLIMB_STEP3_LIFT_UP;
+                    }
+
                 }else
                 {
                     move_approach(now_point,end_point,now_pos,vr);
@@ -354,7 +360,7 @@ int ClimbStairs(int curr_id, int stair_id)
                 Point_struct end_point ={stairs_center[stair_id].x,stairs_center[stair_id].y};
 
                 move_approach(now_point,end_point,now_pos,0);
-
+                //RTT_Printf("good\n");
                 if (is_on_stair_center(stair_id))
                 {
                     current_climb_state = CLIMB_COMPLETE;
@@ -521,7 +527,7 @@ int DownStairs(int curr_id, int stair_id)
                     float vr = PID_Angle_Calculate(&chassis_yaw_pid,face_angle(face),now_pos);
                     if (fabsf(lcResult.r-face_angle(face))<0.05f)
                     {
-                        if (distance<50.0f || !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
+                        if (distance<50.0f)
                         {
                             // 停止向前移动
                             Change_dji_loc(DJI_M_CLIMB_RB,0);
