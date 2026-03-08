@@ -46,6 +46,8 @@ pos stairs_center[15]={
     {2690,8690,0},  {0,0,0},        {290,8690,0}
 };
 
+Point_struct entry_point = {1490,2090};
+
 // 状态变量
 Climb_State_e current_climb_state = CLIMB_IDLE;
 Move_State_e current_move_state = MOVE_IDLE;
@@ -269,37 +271,23 @@ int ClimbStairs(int curr_id, int stair_id)
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
             // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
-            Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
             float now_pos = lcResult.r;                        // 机器人当前朝向角
-            Point_struct end_point =get_stair_edge(stair_id,face);
-            float distance = get_length(now_point, end_point);
-            RTT_Printf("%f\n",distance);
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
             //RTT_Printf("face=%d  face_angle=%f\n",face,face_angle(face));
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
-
-                if (distance<90.0f)
-                {
-                    cha_remote(0,1000,vr);
-                    if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)) {
-                        // 停止向前移动
-                        Change_dji_loc(DJI_M_CLIMB_RB,0);
-                        Change_dji_loc(DJI_M_CLIMB_LB,0);
-                        cha_remote(0,0,0);
-                        current_climb_state = CLIMB_STEP3_LIFT_UP;
-                    }
-
-                }else
-                {
-                    move_approach(now_point,end_point,now_pos,vr);
+                cha_remote(0,500,vr);
+                if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)) {
+                    // 停止向前移动
+                    Change_dji_loc(DJI_M_CLIMB_RB,0);
+                    Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    cha_remote(0,0,0);
+                    current_climb_state = CLIMB_STEP3_LIFT_UP;
                 }
             }else
             {
                 cha_remote(0, 0, vr);
             }
-
-
             break;
         }
 
@@ -329,8 +317,8 @@ int ClimbStairs(int curr_id, int stair_id)
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
             Change_dji_speed(DJI_2006_L, 6000);
             Change_dji_speed(DJI_2006_R, -6000);
-
-            if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
+            // if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
+            if (!HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10))
             {
                  // 停止向前移动
                 printf("step4_end\n");
@@ -397,8 +385,6 @@ int Move_to_Edge(int curr_id, int stair_id)
     {
         // 触发一键攀爬，开始第一步
         //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
-        if (climb_cnt == 1)
-        {
             //得出上楼梯的方向
             // if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
             // else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
@@ -406,9 +392,8 @@ int Move_to_Edge(int curr_id, int stair_id)
             // else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
             // else face=4;
 
-            current_move_state = MOVE_STEP1_FRONT_UP;
-            return 0;
-        }
+        current_move_state = MOVE_STEP1_FRONT_UP;
+        return 0;
     }
 
     switch (current_move_state)
@@ -449,25 +434,18 @@ int Move_to_Edge(int curr_id, int stair_id)
         {
             // 底盘向前移动，前轮搭在台子上 (原图步骤3)
             // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
-            Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
             float now_pos = lcResult.r;                        // 机器人当前朝向角
-            Point_struct end_point =get_stair_edge(stair_id,face);
-            float distance = get_length(now_point, end_point);
-
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), now_pos);
-
+            //RTT_Printf("face=%d  face_angle=%f\n",face,face_angle(face));
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
-                if (distance<50.0f || !HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11))
-                {
+                cha_remote(0,500,vr);
+                if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)) {
                     // 停止向前移动
                     Change_dji_loc(DJI_M_CLIMB_RB,0);
                     Change_dji_loc(DJI_M_CLIMB_LB,0);
                     cha_remote(0,0,0);
-                    current_move_state = MOVE_COMPLETE;
-                }else
-                {
-                    move_approach(now_point,end_point,now_pos,vr);
+                    current_climb_state = CLIMB_STEP3_LIFT_UP;
                 }
             }else
             {

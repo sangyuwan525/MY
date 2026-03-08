@@ -1,5 +1,7 @@
 #include "Hfsm.h"
 
+#include "locator_driver.h"
+
 #define TOTAL_STICK  2  // 一区总共拿取的杆数量
 
 R2_Context_t g_robot_ctx = {
@@ -43,6 +45,8 @@ void Handle_MC_Logic(R2_Context_t *r2) {
 
         case MC_PICK_HEAD:  //  出发取端头
             // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
+            Point_struct now_point = {lcResult.x,lcResult.y};
+            init_single_line_path(&path_test,now_point,entry_point,lcResult.r,0);
             if (go_path_control(&path_test,spd_test) == 1) {
                // printf("MC_PICK_HEAD\n");
                 if (MC_flag==1) {   // 收到上层信息
@@ -90,6 +94,8 @@ void Handle_MF_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.mf) {
         case MF_ENTRY: // 进入树林入口
             // 规则：从入口方块(1,2,3)进入，假设此处调用路径控制前往入口
+            Point_struct now_point = {lcResult.x,lcResult.y};
+            init_single_line_path(&path_test,now_point,entry_point,lcResult.r,0);
             if (go_path_control(&path_test, spd_test) == 1) {
                 // 进入成功后，调用 path_plan.c 中的算法进行全局规划
                 // 假设输入地图数据 map，获取最优路径

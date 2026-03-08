@@ -35,12 +35,12 @@ void StartTask_Printf(void *argument)
         RTT_Printf("y=%.1f  ,",lcResult.y);
         RTT_Printf("r=%.3f\n",lcResult.r);
         //RTT_Printf("vx=%f  vy=%f\n",remote_engineer.vx,remote_engineer.vy);
-        RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
+        // RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
-        // RTT_Printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
-        // RTT_Printf("MC_flag:%d  MF_flag:%d  CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
-        // RTT_Printf("%d   %d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id);
-        RTT_Printf("pb11 %d\n,",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
+        RTT_Printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
+        RTT_Printf("MC_flag:%d  MF_flag:%d  CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
+        RTT_Printf("%d   %d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id);
+        // RTT_Printf("pb10 %d  pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         //RTT_Printf("face %d\n",get_face(1,0));
         osDelay(500);
     }

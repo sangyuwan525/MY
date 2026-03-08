@@ -5,6 +5,7 @@
 #ifndef R2_CHASSIS_CLIMBSTAIRS_H
 #define R2_CHASSIS_CLIMBSTAIRS_H
 
+#include "chassis_path.h"
 #include "gpio.h"
 #include "dji_3508_2006_motor.h"
 #include "tgmath.h"
@@ -60,8 +61,8 @@ typedef enum
 #define front_up -300000
 #define  front_up_400
 
-#define back_up 335000//305000  325000
-#define front_up2 (50000)//-20000  -40000
+#define back_up 300000//305000  325000
+#define front_up2 (20000)//-20000  -40000
 
 #define CYLINDER_GPIO_PORT GPIOC
 #define CYLINDER_PIN1 GPIO_PIN_5
@@ -70,6 +71,7 @@ extern int climb_cnt;
 extern int down_cnt;
 extern Climb_State_e current_climb_state;
 extern Down_State_e current_down_state;
+extern Point_struct entry_point;
 
 //上下楼梯的函数
 int ClimbStairs(int curr_id, int stair_id);
