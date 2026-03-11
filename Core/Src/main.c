@@ -36,10 +36,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-int __io_putchar(int ch) {
-  HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
-}
+// int __io_putchar(int ch) {
+//   HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+//   return ch;
+// }
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -105,7 +105,6 @@ int main(void)
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
-  MX_LPUART1_UART_Init();
   MX_UART4_Init();
   MX_UART5_Init();
   MX_USART2_UART_Init();

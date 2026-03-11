@@ -497,24 +497,14 @@ int DownStairs(int curr_id, int stair_id)
                 {
                     // 底盘向前移动，前轮搭在台子上 (原图步骤3)
                     // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
-                    Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
                     float now_pos = lcResult.r;                        // 机器人当前朝向角
-                    Point_struct end_point =get_stair_edge(stair_id,face);
-                    float distance = get_length(now_point, end_point);
-
                     float vr = PID_Angle_Calculate(&chassis_yaw_pid,face_angle(face),now_pos);
                     if (fabsf(lcResult.r-face_angle(face))<0.05f)
                     {
-                        if (distance<50.0f)
-                        {
-                            // 停止向前移动
-                            Change_dji_loc(DJI_M_CLIMB_RB,0);
-                            Change_dji_loc(DJI_M_CLIMB_LB,0);
+                        cha_remote(0,500,vr);
+                        if (HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
                             cha_remote(0,0,0);
                             current_down_state = DOWN_STEP2_FRONT_DOWN;
-                        }else
-                        {
-                            move_approach(now_point,end_point,now_pos,vr);
                         }
                     }else
                     {
@@ -551,7 +541,7 @@ int DownStairs(int curr_id, int stair_id)
             Change_dji_speed(DJI_2006_L, 6000);
             Change_dji_speed(DJI_2006_R, -6000);
 
-            if (is_on_stair_edge(stair_id,face) || down_cnt == 3)
+            if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10))
             {
                 // 停止向前移动
                 Change_dji_speed(DJI_2006_L, 0);

@@ -85,6 +85,12 @@ void StartTask_chassis(void *argument)
                         else if (climb_test_cnt==2)
                         {
                             if (ClimbStairs(1,0)) {
+                                climb_test_cnt++;
+                            };
+                        }
+                        else if (climb_test_cnt==3)
+                        {
+                            if (ClimbStairs(0,3)) {
                                 climb_test_cnt=-1;
                             };
                         }
