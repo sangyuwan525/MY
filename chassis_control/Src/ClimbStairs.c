@@ -216,18 +216,10 @@ int Move_back_to_Center(int stair_id)
  */
 int ClimbStairs(int curr_id, int stair_id)
 {
-    int face = get_face(curr_id,stair_id);
+    int face = get_face(curr_id,stair_id);//先算出朝向角
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_climb_state == CLIMB_IDLE)
     {
-        // 触发一键攀爬，开始第一步
-        //Extend_Cylinder(); // 在开始之前先伸长气缸 (对应原图步骤2)
-            //得出上楼梯的方向
-            // if (fabsf(lcResult.r-0)<0.1) face=0;//往y轴正方向上楼梯
-            // else if (fabsf(lcResult.r-4.71)<0.1) face=1;//往x轴正方向上楼梯
-            // else if (fabsf(lcResult.r-1.57)<0.1) face=2;//往x轴负方向上楼梯
-            // else if (fabsf(lcResult.r-3.14)<0.1) face=3;//往y轴负方向上楼梯
-            // else face=4;
 
         current_climb_state = CLIMB_STEP1_FRONT_UP;
         return 0;
@@ -296,6 +288,8 @@ int ClimbStairs(int curr_id, int stair_id)
         {
             // 四个3508一起抬升底盘，将车身向上抬 (原按钮5)
             // 此处抬升需要一个时间来完成，因为是速度控制或目标位置很远
+            Change_dji_loc(DJI_M_CLIMB_LB,0);
+            Change_dji_loc(DJI_M_CLIMB_RB,0);
             Change_dji_loc(DJI_M_CLIMB_LF,-front_up2);
             Change_dji_loc(DJI_M_CLIMB_RF,front_up2);
             Change_dji_loc(DJI_M_CLIMB_LB,back_up);
@@ -315,8 +309,8 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, 6000);
-            Change_dji_speed(DJI_2006_R, -6000);
+            Change_dji_speed(DJI_2006_L, 4000);
+            Change_dji_speed(DJI_2006_R, -4000);
             // if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             if (!HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10))
             {

@@ -62,7 +62,7 @@ void StartTask_chassis(void *argument)
                     vec2 v_world,remote;
                     remote.x=rc_engineer_data.vx;
                     remote.y=rc_engineer_data.vy;
-                   v_world= change_world_to_local(remote,lcResult.r);
+                    v_world= change_world_to_local(remote,lcResult.r);
                     // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
                     cha_remote(v_world.x,
                                v_world.y,
