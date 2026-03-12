@@ -61,8 +61,8 @@ typedef enum
 #define front_up -300000
 #define  front_up_400
 
-#define back_up 315000//305000  325000
-#define front_up2 (20000)//-20000  -40000
+#define back_up 325000//305000  325000
+#define front_up2 (30000)//-20000  -40000
 
 #define CYLINDER_GPIO_PORT GPIOC
 #define CYLINDER_PIN1 GPIO_PIN_5

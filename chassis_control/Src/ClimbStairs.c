@@ -517,16 +517,16 @@ int DownStairs(int curr_id, int stair_id)
         case DOWN_STEP2_FRONT_DOWN:
         {
             // 前轮抬到200平齐，后轮触地 (原图步骤2 + 原按钮1)
-            Change_dji_loc(DJI_M_CLIMB_LF,-back_up-30000);
-            Change_dji_loc(DJI_M_CLIMB_RF,back_up+30000);
-            Change_dji_loc(DJI_M_CLIMB_RB,-30000);
-            Change_dji_loc(DJI_M_CLIMB_LB,30000);
+            Change_dji_loc(DJI_M_CLIMB_LF,-back_up);
+            Change_dji_loc(DJI_M_CLIMB_RF,back_up);
+            Change_dji_loc(DJI_M_CLIMB_RB,-25000);
+            Change_dji_loc(DJI_M_CLIMB_LB,25000);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_SET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_SET);
             // 判断电机是否到达目标位置 (或等待气缸伸长)
             // 假设我们使用一个简单的延时来等待气缸伸长完成
             // if (is_motor_cplt(DJI_M_CLIMB_LF,-front_up)&&is_motor_cplt(DJI_M_CLIMB_RF,front_up))
-            if (is_motor_cplt(DJI_M_CLIMB_LF,-back_up-30000)&&is_motor_cplt(DJI_M_CLIMB_RF,back_up+30000))//&&climb_cnt == 2)
+            if (is_motor_cplt(DJI_M_CLIMB_LF,-back_up)&&is_motor_cplt(DJI_M_CLIMB_RF,back_up))//&&climb_cnt == 2)
             {
                 current_down_state = DOWN_STEP3_REAR_FORWARD;
             }

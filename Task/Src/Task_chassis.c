@@ -90,12 +90,17 @@ void StartTask_chassis(void *argument)
                         }
                         else if (climb_test_cnt==3)
                         {
-                            if (ClimbStairs(0,3)) {
+                            if (DownStairs(0,3)) {
                                 climb_test_cnt=-1;
                             };
                         }
                     }else if (rc_engineer_data.test_mode==DOWN_MODE) {
-
+                        if (climb_test_cnt==0)
+                        {
+                            if (DownStairs(0,3)) {
+                                climb_test_cnt=-1;
+                            };
+                        }
                         //DownStairs();
                     }else if (rc_engineer_data.test_mode==UP_MODE) {
                         Change_dji_loc(DJI_M_CLIMB_LF,100000);
