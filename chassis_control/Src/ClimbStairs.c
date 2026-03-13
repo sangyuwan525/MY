@@ -440,7 +440,7 @@ int Move_to_Edge(int curr_id, int stair_id)
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
                 cha_remote(0,500,vr);
-                if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)) {
+                if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)||HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
                     // 停止向前移动
                     Change_dji_loc(DJI_M_CLIMB_RB,0);
                     Change_dji_loc(DJI_M_CLIMB_LB,0);
