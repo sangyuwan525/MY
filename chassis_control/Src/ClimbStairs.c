@@ -42,8 +42,8 @@ pos stairs_center[15]={
     {2690,3290,400},{1490,3290,200},{290,3290,400},
     {2690,4490,200},{1490,4490,400},{290,4490,600},
     {2690,5690,400},{1490,5690,600},{290,5690,400},
-    {2690,7490,200},{1490,7490,400},{290,7490,200},
-    {2690,8690,0},  {0,0,0},        {290,8690,0}
+    {2690,6890,200},{1490,6890,400},{290,6890,200},
+    {2690,8090,0},  {0,0,0},        {290,8090,0}
 };
 
 Point_struct entry_point = {1490,2090};
@@ -351,6 +351,7 @@ int ClimbStairs(int curr_id, int stair_id)
                 //RTT_Printf("good\n");
                 if (is_on_stair_center(stair_id))
                 {
+                    cha_remote(0,0,0);
                     current_climb_state = CLIMB_COMPLETE;
                 }
             }
@@ -442,10 +443,10 @@ int Move_to_Edge(int curr_id, int stair_id)
                 cha_remote(0,500,vr);
                 if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)||HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
                     // 停止向前移动
-                    Change_dji_loc(DJI_M_CLIMB_RB,0);
-                    Change_dji_loc(DJI_M_CLIMB_LB,0);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,2000);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,-2000);
                     cha_remote(0,0,0);
-                    current_climb_state = CLIMB_STEP3_LIFT_UP;
+                    current_move_state = MOVE_COMPLETE;
                 }
             }else
             {
@@ -586,6 +587,7 @@ int DownStairs(int curr_id, int stair_id)
 
             if (is_on_stair_center(stair_id))
             {
+                cha_remote(0,0,0);
                 current_down_state = DOWN_COMPLETE;
             }
             break;

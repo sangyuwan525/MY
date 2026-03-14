@@ -200,6 +200,7 @@ void StartTask_chassis(void *argument)
                         {
                             down_cnt++;
                         }
+                        climb_test_cnt=1;
                         MF_flag++;
                         MC_flag++;
                         CF_flag++;
@@ -222,6 +223,7 @@ void StartTask_chassis(void *argument)
                         climb_cnt=0;
                         climb_test_cnt=0;//climb_test_cnt=1-climb_test_cnt;
                         current_climb_state=0;
+                        current_down_state=0;
                         MF_flag--;
                         MC_flag--;
                         CF_flag--;
