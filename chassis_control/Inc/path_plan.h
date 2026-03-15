@@ -26,6 +26,10 @@
 // INF 用作不可达或初始大值
 #define INF 32767
 
+#define MOVE_COST 10
+#define SIDE_GRAB_PENALTY 12
+#define REMOVE_PENALTY 5
+
 // KFS 类型说明：
 // - KFS_NONE: 无特殊设施
 // - KFS_R1: 第一类 KFS（会增加 r1_used 计数）

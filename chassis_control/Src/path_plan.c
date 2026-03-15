@@ -23,6 +23,14 @@ KFS_Type initial_map[TOTAL_NODES]={
 };
 
 // ================= 邻接判断辅助函数 =================
+
+static inline bool is_adjacent_grid(int8_t a, int8_t b){
+    if(a >= GRID_NODES || b >= GRID_NODES) return false;
+    int r1 = a / COLS, c1 = a % COLS;
+    int r2 = b / COLS, c2 = b % COLS;
+    return abs(r1 - r2) + abs(c1 - c2) == 1;
+}
+
 /**
  * @brief 判断两个节点是否在物理上相邻
  * @param a 节点A编号 (0-13)
@@ -76,11 +84,10 @@ bool run_dijkstra(
     State *end,
     State parent[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4]
 ){
-    // 四维数组 dist/used：索引维度分别为 node、r1_used、r2_removed、r2_mask
     static int16_t dist[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4];
     static bool used[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4];
 
-    // 初始化距离为 INF，未被访问
+    // 初始化阵列
     for(int i=0;i<TOTAL_NODES;i++)
         for(int j=0;j<=MAX_R1_LIMIT;j++)
             for(int k=0;k<=MAX_R2_REMOVE;k++)
@@ -89,15 +96,33 @@ bool run_dijkstra(
                     used[i][j][k][m]=false;
                 }
 
-    // 起始状态：在 start，r1_used=0, r2_removed=0, mask=0
-    dist[start][0][0][0]=0;
+    bool entry_has_r2 = (map[0] == KFS_R2 || map[1] == KFS_R2 || map[2] == KFS_R2);
+    if (entry_has_r2 && (t1!=0 && t1!=1 && t1!=2) && (t2!=0 && t2!=1 && t2!=2)) {
+        return false;
+    }
 
-    // 主循环：每次挑选未访问的最小 dist 状态
+    // =========================================================
+    // 修复：只要门口有 R2，就不允许 0 代价直接走进去！
+    // =========================================================
+    if (map[1] == KFS_R2) {
+        // 1 号有，强制优先拿 1 号
+        if (t1 == 1) dist[start][0][0][1] = SIDE_GRAB_PENALTY;
+        else if (t2 == 1) dist[start][0][0][2] = SIDE_GRAB_PENALTY;
+        else return false;
+    } else if (entry_has_r2) {
+        // 1 号没有，但 0 或 2 有 R2。此时【必须】交出探身代价去拿目标
+        if (t1 == 0 || t1 == 2) dist[start][0][0][1] = SIDE_GRAB_PENALTY;
+        if (t2 == 0 || t2 == 2) dist[start][0][0][2] = SIDE_GRAB_PENALTY;
+    } else {
+        // 只有在入口处完全干干净净没有任何 R2 时，才能 0 代价直接进入
+        dist[start][0][0][0] = 0;
+    }
+
+    // 主循环
     while(1){
         State cur={-1,0,0,0,0};
         int best=INF;
 
-        // O(状态数) 扫描选择最小距离的未访问状态（可用优先队列优化）
         for(int i=0;i<TOTAL_NODES;i++)
             for(int j=0;j<=MAX_R1_LIMIT;j++)
                 for(int k=0;k<=MAX_R2_REMOVE;k++)
@@ -107,68 +132,96 @@ bool run_dijkstra(
                             cur=(State){i,j,k,(uint8_t)m,dist[i][j][k][m]};
                         }
 
-        // 没有可选状态，搜索失败
         if(cur.node==-1) break;
         used[cur.node][cur.r1_used][cur.r2_removed][cur.r2_mask]=true;
 
-        // 如果到达目标节点且两个目标 R2 都已采集（mask==3），则成功
         if(cur.node==target && cur.r2_mask==3){
             *end=cur;
             return true;
         }
 
-        // 构建邻居列表（考虑入口/出口特殊连接）
+        // 进出约束
         int8_t neigh[5]; int n=0;
         if(cur.node==ENTRY_NODE){
-            neigh[n++]=0; neigh[n++]=1; neigh[n++]=2;
-        }else{
-            int r=cur.node/COLS,c=cur.node%COLS;
-            int dr[]={-1,1,0,0},dc[]={0,0,-1,1};
+            neigh[n++]=1;
+        }else if (cur.node!=EXIT_NODE){
+            int r=cur.node/COLS, c=cur.node%COLS;
+            int dr[]={-1,1,0,0}, dc[]={0,0,-1,1};
             for(int i=0;i<4;i++){
-                int nr=r+dr[i],nc=c+dc[i];
-                if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS)
+                int nr=r+dr[i], nc=c+dc[i];
+                if(nr>=0 && nr<ROWS && nc>=0 && nc<COLS)
                     neigh[n++]=nr*COLS+nc;
             }
-            if(cur.node>=9&&cur.node<=11) neigh[n++]=EXIT_NODE;
+            if(cur.node==9 || cur.node==11) neigh[n++]=EXIT_NODE;
         }
 
-        // 遍历每个可达邻居，计算状态转移和代价
+        // 遍历可达邻居
         for(int i=0;i<n;i++){
             int8_t nx=neigh[i];
-            // 高度差必须等于 200 才允许移动（坡度限制）
+
             if(abs((int)HEIGHT_MAP[nx]-(int)HEIGHT_MAP[cur.node])!=200) continue;
 
-            // 继承当前状态的计数和掩码
-            int nr1=cur.r1_used;
-            int nr2=cur.r2_removed;
-            uint8_t mask=cur.r2_mask;
-            int cost=cur.cost+10; // 默认移动代价为 10
+            int nr1 = cur.r1_used;
+            int nr2 = cur.r2_removed;
+            uint8_t base_mask = cur.r2_mask;
+            int base_cost = cur.cost + MOVE_COST;
 
             if(nx<GRID_NODES){
-                // 不可通行的假节点直接跳过
                 if(map[nx]==KFS_FAKE) continue;
 
-                // 碰到 R1，则增加 r1 计数；超过上限则无法通行
                 if(map[nx]==KFS_R1){
                     if(++nr1>MAX_R1_LIMIT) continue;
                 }
 
-                // 碰到 R2：如果是 t1 或 t2 则标记已采集；否则视为被移除的 R2（增加成本/计数）
                 if(map[nx]==KFS_R2){
-                    if(nx==t1) mask|=1;             // t1 被取走
-                    else if(nx==t2) mask|=2;        // t2 被取走
-                    else{
-                        // 非目标的 R2 被“移除/绕开”，有更高代价和数量限制
+                    if(nx==t1) base_mask|=1;
+                    else if(nx==t2) base_mask|=2;
+                    else {
                         if(++nr2>MAX_R2_REMOVE) continue;
-                        cost+=5; // 额外代价（示意性增加）
+                        base_cost+=REMOVE_PENALTY;
+                    }
+                }
+
+                bool can_sg_t1 = ((base_mask & 1) == 0) && is_adjacent_grid(nx, t1);
+                bool can_sg_t2 = ((base_mask & 2) == 0) && is_adjacent_grid(nx, t2);
+
+                if(base_cost < dist[nx][nr1][nr2][base_mask]){
+                    dist[nx][nr1][nr2][base_mask] = base_cost;
+                    parent[nx][nr1][nr2][base_mask] = cur;
+                }
+
+                if(can_sg_t1){
+                    int cost_sg = base_cost + SIDE_GRAB_PENALTY;
+                    uint8_t mask_sg = base_mask | 1;
+                    if(cost_sg < dist[nx][nr1][nr2][mask_sg]){
+                        dist[nx][nr1][nr2][mask_sg] = cost_sg;
+                        parent[nx][nr1][nr2][mask_sg] = cur;
+                    }
+                }
+
+                if(can_sg_t2){
+                    int cost_sg = base_cost + SIDE_GRAB_PENALTY;
+                    uint8_t mask_sg = base_mask | 2;
+                    if(cost_sg < dist[nx][nr1][nr2][mask_sg]){
+                        dist[nx][nr1][nr2][mask_sg] = cost_sg;
+                        parent[nx][nr1][nr2][mask_sg] = cur;
+                    }
+                }
+
+                if(can_sg_t1 && can_sg_t2){
+                    int cost_sg = base_cost + (SIDE_GRAB_PENALTY * 2);
+                    uint8_t mask_sg = base_mask | 3;
+                    if(cost_sg < dist[nx][nr1][nr2][mask_sg]){
+                        dist[nx][nr1][nr2][mask_sg] = cost_sg;
+                        parent[nx][nr1][nr2][mask_sg] = cur;
                     }
                 }
             }
-
-            // 松弛操作：若新的代价更小则更新 dist 与 parent
-            if(cost<dist[nx][nr1][nr2][mask]){
-                dist[nx][nr1][nr2][mask]=cost;
-                parent[nx][nr1][nr2][mask]=cur;
+            else {
+                if(base_cost < dist[nx][nr1][nr2][base_mask]){
+                    dist[nx][nr1][nr2][base_mask] = base_cost;
+                    parent[nx][nr1][nr2][base_mask] = cur;
+                }
             }
         }
     }
