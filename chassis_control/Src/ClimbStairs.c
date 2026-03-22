@@ -180,7 +180,7 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
     vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, end_point);
     // 速度转换到车身局部坐标系
     vec2 spd_local_temp = change_world_to_local(adjust_spd_world, now_pos);
-    const float close_limit = 500.0f;
+    const float close_limit = 1000.0f;
     float max_spd=spd_local_temp.x>spd_local_temp.y?spd_local_temp.x:spd_local_temp.y;
     float min_spd=spd_local_temp.x<spd_local_temp.y?spd_local_temp.x:spd_local_temp.y;
     float rating=1.0;
@@ -189,7 +189,7 @@ void move_approach(Point_struct now_point,Point_struct end_point,float now_pos,f
 
     spd_local_temp.x*=rating;
     spd_local_temp.y*=rating;
-
+    //RTT_Printf("vx:%f,vy:%f\n",spd_local_temp.x, spd_local_temp.y);
     cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
     //RTT_Printf("spdx=%f, spdy=%f, vr=%f\n", spd_local_temp.x, spd_local_temp.y, vr);
 }
@@ -199,8 +199,7 @@ int Move_back_to_Center(int stair_id)
 {
     Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
     Point_struct end_point = {stairs_center[stair_id].x,stairs_center[stair_id].y};
-    float distance = get_length(now_point, end_point);
-    if (distance<50.0f) {
+    if (is_on_stair_center((stair_id))) {
         cha_remote(0,0,0);
         return 1;
     }else {
@@ -309,8 +308,8 @@ int ClimbStairs(int curr_id, int stair_id)
         case CLIMB_STEP4_REAR_FORWARD:
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
-            Change_dji_speed(DJI_2006_L, 4000);
-            Change_dji_speed(DJI_2006_R, -4000);
+            Change_dji_speed(DJI_2006_L, 8000);
+            Change_dji_speed(DJI_2006_R, -8000);
             // if (is_on_stair_edge(stair_id,face) || climb_cnt == 3)
             if (!HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10))
             {
@@ -463,6 +462,7 @@ int Move_to_Edge(int curr_id, int stair_id)
     return 0;
 }
 
+
 //下楼梯的函数
 int DownStairs(int curr_id, int stair_id)
 {
@@ -498,6 +498,7 @@ int DownStairs(int curr_id, int stair_id)
                     {
                         cha_remote(0,500,vr);
                         if (HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
+                            RTT_Printf("1111111\n");
                             cha_remote(0,0,0);
                             current_down_state = DOWN_STEP2_FRONT_DOWN;
                         }
@@ -533,8 +534,8 @@ int DownStairs(int curr_id, int stair_id)
         {
             // 2006推动底盘向前运动，让后轮也上台阶 (原图步骤6 + 原按钮3)
             //cha_remote(0,500,0);
-            Change_dji_speed(DJI_2006_L, 6000);
-            Change_dji_speed(DJI_2006_R, -6000);
+            Change_dji_speed(DJI_2006_L, 5000);
+            Change_dji_speed(DJI_2006_R, -5000);
 
             if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10))
             {
@@ -554,10 +555,12 @@ int DownStairs(int curr_id, int stair_id)
         {
             // 四个3508一起抬升底盘，将车身向上抬 (原按钮5)
             // 此处抬升需要一个时间来完成，因为是速度控制或目标位置很远
-            Change_dji_loc(DJI_M_CLIMB_LF,0);
-            Change_dji_loc(DJI_M_CLIMB_RF,0);
-            Change_dji_loc(DJI_M_CLIMB_LB,front_up);
-            Change_dji_loc(DJI_M_CLIMB_RB,-front_up);
+
+            // 发送平滑处理后的期望位置
+            Change_dji_loc(DJI_M_CLIMB_LF, 0);
+            Change_dji_loc(DJI_M_CLIMB_RF, 0);
+            Change_dji_loc(DJI_M_CLIMB_LB, front_up);
+            Change_dji_loc(DJI_M_CLIMB_RB, -front_up);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN1,GPIO_PIN_RESET);
             // HAL_GPIO_WritePin(CYLINDER_GPIO_PORT,CYLINDER_PIN2,GPIO_PIN_RESET);
 

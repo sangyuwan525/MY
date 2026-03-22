@@ -28,7 +28,7 @@
 
 #define MOVE_COST 10
 #define SIDE_GRAB_PENALTY 12
-#define REMOVE_PENALTY 5
+#define REMOVE_PENALTY 15
 
 // KFS 类型说明：
 // - KFS_NONE: 无特殊设施

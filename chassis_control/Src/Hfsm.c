@@ -182,9 +182,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     if (r2->plan.r2_taken[0]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
                         r2->sub_state.mf = MF_MOVE_TO_BLOCK;
                     }else{
-                        if (Move_back_to_Center(r2->current_stair_id)) {    // 如果kfs所在方块不是要移动的目标方块，返回中心进行判断
-                            r2->sub_state.mf = MF_ACTION_JUDGE;
-                        }
+                        r2->sub_state.mf = MF_BACK_TO_CENTER;
                     }
                 }
             }
@@ -203,11 +201,15 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     if (r2->plan.r2_taken[1]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
                         r2->sub_state.mf = MF_MOVE_TO_BLOCK;
                     }else{
-                        if (Move_back_to_Center(r2->current_stair_id)) {    // 如果kfs所在方块不是要移动的目标方块，返回中心进行判断
-                            r2->sub_state.mf = MF_ACTION_JUDGE;
-                        }
+                        r2->sub_state.mf = MF_BACK_TO_CENTER;
                     }
                 }
+            }
+            break;
+
+        case MF_BACK_TO_CENTER:
+            if (Move_back_to_Center(r2->current_stair_id)) {    // 如果kfs所在方块不是要移动的目标方块，返回中心进行判断
+                r2->sub_state.mf = MF_ACTION_JUDGE;
             }
             break;
 

@@ -45,6 +45,7 @@ typedef enum {
     MF_PICK_ADJACENT_1,   // 抓取相邻方块的KFS r2_taken[1]
     MF_REMOVE_KFS,      // 移除相邻方块上的KFS
    // MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
+    MF_BACK_TO_CENTER,//判断抓取是否完成，防止重复移动到台阶边缘去抓取
     MF_EXIT_NAV         // 导航至出口 (10/11/12号方块) [cite: 133]
 } MFSubState_t;
 
