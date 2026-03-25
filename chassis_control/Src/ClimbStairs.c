@@ -46,7 +46,7 @@ pos stairs_center[15]={
     {2690,8090,0},  {0,0,0},        {290,8090,0}
 };
 
-Point_struct entry_point = {1490,2090};
+Point_struct entry_point[3] = {{2690,2090},{1490,2090},{290,2090}};
 
 // 状态变量
 Climb_State_e current_climb_state = CLIMB_IDLE;

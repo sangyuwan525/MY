@@ -38,6 +38,7 @@ typedef enum {
 
 // --- 子状态：二区梅林 (Sub-states for MF) ---
 typedef enum {
+    MF_ENTRY_CHECK,     // 进入入口前先进行判断
     MF_ENTRY,           // 进入树林入口
     MF_ACTION_JUDGE,    // 下一步动作判断，移动还是拿取还是移出
     MF_MOVE_TO_BLOCK,   // 移动到目标方块

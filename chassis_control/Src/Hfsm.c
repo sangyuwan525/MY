@@ -82,8 +82,9 @@ void Handle_MC_Logic(R2_Context_t *r2) {
             // 规则4.3.10: 只有在R1完全离开武馆后，R2才能离开
             if (MC_flag==4 || r2->r1_left_mc) {
                 // 切换到顶层状态：进入梅林
+                r2->plan = plan_route(initial_map); // 规划路径
                 r2->current_top_state = STATE_MF_AREA;
-                r2->sub_state.mf = MF_ENTRY;
+                r2->sub_state.mf = MF_ENTRY_CHECK;
             }
             break;
     }
@@ -92,15 +93,59 @@ void Handle_MC_Logic(R2_Context_t *r2) {
 //  二区逻辑
 void Handle_MF_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.mf) {
+        case MF_ENTRY_CHECK:
+            if (r2->plan.r2_taken[0]==1 || r2->plan.r2_taken[1]==1) {
+                r2->sub_state.mf = MF_ENTRY;
+            }else if (r2->plan.r2_taken[0]==0) {
+                Point_struct now_point = {lcResult.x,lcResult.y};
+                init_single_line_path(&path_test,now_point,entry_point[0],lcResult.r,0);
+                if (go_path_control(&path_test, spd_test) == 1) {
+                    // 进入成功后，调用 path_plan.c 中的算法进行全局规划
+                    // 假设输入地图数据 map，获取最优路径
+                    if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
+                        send_flag_to_up(FLAG_GRAB_KFS);
+                        if (MF_flag==3) {
+                            // 抓取成功
+                            r2->kfs_count++;
+                            if (r2->already_taken==1) {
+                                r2->already_taken = 2;  // 两个都已抓取
+                            }else {
+                                r2->already_taken = 0;  // 已抓取r2_taken[0]
+                            }
+                        }
+                        r2->sub_state.mf = MF_ENTRY;
+                    }
+                }
+            }else if (r2->plan.r2_taken[0]==2) {
+                Point_struct now_point = {lcResult.x,lcResult.y};
+                init_single_line_path(&path_test,now_point,entry_point[2],lcResult.r,0);
+                if (go_path_control(&path_test, spd_test) == 1) {
+                    // 进入成功后，调用 path_plan.c 中的算法进行全局规划
+                    // 假设输入地图数据 map，获取最优路径
+                    if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
+                        send_flag_to_up(FLAG_GRAB_KFS);
+                        if (MF_flag==3) {
+                            // 抓取成功
+                            r2->kfs_count++;
+                            if (r2->already_taken==1) {
+                                r2->already_taken = 2;  // 两个都已抓取
+                            }else {
+                                r2->already_taken = 0;  // 已抓取r2_taken[0]
+                            }
+                        }
+                        r2->sub_state.mf = MF_ENTRY;
+                    }
+                }
+            }
+            break;
         case MF_ENTRY: // 进入树林入口
             // 规则：从入口方块(1,2,3)进入，假设此处调用路径控制前往入口
-            Point_struct now_point = {lcResult.x,lcResult.y};
-            init_single_line_path(&path_test,now_point,entry_point,lcResult.r,0);
+            Point_struct cur_point = {lcResult.x,lcResult.y};
+            init_single_line_path(&path_test,cur_point,entry_point[1],lcResult.r,0);
             if (go_path_control(&path_test, spd_test) == 1) {
                 // 进入成功后，调用 path_plan.c 中的算法进行全局规划
                 // 假设输入地图数据 map，获取最优路径
                 if (MF_flag==1) {
-                    r2->plan = plan_route(initial_map);
                     r2->current_step = 1;  // 第一步为走到入口处
                     r2->sub_state.mf = MF_ACTION_JUDGE;
                 }

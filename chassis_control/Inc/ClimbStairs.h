@@ -71,7 +71,7 @@ extern int climb_cnt;
 extern int down_cnt;
 extern Climb_State_e current_climb_state;
 extern Down_State_e current_down_state;
-extern Point_struct entry_point;
+extern Point_struct entry_point[3];
 
 //上下楼梯的函数
 int ClimbStairs(int curr_id, int stair_id);
@@ -89,6 +89,8 @@ typedef struct
     int y;
     int z;
 }pos;
+
+extern pos stairs_center[15];
 
 
 #endif //R2_CHASSIS_CLIMBSTAIRS_H

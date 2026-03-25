@@ -292,29 +292,38 @@ float get_length_in_path(Point_struct foot_point,Trajectory* tra_array,uint8_t c
  *
  * @return float  当前位置 path_pos 对应的期望朝向角（弧度）。
  *
- * @note   1. 该函数采用带平滑起始区的线性插值方法来过渡朝向角。
- * 2. 在路径开始的 10% 距离内 (path_pos < length * 0.1)，朝向角保持为 start_angle (tpro=0)。
- * 3. 在路径的 10% 到 55% 距离内 (tpro 从 0 增加到 1.0)，朝向角从 start_angle 线性插值到 end_angle。
- * 4. 在路径的 55% 之后 (tpro > 1.0f)，朝向角保持为 end_angle。
- * 5. 插值公式为: angle = start_angle + (end_angle - start_angle) * tpro。
- *
- * @par 内部 tpro 逻辑分析:
- * - 当 path_pos < 0.1*length 时，tpro = 0。
- * - 临界点 path_pos = 0.55*length 时，tpro = 2 * 0.55*length / length = 1.1，被钳位到 1.0f。
- * - 临界点 path_pos = 0.5*length 时，tpro = 2 * 0.5*length / length = 1.0f。
- * - 实际上，该函数在路径的 **0% 到 50%** 距离内完成朝向角的过渡。
+ * @note   1. 该函数在整条路径上做朝向角过渡，进度参数为 t=clamp(path_pos/length, 0, 1)。
+ * 2. 过渡曲线使用 quintic smoothstep：t^3(10-15t+6t^2)，可降低起止段角速度突变。
+ * 3. 角度差始终按 [-pi, pi] 最短路径取值，避免跨边界时大角度跳变。
+ * 4. 当 length 很小（接近 0）时直接返回 end_angle（并包角到 [-pi, pi]）。
  * @date   2025/11/02
  */
+static float wrap_angle_to_pi(float angle) {
+    while (angle > pi) angle -= 2.0f * pi;
+    while (angle < -pi) angle += 2.0f * pi;
+    return angle;
+}
+
 float get_angle_in_path(float path_pos,float length,float start_angle,float end_angle) {
-    float tpro;
-    if (path_pos < length * 0.1) {
-        tpro = 0;
+    float t;
+    float smooth_t;
+    float delta;
+
+    if (length <= 1e-6f) {
+        return wrap_angle_to_pi(end_angle);
     }
-    else {
-        tpro = 2 * path_pos /length;
-    }
-    if (tpro > 1.0f) tpro = 1.0f;
-    return start_angle + (end_angle - start_angle) * tpro;
+
+    // Full-path progress: yaw transition is distributed over the whole path.
+    t = path_pos / length;
+    if (t < 0.0f) t = 0.0f;
+    else if (t > 1.0f) t = 1.0f;
+
+    // Quintic smoothstep for smoother yaw-rate at path start/end.
+    smooth_t = t * t * t * (10.0f + t * (-15.0f + 6.0f * t));
+
+    // Always use shortest angular difference in [-pi, pi].
+    delta = wrap_angle_to_pi(end_angle - start_angle);
+    return wrap_angle_to_pi(start_angle + delta * smooth_t);
 }
 /**
  * @brief  根据 S 型曲线算法计算路径上某位置的期望速度向量。
@@ -415,8 +424,16 @@ float test_angle;
 int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 {
     const Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
-    const float now_pos = lcResult.r;                        // 机器人当前朝向角
-    // 检查当前轨迹段是否有效，防止越界
+    const float now_pos = wrap_angle_to_pi(lcResult.r);      // 机器人当前朝向角（约定 [-pi, pi]）
+
+    // 动态阈值：结合减速段长度，避免短路径切换过早或过晚。
+    const float near_distance_threshold = fmaxf(180.0f, fminf(550.0f, path_spd.down_stage + 120.0f));
+    const float switch_distance_threshold = fmaxf(80.0f, fminf(200.0f, path_spd.down_stage * 0.5f + 60.0f));
+    const float near_remain_threshold = fmaxf(120.0f, fminf(450.0f, path_spd.down_stage * 0.8f + 100.0f));
+    const float switch_remain_threshold = fmaxf(50.0f, fminf(180.0f, path_spd.down_stage * 0.35f + 30.0f));
+    const float done_remain_threshold = fmaxf(20.0f, fminf(80.0f, path_spd.down_stage * 0.2f + 20.0f));
+
+    // 检查当前轨迹段是否有效，防止越界。
     if ((*path).trajectory_count >= (*path).trajectory_num) {
         cha_remote(0.0f, 0.0f, 0.0f);
         return 1;
@@ -424,23 +441,29 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     // 当前轨迹段的终点
     Point_struct current_end_point = (*path).trajectories[(*path).trajectory_count].point_end;
-	float distance = get_length(now_point, current_end_point); // 当前点到轨迹段终点的直线距离
+    float distance = get_length(now_point, current_end_point); // 当前点到轨迹段终点的直线距离
 
-	// --- 1. 轨迹切换/末端靠近阶段 ---
-	if (distance < 550.0f)
-	{
-		// 1.1. 非终点轨迹段的切换逻辑
-		if((*path).trajectories[(*path).trajectory_count].ifvoid != empty&& distance <= 200.0f)
-		{
-				(*path).trajectory_count++; // 进入下一段路径
-				//printf("count %d\n", (*path).count);
-                // ⚠️ 建议在这里重置 PID 状态
-				return 0;
-		}
+    // 先计算足点与累计路径位置，用于“按剩余长度”做切段/完成判定。
+    Point_struct foot_point = get_foot_point(now_point, (*path).trajectories[(*path).trajectory_count]);
+    float path_pos = get_length_in_path(foot_point, (*path).trajectories, (*path).trajectory_count);
+    float path_remain = (*path).length - path_pos;
+    if (path_remain < 0.0f) path_remain = 0.0f;
 
-		// 1.2. 终点轨迹段的精确对位/路径完成判断
-		else if ((*path).trajectories[(*path).trajectory_count].ifvoid == empty) // 是终点
-		{
+    // --- 1. 轨迹切换/末端靠近阶段 ---
+    // 条件由“终点欧式距离 + 剩余路径长度”联合决定。
+    if (distance < near_distance_threshold || path_remain < near_remain_threshold)
+    {
+        // 1.1. 非终点轨迹段的切换逻辑
+        if ((*path).trajectories[(*path).trajectory_count].ifvoid != empty &&
+            (distance <= switch_distance_threshold || path_remain <= switch_remain_threshold))
+        {
+            (*path).trajectory_count++; // 进入下一段路径
+            return 0;
+        }
+
+        // 1.2. 终点轨迹段的精确对位/路径完成判断
+        else if ((*path).trajectories[(*path).trajectory_count].ifvoid == empty) // 是终点
+        {
             // 计算靠近速度 (世界坐标系)，使用全局靠近PID实例
             vec2 adjust_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, current_end_point);
 
@@ -453,15 +476,14 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
             if (spd_local_temp.y > close_limit) spd_local_temp.y = close_limit;
             else if (spd_local_temp.y < -close_limit) spd_local_temp.y = -close_limit;
 
-            // 角度规划
-            // float tar_ang_kaojin = (*path).start_angle + ((*path).end_angle - (*path).start_angle) *
-            //                            (distance / (*path).length);
-		    float tar_ang_kaojin =(*path).end_angle;
+            // 终点角度同样按 [-pi, pi] 使用，避免跨边界跳变。
+            float tar_ang_kaojin = wrap_angle_to_pi((*path).end_angle);
             // 旋转速度计算，使用全局角度PID实例
             float vr = PID_Angle_Calculate(&chassis_yaw_pid, tar_ang_kaojin, now_pos);
 
-            // 路径完成判断
-            if (distance < 50.0f && fabsf((*path).end_angle - now_pos) < 0.1f &&
+            // 路径完成判断：位置 + 剩余长度 + 角度 + 速度
+            float yaw_err = wrap_angle_to_pi((*path).end_angle - now_pos);
+            if (distance < 50.0f && path_remain < done_remain_threshold && fabsf(yaw_err) < 0.1f &&
                 fabsf(lcResult.vx) < 50.0f && fabsf(lcResult.vy) < 50.0f && fabsf(lcResult.vr) < 50.0f) {
                 cha_remote(0.0f, 0.0f, 0.0f);
                 return 1; // 路径完成
@@ -469,36 +491,32 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
                 cha_remote(spd_local_temp.x, spd_local_temp.y, vr); // 输出末端调整速度
             }
             return 0;
-		}
-	}
+        }
+    }
 
     // --- 2. Pure Pursuit/航迹跟踪主循环逻辑 ---
 
-	// 2.1. 几何信息计算
-	Point_struct foot_point = get_foot_point(now_point, (*path).trajectories[(*path).trajectory_count]);
-	float path_pos = get_length_in_path(foot_point, (*path).trajectories, (*path).trajectory_count);
-
     // 2.2. 角度控制
-	float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
+    float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
     test_angle=target_angle;
-	float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);// 使用全局角度PID
+    float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);// 使用全局角度PID
 
-	vec2 spd_dir = get_spd_dir(foot_point, (*path).trajectories[(*path).trajectory_count]);
+    vec2 spd_dir = get_spd_dir(foot_point, (*path).trajectories[(*path).trajectory_count]);
 
-	// 期望沿轨迹速度
-	vec2 target_spd_world = get_spd_on_path_calculate(path_spd, path_pos, (*path).length, spd_dir);
+    // 期望沿轨迹速度
+    vec2 target_spd_world = get_spd_on_path_calculate(path_spd, path_pos, (*path).length, spd_dir);
 
-	// 横向纠正速度，使用全局修正PID
-	vec2 correct_spd_world = PID_Correct_Calculate(&chassis_correct_pid, now_point, foot_point);
+    // 横向纠正速度，使用全局修正PID
+    vec2 correct_spd_world = PID_Correct_Calculate(&chassis_correct_pid, now_point, foot_point);
 
-	vec2 sum_spd_world = sum_vec2(target_spd_world, correct_spd_world);// 总速度
+    vec2 sum_spd_world = sum_vec2(target_spd_world, correct_spd_world);// 总速度
 
-	// 2.4. 局部速度输出
-	vec2 spd_local_final = change_world_to_local(sum_spd_world, now_pos);// 速度转换到车身坐标系
+    // 2.4. 局部速度输出
+    vec2 spd_local_final = change_world_to_local(sum_spd_world, now_pos);// 速度转换到车身坐标系
 
-	cha_remote(spd_local_final.x, spd_local_final.y, rotation_spd);// 为电机速度赋值
+    cha_remote(spd_local_final.x, spd_local_final.y, rotation_spd);// 为电机速度赋值
 
-	return 0; // 路径正在进行中
+    return 0; // 路径正在进行中
 }
 
 
