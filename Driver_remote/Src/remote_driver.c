@@ -95,6 +95,8 @@ void Remote_Data_Convert(const rc_info_t *rc_data, remote_engineer_t *engineer_d
         engineer_data->mode = CHASSIS_MODE_MANUAL;// 手动模式
     } else if (rc_data->sw1 == 2 && rc_data->sw2 == 2) {
         engineer_data->mode = CHASSIS_MODE_AUTO; // 自动模式
+    } else if (rc_data->sw1 == 1 && rc_data->sw2 == 2) {
+        engineer_data->mode = CHASSIS_MODE_TEST; // 测试模式
     } else {
         engineer_data->mode = CHASSIS_MODE_STANDBY; // 待机模式
     }

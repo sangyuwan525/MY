@@ -20,7 +20,7 @@ PID_Approaching_t chassis_kaojin_pid;
 void PID_Angle_Init(PID_Angle_t *pid)
 {
     // 假设使用您之前代码中的参数值进行初始化
-    pid->kp = 2.0f;
+    pid->kp = 3.0f;//2.0
     pid->ki = 0.01f;
     pid->kd = 0.0f;
 
@@ -190,7 +190,7 @@ vec2 PID_Correct_Calculate(PID_Correct_t *pid, Point_struct now_point, Point_str
  */
 void PID_Approaching_Init(PID_Approaching_t *pid)
 {
-    pid->kp = 3.0f;
+    pid->kp = 4.0f;//3.0
     pid->ki = 0.59f;
     pid->kd = 0.0f; // 注意：原代码中 kd=0.0，但 D 项逻辑是存在的
 

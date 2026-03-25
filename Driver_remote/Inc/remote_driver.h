@@ -38,7 +38,8 @@ typedef struct
 typedef enum {
     CHASSIS_MODE_STANDBY = 0, // 待机模式 (通常对应开关中间或未定义状态)
     CHASSIS_MODE_AUTO    = 1, // 自动模式 (例如：开关打到上/1)
-    CHASSIS_MODE_MANUAL  = 2  // 手动模式 (例如：开关打到下/2)
+    CHASSIS_MODE_MANUAL  = 2,  // 手动模式 (例如：开关打到下/2)
+    CHASSIS_MODE_TEST    =3
 } chassis_mode_e;
 
 typedef enum {

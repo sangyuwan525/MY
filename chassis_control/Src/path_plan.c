@@ -15,10 +15,10 @@ const uint16_t HEIGHT_MAP[TOTAL_NODES] = {
 
 // 地图布局（示例）：数组下标对应节点编号（0..11 为网格，12=入口，13=出口）
 KFS_Type initial_map[TOTAL_NODES]={
-    KFS_R2, KFS_NONE, KFS_R1,
-    KFS_R2, KFS_NONE, KFS_R2,
-    KFS_R2, KFS_FAKE, KFS_R1,
-    KFS_NONE, KFS_NONE, KFS_R1,
+    KFS_R2, KFS_R2, KFS_R1,
+    KFS_R2, KFS_R2, KFS_R1,
+    KFS_FAKE, KFS_NONE, KFS_R1,
+    KFS_NONE,KFS_NONE, KFS_R1,
     KFS_NONE, KFS_NONE
 };
 
@@ -308,6 +308,15 @@ PlanResult plan_route(KFS_Type map[]){
                 // 回溯得到具体路径与被移除的 KFS 列表
                 reconstruct(end,parent,map,r2s[i],r2s[j],&best_res);
             }
+        }
+    }
+    for (int i=0;i<best_res.path_len;i++)
+    {
+        if (best_res.r2_taken[0]==best_res.path[i]&&best_res.r2_taken[1]!=best_res.path[i])
+        {
+            int n = best_res.r2_taken[0];
+            best_res.r2_taken[0]=best_res.r2_taken[1];
+            best_res.r2_taken[1]=n;
         }
     }
 

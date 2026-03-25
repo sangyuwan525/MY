@@ -32,14 +32,15 @@
 #include "pid.h"
 #include "SEGGER_RTT.h"
 #include "path_plan.h"
+#include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-// int __io_putchar(int ch) {
-//   HAL_UART_Transmit(&hlpuart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-//   return ch;
-// }
+int __io_putchar(int ch) {
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -108,6 +109,7 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 

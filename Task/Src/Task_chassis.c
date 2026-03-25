@@ -62,7 +62,7 @@ void StartTask_chassis(void *argument)
                     vec2 v_world,remote;
                     remote.x=rc_engineer_data.vx;
                     remote.y=rc_engineer_data.vy;
-                   v_world= change_world_to_local(remote,lcResult.r);
+                    v_world= change_world_to_local(remote,lcResult.r);
                     // 将遥控器工程量速度 (vx, vy, vw) 传入底盘驱动
                     cha_remote(v_world.x,
                                v_world.y,
@@ -114,6 +114,10 @@ void StartTask_chassis(void *argument)
                 {
                     chassis_auto_control(&g_robot_ctx);
                 }
+                else if (rc_engineer_data.mode == CHASSIS_MODE_TEST)
+                {
+
+                }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
                     // 停止底盘，发送 (0, 0, 0) 指令
@@ -161,13 +165,17 @@ void StartTask_chassis(void *argument)
                 //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
-                    MF_flag = 1;
+                    Change_dji_loc(DJI_M_CLIMB_LF,-back_up);
+                    Change_dji_loc(DJI_M_CLIMB_RF,back_up);
+                    Change_dji_loc(DJI_M_CLIMB_RB,-25000);
+                    Change_dji_loc(DJI_M_CLIMB_LB,25000);
                 }else {
                     //MF_flag = 0;
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
-
+                    g_robot_ctx.current_top_state=1;
+                    // g_robot_ctx.sub_state.mf=
                     // // 按钮2,前侧和后侧将机身顶起
                     // Change_dji_loc(DJI_M_CLIMB_LF,10000);
                     // Change_dji_loc(DJI_M_CLIMB_RF,-10000);
@@ -201,6 +209,7 @@ void StartTask_chassis(void *argument)
                             down_cnt++;
                         }
                         climb_test_cnt=1;
+                        PID_Init();
                         MF_flag++;
                         MC_flag++;
                         CF_flag++;
@@ -240,6 +249,10 @@ void StartTask_chassis(void *argument)
             //     }
                 if (rc_engineer_data.button5 == 1)
                 {
+                    Change_dji_loc(DJI_M_CLIMB_LF, 0);
+                    Change_dji_loc(DJI_M_CLIMB_RF, 0);
+                    Change_dji_loc(DJI_M_CLIMB_LB, front_up);
+                    Change_dji_loc(DJI_M_CLIMB_RB, -front_up);
                     // 按钮5被按下，四个3508一起抬升底盘
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
