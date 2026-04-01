@@ -107,7 +107,10 @@ typedef struct {
 
 float get_length(Point_struct a, Point_struct b);
 vec2 change_world_to_local(vec2 src, float angle);
-int go_path_control(Path_struct* path, path_spd_data_t path_spd);
+int go_path_control_smooth(Path_struct* path, path_spd_data_t path_spd);
+#define go_path_control go_path_control_smooth
+// 对外保持 go_path_control 接口名不变，内部重定向到平滑版实现。
+#define go_path_control go_path_control_smooth
 
 extern float test_angle;
 

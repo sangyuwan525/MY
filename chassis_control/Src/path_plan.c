@@ -296,6 +296,7 @@ PlanResult plan_route(KFS_Type map[]){
     State best_end;
     static State parent[TOTAL_NODES][MAX_R1_LIMIT+1][MAX_R2_REMOVE+1][4];
     PlanResult best_res;
+    best_res.entry_grab = -1;
 
     // 枚举所有两两组合（不重复的顺序对）作为 t1,t2
     for(int i=0;i<cnt;i++)for(int j=i+1;j<cnt;j++){
@@ -318,6 +319,9 @@ PlanResult plan_route(KFS_Type map[]){
             best_res.r2_taken[0]=best_res.r2_taken[1];
             best_res.r2_taken[1]=n;
         }
+    }
+    if (best_res.r2_taken[0]==0 || best_res.r2_taken[0]==2 || best_res.r2_taken[1]==0 || best_res.r2_taken[1]==2) {
+        best_res.entry_grab = 1;
     }
 
     // 输出结果

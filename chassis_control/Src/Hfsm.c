@@ -40,13 +40,18 @@ void Handle_MC_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.mc) {
         case MC_INIT:  //  初始状态
             // 初始化传感器，定位
+            Point_struct now_point = {lcResult.x,lcResult.y};
+            // init_single_line_path(&path_test,now_point,entry_point[1],lcResult.r,-1.57079632679f);
+            Point_struct central_point = {800.f,1000.f};
+            Point_struct end_point = {1000.f,1500.f};
+            init_tangent_line_circle_path(&path_test,now_point,end_point,central_point,1,lcResult.r,1.57f);
             r2->sub_state.mc = MC_PICK_HEAD;
             break;
 
         case MC_PICK_HEAD:  //  出发取端头
             // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
-            Point_struct now_point = {lcResult.x,lcResult.y};
-            init_single_line_path(&path_test,now_point,entry_point,lcResult.r,0);
+            // Point_struct now_point = {lcResult.x,lcResult.y};
+            // init_single_line_path(&path_test,now_point,entry_point[1],lcResult.r,-1.57079632679f);
             if (go_path_control(&path_test,spd_test) == 1) {
                // printf("MC_PICK_HEAD\n");
                 if (MC_flag==1) {   // 收到上层信息
@@ -94,47 +99,22 @@ void Handle_MC_Logic(R2_Context_t *r2) {
 void Handle_MF_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.mf) {
         case MF_ENTRY_CHECK:
+            r2->current_step = 1;
+            r2->target_stair_id = r2->plan.path[r2->current_step];
+            r2->current_stair_id = r2->plan.path[r2->current_step-1];
             if (r2->plan.r2_taken[0]==1 || r2->plan.r2_taken[1]==1) {
                 r2->sub_state.mf = MF_ENTRY;
-            }else if (r2->plan.r2_taken[0]==0) {
-                Point_struct now_point = {lcResult.x,lcResult.y};
-                init_single_line_path(&path_test,now_point,entry_point[0],lcResult.r,0);
+            }else if (r2->plan.r2_taken[0]==0 || r2->plan.r2_taken[0]==2) {
+                Point_struct cur_point = {lcResult.x,lcResult.y};
+                init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[0]],lcResult.r,0);
                 if (go_path_control(&path_test, spd_test) == 1) {
-                    // 进入成功后，调用 path_plan.c 中的算法进行全局规划
-                    // 假设输入地图数据 map，获取最优路径
-                    if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
-                        send_flag_to_up(FLAG_GRAB_KFS);
-                        if (MF_flag==3) {
-                            // 抓取成功
-                            r2->kfs_count++;
-                            if (r2->already_taken==1) {
-                                r2->already_taken = 2;  // 两个都已抓取
-                            }else {
-                                r2->already_taken = 0;  // 已抓取r2_taken[0]
-                            }
-                        }
-                        r2->sub_state.mf = MF_ENTRY;
-                    }
+                    r2->sub_state.mf = MF_PICK_ADJACENT_0;
                 }
-            }else if (r2->plan.r2_taken[0]==2) {
-                Point_struct now_point = {lcResult.x,lcResult.y};
-                init_single_line_path(&path_test,now_point,entry_point[2],lcResult.r,0);
+            }else if (r2->plan.r2_taken[1]==0 || r2->plan.r2_taken[1]==2) {
+                Point_struct cur_point = {lcResult.x,lcResult.y};
+                init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[1]],lcResult.r,0);
                 if (go_path_control(&path_test, spd_test) == 1) {
-                    // 进入成功后，调用 path_plan.c 中的算法进行全局规划
-                    // 假设输入地图数据 map，获取最优路径
-                    if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
-                        send_flag_to_up(FLAG_GRAB_KFS);
-                        if (MF_flag==3) {
-                            // 抓取成功
-                            r2->kfs_count++;
-                            if (r2->already_taken==1) {
-                                r2->already_taken = 2;  // 两个都已抓取
-                            }else {
-                                r2->already_taken = 0;  // 已抓取r2_taken[0]
-                            }
-                        }
-                        r2->sub_state.mf = MF_ENTRY;
-                    }
+                    r2->sub_state.mf = MF_PICK_ADJACENT_1;
                 }
             }
             break;
@@ -224,7 +204,10 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     }else {
                         r2->already_taken = 0;  // 已抓取r2_taken[0]
                     }
-                    if (r2->plan.r2_taken[0]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
+                    if (r2->plan.r2_taken[0]==0 || r2->plan.r2_taken[0]==2) {
+                        r2->plan.entry_grab = 0;
+                        r2->sub_state.mf = MF_ENTRY;
+                    }else if (r2->plan.r2_taken[0]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
                         r2->sub_state.mf = MF_MOVE_TO_BLOCK;
                     }else{
                         r2->sub_state.mf = MF_BACK_TO_CENTER;
@@ -243,7 +226,10 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     }else {
                         r2->already_taken = 1;  // 已抓取r2_taken[1]
                     }
-                    if (r2->plan.r2_taken[1]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
+                    if (r2->plan.r2_taken[1]==0 || r2->plan.r2_taken[1]==2) {
+                        r2->plan.entry_grab = 0;
+                        r2->sub_state.mf = MF_ENTRY;
+                    }else if (r2->plan.r2_taken[1]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
                         r2->sub_state.mf = MF_MOVE_TO_BLOCK;
                     }else{
                         r2->sub_state.mf = MF_BACK_TO_CENTER;

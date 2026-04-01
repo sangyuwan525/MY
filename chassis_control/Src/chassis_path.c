@@ -200,13 +200,25 @@ vec2 get_spd_dir(Point_struct foot_point, Trajectory tra) {
         vec2 O_to_p;
         O_to_p.x = foot_point.x - Cx;
         O_to_p.y = foot_point.y - Cy;
-        if (fabsf(O_to_p.y)<1e-4f) {
-            dir.x = 0.0f;
-            dir.y = 1.0f;
-        }
-        else {
-            dir.x = 1.0f;
-            dir.y = -(O_to_p.x / O_to_p.y);
+        vec2 tan_ccw = {-O_to_p.y, O_to_p.x};
+        vec2 tan_cw  = { O_to_p.y,-O_to_p.x};
+        // 严格几何切向：CCW=(-ry,rx), CW=(ry,-rx)
+        {
+            const float angle_geom = get_central_angle(foot_point, tra);
+            if (angle_geom > 1e-4f) {
+                dir = tan_ccw;
+            }
+            else if (angle_geom < -1e-4f) {
+                dir = tan_cw;
+            }
+            else {
+                // 起点附近角度符号不稳定时，用“更指向弧终点”的切向作为回退。
+                vec2 to_end = {tra.point_end.x - foot_point.x, tra.point_end.y - foot_point.y};
+                const float d_ccw = tan_ccw.x * to_end.x + tan_ccw.y * to_end.y;
+                const float d_cw = tan_cw.x * to_end.x + tan_cw.y * to_end.y;
+                dir = (d_ccw >= d_cw) ? tan_ccw : tan_cw;
+            }
+            goto circle_dir_ready;
         }
         vec2 O_to_s;
         O_to_s.x = tra.point_start.x - tra.trace[center_x];
@@ -243,6 +255,7 @@ vec2 get_spd_dir(Point_struct foot_point, Trajectory tra) {
                 }
             }
         }
+circle_dir_ready:;
     }
     float moul = vec_module(dir.x,dir.y);
     if (moul < 1e-6f) {
@@ -304,6 +317,100 @@ static float wrap_angle_to_pi(float angle) {
     return angle;
 }
 
+/**
+ * @brief 将数值限制到 [0,1] 区间。
+ */
+static float clamp01f(float x) {
+    if (x < 0.0f) return 0.0f;
+    if (x > 1.0f) return 1.0f;
+    return x;
+}
+
+/**
+ * @brief Quintic smoothstep，输入输出都在 [0,1]。
+ */
+static float smoothstep5(float t) {
+    t = clamp01f(t);
+    return t * t * t * (10.0f + t * (-15.0f + 6.0f * t));
+}
+
+/**
+ * @brief 角度按最短路径插值，并包角到 [-pi, pi]。
+ */
+static float lerp_angle_shortest(float from, float to, float t) {
+    const float delta = wrap_angle_to_pi(to - from);
+    return wrap_angle_to_pi(from + delta * clamp01f(t));
+}
+
+/**
+ * @brief 计算末段平滑混合系数 alpha（0=纯路径跟踪，1=纯靠近终点）。
+ */
+static float calc_end_blend_alpha(float distance,
+                                  float path_remain,
+                                  float near_distance_threshold,
+                                  float near_remain_threshold,
+                                  float done_remain_threshold) {
+    const float dis_denom = fmaxf(near_distance_threshold - 50.0f, 1e-3f);
+    const float alpha_dis = clamp01f((near_distance_threshold - distance) / dis_denom);
+
+    const float rem_denom = fmaxf(near_remain_threshold - done_remain_threshold, 1e-3f);
+    const float alpha_rem = clamp01f((near_remain_threshold - path_remain) / rem_denom);
+
+    return smoothstep5(fmaxf(alpha_dis, alpha_rem));
+}
+
+/**
+ * @brief 自适应版路径速度分配（按总路径长度自动缩放加减速段）。
+ * @note  保留原函数以兼容旧逻辑，新的 go_path_control 使用此函数。
+ */
+static vec2 get_spd_on_path_calculate_adaptive(path_spd_data_t path_spd, float path_pos, float length, vec2 spd_dir)
+{
+    vec2 spd = {0.0f, 0.0f};
+    const float L = fmaxf(length, 1e-3f);
+    const float s = fminf(fmaxf(path_pos, 0.0f), L);
+
+    // 起步/末段保底速度，防止低速区粘滞
+    // 超激进起步底速：进一步提升起步响应
+    const float v_start = fmaxf(700.0f, 0.30f * path_spd.max_speed);
+    const float v_end = fmaxf(220.0f, 0.12f * path_spd.max_speed);
+
+    // 根据路径总长自动约束加减速段
+    float up_eff = fminf(fmaxf(path_spd.up_stage, 60.0f), 0.45f * L);
+    float down_eff = fminf(fmaxf(path_spd.down_stage, 60.0f), 0.45f * L);
+
+    // 短路径自动压缩阶段长度，避免“阶段和 > 路径长”
+    {
+        const float stage_sum = up_eff + down_eff;
+        const float stage_limit = 0.90f * L;
+        if (stage_sum > stage_limit) {
+            const float scale = stage_limit / fmaxf(stage_sum, 1e-3f);
+            up_eff *= scale;
+            down_eff *= scale;
+        }
+    }
+
+    const float cruise_start = up_eff;
+    const float cruise_end = L - down_eff;
+    float abs_spd;
+
+    if (s < cruise_start) {
+        const float t = s / fmaxf(up_eff, 1e-3f);
+        abs_spd = v_start + (path_spd.max_speed - v_start) * smoothstep5(t);
+    } else if (s > cruise_end) {
+        const float t = (L - s) / fmaxf(down_eff, 1e-3f);
+        abs_spd = v_end + (path_spd.max_speed - v_end) * smoothstep5(t);
+    } else {
+        abs_spd = path_spd.max_speed;
+    }
+
+    if (abs_spd < 0.0f) abs_spd = 0.0f;
+    if (abs_spd > path_spd.max_speed) abs_spd = path_spd.max_speed;
+
+    spd.x = abs_spd * spd_dir.x;
+    spd.y = abs_spd * spd_dir.y;
+    return spd;
+}
+
 float get_angle_in_path(float path_pos,float length,float start_angle,float end_angle) {
     float t;
     float smooth_t;
@@ -324,6 +431,56 @@ float get_angle_in_path(float path_pos,float length,float start_angle,float end_
     // Always use shortest angular difference in [-pi, pi].
     delta = wrap_angle_to_pi(end_angle - start_angle);
     return wrap_angle_to_pi(start_angle + delta * smooth_t);
+}
+
+/**
+ * @brief 轨迹切向方向（稳定版）：
+ * 直线：start->end
+ * 圆弧：先在“轨迹段级别”固定 CCW/CW，再用严格几何切向，避免切点附近翻转抖动。
+ */
+static vec2 get_spd_dir_stable(Point_struct foot_point, Trajectory tra) {
+    static vec2 last_dir = {1.0f, 0.0f};
+    vec2 dir = {0.0f, 0.0f};
+
+    if (tra.traceType == line) {
+        dir.x = tra.point_end.x - tra.point_start.x;
+        dir.y = tra.point_end.y - tra.point_start.y;
+    } else if (tra.traceType == circle) {
+        const float Cx = tra.trace[center_x];
+        const float Cy = tra.trace[center_y];
+        const float total_angle = tra.trace[circle_angle];
+
+        const float start_ang = atan2f(tra.point_start.y - Cy, tra.point_start.x - Cx);
+        const float end_ang = atan2f(tra.point_end.y - Cy, tra.point_end.x - Cx);
+
+        float ccw_delta = end_ang - start_ang;
+        while (ccw_delta < 0.0f) ccw_delta += 2.0f * pi;
+        while (ccw_delta >= 2.0f * pi) ccw_delta -= 2.0f * pi;
+        float cw_delta = 2.0f * pi - ccw_delta;
+        if (ccw_delta < 1e-6f) cw_delta = 2.0f * pi;
+
+        // 匹配轨迹存储的 total_angle 来确定该段固定方向。
+        const int seg_ccw = (fabsf(total_angle - ccw_delta) <= fabsf(total_angle - cw_delta)) ? 1 : 0;
+
+        const float rx = foot_point.x - Cx;
+        const float ry = foot_point.y - Cy;
+        if (seg_ccw) {
+            dir.x = -ry;
+            dir.y = rx;
+        } else {
+            dir.x = ry;
+            dir.y = -rx;
+        }
+    }
+
+    const float n = vec_module(dir.x, dir.y);
+    if (n < 1e-6f) {
+        return last_dir;
+    }
+    dir.x /= n;
+    dir.y /= n;
+    last_dir = dir;
+    return dir;
 }
 /**
  * @brief  根据 S 型曲线算法计算路径上某位置的期望速度向量。
@@ -419,8 +576,102 @@ vec2 change_world_to_local(vec2 src, float angle)
 }
 
 //测试target_angle
+/**
+ * @brief 平滑版路径控制：
+ * 1) 速度按路径总长自适应分配；
+ * 2) 最后一段使用“路径跟踪 + 终点靠近”平滑混合，避免速度突变。
+ */
+int go_path_control_smooth(Path_struct* path, path_spd_data_t path_spd)
+{
+    const Point_struct now_point = {lcResult.x, lcResult.y};
+    const float now_pos = wrap_angle_to_pi(lcResult.r);
+
+    const float near_distance_threshold = fmaxf(180.0f, fminf(550.0f, path_spd.down_stage + 120.0f));
+    const float switch_distance_threshold = fmaxf(80.0f, fminf(200.0f, path_spd.down_stage * 0.5f + 60.0f));
+    const float near_remain_threshold = fmaxf(120.0f, fminf(450.0f, path_spd.down_stage * 0.8f + 100.0f));
+    const float switch_remain_threshold = fmaxf(50.0f, fminf(180.0f, path_spd.down_stage * 0.35f + 30.0f));
+    const float done_remain_threshold = fmaxf(20.0f, fminf(80.0f, path_spd.down_stage * 0.2f + 20.0f));
+
+    if ((*path).trajectory_count >= (*path).trajectory_num) {
+        cha_remote(0.0f, 0.0f, 0.0f);
+        return 1;
+    }
+
+    Point_struct current_end_point = (*path).trajectories[(*path).trajectory_count].point_end;
+    float distance = get_length(now_point, current_end_point);
+
+    Point_struct foot_point = get_foot_point(now_point, (*path).trajectories[(*path).trajectory_count]);
+    float path_pos = get_length_in_path(foot_point, (*path).trajectories, (*path).trajectory_count);
+    float path_remain = (*path).length - path_pos;
+    if (path_remain < 0.0f) path_remain = 0.0f;
+
+    // 非末段切段；末段不硬切模式。
+    //if ((*path).trajectories[(*path).trajectory_count].ifvoid != empty &&
+    if ((*path).trajectories[(*path).trajectory_count].ifvoid != empty &&
+        (distance < near_distance_threshold || path_remain < near_remain_threshold) &&
+        (distance <= switch_distance_threshold || path_remain <= switch_remain_threshold)) {
+        (*path).trajectory_count++;
+        return 0;
+    }
+
+    float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
+    vec2 spd_dir = get_spd_dir_stable(foot_point, (*path).trajectories[(*path).trajectory_count]);
+    vec2 target_spd_world = get_spd_on_path_calculate_adaptive(path_spd, path_pos, (*path).length, spd_dir);
+
+    // 圆弧段自动降速：半径越小降得越多，降低切弯抖动和“折线感”
+    if ((*path).trajectories[(*path).trajectory_count].traceType == circle) {
+        const float r = (*path).trajectories[(*path).trajectory_count].trace[circle_r];
+        const float curve_ratio = fmaxf(0.60f, fminf(0.95f, r / (r + 700.0f)));
+        target_spd_world.x *= curve_ratio;
+        target_spd_world.y *= curve_ratio;
+    }
+
+    vec2 correct_spd_world = PID_Correct_Calculate(&chassis_correct_pid, now_point, foot_point);
+    vec2 cmd_spd_world = sum_vec2(target_spd_world, correct_spd_world);
+
+    // 末段平滑混合
+    if ((*path).trajectories[(*path).trajectory_count].ifvoid == empty) {
+        vec2 approach_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, current_end_point);
+        const float approach_limit = fmaxf(450.0f, fminf(900.0f, path_spd.max_speed * 0.30f));
+        const float approach_norm = vec_module(approach_spd_world.x, approach_spd_world.y);
+        if (approach_norm > approach_limit && approach_norm > 1e-3f) {
+            const float k = approach_limit / approach_norm;
+            approach_spd_world.x *= k;
+            approach_spd_world.y *= k;
+        }
+
+        const float alpha = calc_end_blend_alpha(distance,
+                                                 path_remain,
+                                                 near_distance_threshold,
+                                                 near_remain_threshold,
+                                                 done_remain_threshold);
+        cmd_spd_world.x = (1.0f - alpha) * cmd_spd_world.x + alpha * approach_spd_world.x;
+        cmd_spd_world.y = (1.0f - alpha) * cmd_spd_world.y + alpha * approach_spd_world.y;
+        target_angle = lerp_angle_shortest(target_angle, (*path).end_angle, alpha);
+    }
+
+    const float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);
+    vec2 spd_local_final = change_world_to_local(cmd_spd_world, now_pos);
+    cha_remote(spd_local_final.x, spd_local_final.y, rotation_spd);
+
+    // 到位判定
+    if ((*path).trajectories[(*path).trajectory_count].ifvoid == empty) {
+        const float yaw_err = wrap_angle_to_pi((*path).end_angle - now_pos);
+        if (distance < 50.0f && path_remain < done_remain_threshold && fabsf(yaw_err) < 0.1f &&
+            fabsf(lcResult.vx) < 50.0f && fabsf(lcResult.vy) < 50.0f && fabsf(lcResult.vr) < 50.0f) {
+            cha_remote(0.0f, 0.0f, 0.0f);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 float test_angle;
 
+#if 0
+#undef go_path_control
+#define go_path_control go_path_control_legacy
 int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 {
     const Point_struct now_point = {lcResult.x, lcResult.y}; // 机器人当前坐标点
@@ -451,7 +702,8 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     // --- 1. 轨迹切换/末端靠近阶段 ---
     // 条件由“终点欧式距离 + 剩余路径长度”联合决定。
-    if (distance < near_distance_threshold || path_remain < near_remain_threshold)
+    if ((*path).trajectories[(*path).trajectory_count].ifvoid != empty &&
+        (distance < near_distance_threshold || path_remain < near_remain_threshold))
     {
         // 1.1. 非终点轨迹段的切换逻辑
         if ((*path).trajectories[(*path).trajectory_count].ifvoid != empty &&
@@ -498,16 +750,52 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     // 2.2. 角度控制
     float target_angle = get_angle_in_path(path_pos, (*path).length, (*path).start_angle, (*path).end_angle);
-    test_angle=target_angle;
+    //test_angle=target_angle;
     float rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);// 使用全局角度PID
 
     vec2 spd_dir = get_spd_dir(foot_point, (*path).trajectories[(*path).trajectory_count]);
 
     // 期望沿轨迹速度
-    vec2 target_spd_world = get_spd_on_path_calculate(path_spd, path_pos, (*path).length, spd_dir);
+    // 使用“按路径长度自适应”的速度分配，长路径可跑满，短路径不突兀。
+    vec2 target_spd_world = get_spd_on_path_calculate_adaptive(path_spd, path_pos, (*path).length, spd_dir);
 
     // 横向纠正速度，使用全局修正PID
+    // 使用按路径总长自适应的速度分配（长路径可跑满，短路径更平滑）
+    vec2 target_spd_world = get_spd_on_path_calculate_adaptive(path_spd, path_pos, (*path).length, spd_dir);
+    vec2 target_spd_world = get_spd_on_path_calculate_adaptive(path_spd, path_pos, (*path).length, spd_dir);
     vec2 correct_spd_world = PID_Correct_Calculate(&chassis_correct_pid, now_point, foot_point);
+
+    // 末段平滑混合：避免“进入靠近阶段”时速度突变
+    vec2 cmd_spd_world;
+    cmd_spd_world.x = 0.0f;
+    cmd_spd_world.y = 0.0f;
+
+    // 由路径跟踪分量初始化
+    cmd_spd_world = sum_vec2(target_spd_world, correct_spd_world);
+
+    if ((*path).trajectories[(*path).trajectory_count].ifvoid == empty) {
+        vec2 approach_spd_world = PID_Approaching_Calculate(&chassis_kaojin_pid, now_point, current_end_point);
+        const float approach_limit = fmaxf(450.0f, fminf(900.0f, path_spd.max_speed * 0.30f));
+        const float approach_norm = vec_module(approach_spd_world.x, approach_spd_world.y);
+        if (approach_norm > approach_limit && approach_norm > 1e-3f) {
+            const float k = approach_limit / approach_norm;
+            approach_spd_world.x *= k;
+            approach_spd_world.y *= k;
+        }
+
+        const float alpha = calc_end_blend_alpha(distance,
+                                                 path_remain,
+                                                 near_distance_threshold,
+                                                 near_remain_threshold,
+                                                 done_remain_threshold);
+
+        cmd_spd_world.x = (1.0f - alpha) * cmd_spd_world.x + alpha * approach_spd_world.x;
+        cmd_spd_world.y = (1.0f - alpha) * cmd_spd_world.y + alpha * approach_spd_world.y;
+        target_angle = lerp_angle_shortest(target_angle, (*path).end_angle, alpha);
+    }
+
+    // 混合后再计算角速度，保证角度目标连续
+    rotation_spd = PID_Angle_Calculate(&chassis_yaw_pid, target_angle, now_pos);
 
     vec2 sum_spd_world = sum_vec2(target_spd_world, correct_spd_world);// 总速度
 
@@ -518,7 +806,7 @@ int go_path_control(Path_struct* path, path_spd_data_t path_spd)
 
     return 0; // 路径正在进行中
 }
-
+#endif
 
 
 //----------------------------------------分割线----------------------------//

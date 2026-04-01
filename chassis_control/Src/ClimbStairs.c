@@ -11,6 +11,7 @@
 #include "chassis_pid.h"
 #include "path_plan.h"
 #include "debug.h"
+#include "Hfsm.h"
 
 #define PI 3.1415926
 #define  ForestEdge 100  //  梅林边界
@@ -434,7 +435,16 @@ int Move_to_Edge(int curr_id, int stair_id)
             if (fabsf(lcResult.r-face_angle(face))<0.05f)
             {
                 cha_remote(0,500,vr);
-                if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)||HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
+                if (g_robot_ctx.plan.entry_grab == 1) {
+                    if (is_on_stair_edge(stair_id,face))
+                    {
+                        // 停止向前移动
+                        Change_dji_loc(DJI_M_CLIMB_RB,0);
+                        Change_dji_loc(DJI_M_CLIMB_LB,0);
+                        cha_remote(0,0,0);
+                        current_move_state = MOVE_COMPLETE;
+                    }
+                }else if (HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11)||HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1)) {
                     // 停止向前移动
                     // Change_dji_loc(DJI_M_CLIMB_RB,2000);
                     // Change_dji_loc(DJI_M_CLIMB_LB,-2000);

@@ -61,6 +61,8 @@ typedef struct {
 
     int8_t r2_taken[2]; // 实际被作为任务目标取走的两个 R2 节点索引
     int16_t cost;       // 最终代价
+
+    int8_t entry_grab;  // 入口处是否需要抓取,初始为-1，要抓取 0 或 2 置为 1 ，抓完变为 0
 } PlanResult;
 
 extern const uint16_t HEIGHT_MAP[TOTAL_NODES];

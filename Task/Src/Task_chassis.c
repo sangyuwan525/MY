@@ -71,7 +71,7 @@ void StartTask_chassis(void *argument)
                         if (climb_test_cnt==0)
                         {
                             Point_struct now_point = {lcResult.x,lcResult.y};
-                            init_single_line_path(&path_test,now_point,entry_point,lcResult.r,0);
+                            init_single_line_path(&path_test,now_point,entry_point[1],lcResult.r,0);
                             if (go_path_control(&path_test, spd_test) == 1){
                                 climb_test_cnt++;
                             }

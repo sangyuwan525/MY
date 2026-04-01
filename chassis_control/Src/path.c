@@ -8,7 +8,7 @@
 #include "ClimbStairs.h"
 
 Path_struct path_test;
-path_spd_data_t spd_test = {3000, 500, 500};
+path_spd_data_t spd_test = {2000, 500, 500};
 
 /**
  * @brief 准备/初始化路径存储空间
@@ -105,30 +105,28 @@ static float get_arc_angle_by_direction(Point_struct start, Point_struct end, Po
 static int select_tangent_point(Point_struct line_start, Point_struct arc_end, Point_struct center, uint8_t arc_ccw, Point_struct *tangent_point, float *central_angle) {
     // 1. 计算几何基本参数：半径、起点到圆心的距离
     const float radius = vec_module(arc_end.x - center.x, arc_end.y - center.y);
-    const float vx = line_start.x - center.x;
+    const float vx = line_start.x - center.x; // 向量 V = 圆心 -> 直线起点
     const float vy = line_start.y - center.y;
-    const float d2 = vx * vx + vy * vy;
-    const float r2 = radius * radius;
-    float base;
-    float factor;
-    vec2 perp;
-    Point_struct candidates[2];
+    const float d2 = vx * vx + vy * vy; // 距离平方
+    const float r2 = radius * radius;   // 半径平方
 
-    // d2<=r2 说明起点在圆上或圆内，无有效切线。
+    // 2. 检查合法性：若点在圆内 (d2 <= r2)，则无法作切线
     if (radius < 1e-6f || d2 <= r2 + 1e-6f) {
         return -1;
     }
 
-    base = r2 / d2;
-    factor = radius * sqrtf(d2 - r2) / d2;
-    perp.x = -vy;
-    perp.y = vx;
+    // 3. 使用几何法求解两个候选切点坐标
+    float base = r2 / d2;
+    float factor = radius * sqrtf(d2 - r2) / d2;
+    vec2 perp = {-vy, vx}; // 垂直向量
 
+    Point_struct candidates[2];
     candidates[0].x = center.x + base * vx + factor * perp.x;
     candidates[0].y = center.y + base * vy + factor * perp.y;
     candidates[1].x = center.x + base * vx - factor * perp.x;
     candidates[1].y = center.y + base * vy - factor * perp.y;
 
+    // 4. 遍历两个候选切点，根据“方向连续性”进行筛选
     for (uint8_t i = 0; i < 2; i++) {
         vec2 line_dir;
         vec2 radius_dir;
@@ -137,11 +135,14 @@ static int select_tangent_point(Point_struct line_start, Point_struct arc_end, P
         float tangent_norm;
         float dot;
 
+        // 直线方向：从起点指向切点
         line_dir.x = candidates[i].x - line_start.x;
         line_dir.y = candidates[i].y - line_start.y;
+        // 切点处的半径方向
         radius_dir.x = candidates[i].x - center.x;
         radius_dir.y = candidates[i].y - center.y;
 
+        // 根据 CCW/CW 计算圆弧在该切点处的瞬时切向 (半径向量旋转90度)
         if (arc_ccw) {
             arc_tangent_dir.x = -radius_dir.y;
             arc_tangent_dir.y = radius_dir.x;
@@ -150,6 +151,7 @@ static int select_tangent_point(Point_struct line_start, Point_struct arc_end, P
             arc_tangent_dir.y = -radius_dir.x;
         }
 
+        // 5. 归一化并计算点积 (Dot Product)
         line_norm = vec_module(line_dir.x, line_dir.y);
         tangent_norm = vec_module(arc_tangent_dir.x, arc_tangent_dir.y);
         if (line_norm < 1e-6f || tangent_norm < 1e-6f) {
@@ -378,6 +380,16 @@ typedef enum {
 #define R2_CF_ZONE_MIN_Y_MM 7800.0f
 #define R2_HEAD_NEAR_THRESHOLD_MM 120.0f
 
+/**
+ * @brief 一区端头架路径的默认参数。
+ *
+ * @note
+ * 1. 这组默认值只是“保守占位值”，保证新增接口在没有配置时也能工作。
+ * 2. 真正比赛前应根据实车场地坐标，重新测量端头架抓取位 / 等待位 / 回撤位，
+ *    然后通过 set_r2_mc_head_route_config() 写入。
+ * 3. 这里把等待位和回撤位单独抽出来，是为了让 R2 在端头架附近不要用一条硬直线
+ *    直接冲进冲出，从而降低抓取失败或姿态不稳的概率。
+ */
 R2_MC_HeadRouteConfig g_r2_mc_head_route_cfg = {
     // These are conservative defaults in MC only.
     // Replace them with measured head-rack grab/wait/retreat points in your field coordinates.
@@ -390,6 +402,13 @@ R2_MC_HeadRouteConfig g_r2_mc_head_route_cfg = {
     .turn_radius = 650.0f
 };
 
+/**
+ * @brief 将角度包裹到 [-pi, pi]。
+ *
+ * @note
+ * 你前面已经把整套角度定义统一成 [-pi, pi]，这里新增的业务路径辅助函数也必须
+ * 遵守同一套约定，否则在终点角接近 +pi / -pi 交界时会出现跳变。
+ */
 static float wrap_angle_pi_local(float angle) {
     while (angle > pi) {
         angle -= 2.0f * pi;
@@ -400,6 +419,13 @@ static float wrap_angle_pi_local(float angle) {
     return angle;
 }
 
+/**
+ * @brief 根据朝向角得到车头方向单位向量。
+ *
+ * @note
+ * 结合你工程里“0 朝向沿 +Y 方向”的约定，这里不是常见的 (cos, sin)，而是：
+ * x = -sin(yaw), y = cos(yaw)
+ */
 static vec2 yaw_to_dir(float yaw) {
     vec2 dir;
     dir.x = -sinf(yaw);
@@ -407,16 +433,39 @@ static vec2 yaw_to_dir(float yaw) {
     return dir;
 }
 
+/**
+ * @brief 根据两点计算“从 start 指向 end”的期望朝向角。
+ *
+ * @note
+ * 返回值同样按 [-pi, pi] 包角，用于路径起点缺少显式朝向时做一个几何近似。
+ */
 static float yaw_from_points(Point_struct start, Point_struct end) {
     const float dx = end.x - start.x;
     const float dy = end.y - start.y;
     return wrap_angle_pi_local(atan2f(-dx, dy));
 }
 
+/**
+ * @brief 判断两点是否足够接近。
+ *
+ * @note
+ * 这个函数主要用于业务层“识别意图”，例如：
+ * - 终点是否可以视为端头架抓取点
+ * - 起点是否可以视为刚刚处于抓取位
+ */
 static int point_near(Point_struct a, Point_struct b, float threshold_mm) {
     return get_length(a, b) <= threshold_mm;
 }
 
+/**
+ * @brief 把 Path_struct 置为空路径。
+ *
+ * @note
+ * 这个函数和 prepare_path_storage() 的区别是：
+ * - prepare_path_storage() 用于“准备一条新路径”
+ * - prepare_empty_path() 用于“明确清空当前路径状态”
+ * 目前主要作为新增业务接口的安全辅助函数保留。
+ */
 static int prepare_empty_path(Path_struct *p_path) {
     if (p_path == NULL) {
         return -1;
@@ -433,6 +482,20 @@ static int prepare_empty_path(Path_struct *p_path) {
     return 0;
 }
 
+/**
+ * @brief 用一组已经生成好的轨迹段，装配成完整 Path_struct。
+ *
+ * @param p_path           输出路径
+ * @param trajectories     外部临时生成的轨迹段数组
+ * @param trajectory_num   轨迹段数量
+ * @param start_angle      整条路径起点朝向
+ * @param end_angle        整条路径终点朝向
+ *
+ * @note
+ * 1. 这个函数的作用是把“几何规划”和“路径结构体内存管理”解耦。
+ * 2. 规划函数只关心该生成哪些段；真正写入 Path_struct、累加总长度都统一走这里。
+ * 3. 起点/终点角都会在这里再次做包角，避免外部遗漏。
+ */
 static int init_custom_path(Path_struct *p_path, const Trajectory *trajectories, uint8_t trajectory_num, float start_angle, float end_angle) {
     float total_length = 0.0f;
 
@@ -451,6 +514,13 @@ static int init_custom_path(Path_struct *p_path, const Trajectory *trajectories,
     return 0;
 }
 
+/**
+ * @brief 统一修正多段路径里每一段的 ifvoid 标记。
+ *
+ * @note
+ * 在你现有控制器里，ifvoid == empty 表示“最后一段”，其余段应该是 full。
+ * 所以凡是临时拼多段路径，最后都需要调用这个函数统一整理。
+ */
 static void mark_last_segment(Trajectory *trajectories, uint8_t trajectory_num) {
     if (trajectory_num == 0) {
         return;
@@ -461,12 +531,38 @@ static void mark_last_segment(Trajectory *trajectories, uint8_t trajectory_num) 
     trajectories[trajectory_num - 1].ifvoid = empty;
 }
 
+/**
+ * @brief 追加一段直线轨迹。
+ *
+ * @note
+ * 这里只做数组尾插，不做终段标记；终段标记统一由 mark_last_segment() 处理。
+ */
 static int append_line(Trajectory *trajectories, uint8_t *trajectory_num, Point_struct start, Point_struct end) {
     trajectories[*trajectory_num] = generate_line_trajectory(start, end, full);
     (*trajectory_num)++;
     return 0;
 }
 
+/**
+ * @brief 追加一段“尽量优先用 直线 + 圆弧 收敛到终点姿态”的路径。
+ *
+ * @param trajectories   轨迹段数组
+ * @param trajectory_num 当前已写入段数
+ * @param start          当前起点
+ * @param end            终点
+ * @param end_angle      终点期望朝向
+ * @param turn_radius    允许使用的转弯半径
+ *
+ * @note
+ * 这是新增业务规划里最关键的几何函数，逻辑分三步：
+ * 1. 先看“直接连线的方向”和“终点期望朝向”差得大不大。
+ *    如果差很小，直接用一段直线即可。
+ * 2. 如果终点姿态要求明显不同，则以终点朝向为约束，在终点左右两侧各假设一个圆心，
+ *    分别尝试构造“起点 -> 圆的切点 -> 终点圆弧”的路径。
+ * 3. 如果两个候选都可行，选总长度更短的那一条。
+ *
+ * 这样做的目的，是让上层只关心“终点姿态要对”，而不需要手工指定圆心。
+ */
 static int append_best_line_arc_to_pose(Trajectory *trajectories, uint8_t *trajectory_num, Point_struct start, Point_struct end, float end_angle, float turn_radius) {
     const float direct_yaw = yaw_from_points(start, end);
     const float yaw_err = wrap_angle_pi_local(end_angle - direct_yaw);
@@ -529,6 +625,18 @@ static int append_best_line_arc_to_pose(Trajectory *trajectories, uint8_t *traje
     return 0;
 }
 
+/**
+ * @brief 根据点的大致位置，把它归类到 R2 允许通过的几个大区域之一。
+ *
+ * @note
+ * 当前只做“粗粒度区域分类”：
+ * - 一区 MC
+ * - 二区入口区
+ * - 二区出口区
+ * - 三区 CF
+ *
+ * 树林内部故意不在这里放开，因为树林内部应继续用你已有的方块规划逻辑处理。
+ */
 static R2_Accessible_Region classify_r2_region(Point_struct point) {
     if (point.y <= R2_ENTRY_ZONE_MAX_Y_MM) {
         return R2_REGION_MC;
@@ -545,6 +653,14 @@ static R2_Accessible_Region classify_r2_region(Point_struct point) {
     return R2_REGION_INVALID;
 }
 
+/**
+ * @brief 在二区出口区到三区的连接处，选择一个坡道锚点。
+ *
+ * @note
+ * 规则要求 R2 进入三区必须经坡道，所以这里不是直接连 start/end，
+ * 而是强制路径先经过一个“坡道前锚点”。
+ * 当前根据离目标更近原则，在左右两个候选锚点中选一个。
+ */
 static Point_struct select_ramp_anchor(Point_struct reference) {
     const Point_struct left_anchor = {(float)stairs_center[14].x, (float)stairs_center[14].y};
     const Point_struct right_anchor = {(float)stairs_center[12].x, (float)stairs_center[12].y};
@@ -553,6 +669,14 @@ static Point_struct select_ramp_anchor(Point_struct reference) {
     return (dist_left < dist_right) ? left_anchor : right_anchor;
 }
 
+/**
+ * @brief 通过若干中间 waypoint 构建路径，末段自动收敛到终点姿态。
+ *
+ * @note
+ * 用途是把业务层常见的“先到一个等待点/回撤点，再去目标点”统一起来。
+ * 前面的 waypoint 段固定走直线，最后一段由 append_best_line_arc_to_pose()
+ * 自动决定是直线还是“直线 + 圆弧”。
+ */
 static int build_path_via_waypoints(Path_struct *p_path, Point_struct start, const Point_struct *waypoints, uint8_t waypoint_num, Point_struct end, float start_angle, float end_angle, float turn_radius) {
     Trajectory trajectories[6];
     uint8_t trajectory_num = 0;
@@ -568,6 +692,13 @@ static int build_path_via_waypoints(Path_struct *p_path, Point_struct start, con
     return init_custom_path(p_path, trajectories, trajectory_num, start_angle, end_angle);
 }
 
+/**
+ * @brief 更新端头架抓取路径配置。
+ *
+ * @note
+ * 这里额外对 turn_radius 做了下限保护，避免上层误传太小的半径，导致路径几何不可行
+ * 或者虽然可行但对 800x800 尺寸的 R2 不够友好。
+ */
 void set_r2_mc_head_route_config(const R2_MC_HeadRouteConfig* config) {
     if (config == NULL) {
         return;
@@ -578,6 +709,17 @@ void set_r2_mc_head_route_config(const R2_MC_HeadRouteConfig* config) {
     }
 }
 
+/**
+ * @brief 生成“去端头架抓取”的业务路径。
+ *
+ * @note
+ * 路线不是直接 start -> grab_point，而是：
+ * start -> wait_point -> grab_point
+ *
+ * 这么做的好处是：
+ * - 车先到稳定等待位，再以较平滑的姿态靠近端头架
+ * - 后续如果你要微调抓取动作，只需要改 wait/grab 两个点，不需要改状态机
+ */
 int build_r2_head_grab_path(Path_struct* p_path, Point_struct start) {
     Point_struct waypoints[1];
     const Point_struct robot_now = {lcResult.x, lcResult.y};
@@ -596,6 +738,14 @@ int build_r2_head_grab_path(Path_struct* p_path, Point_struct start) {
     );
 }
 
+/**
+ * @brief 生成“去端头架等待位”的业务路径。
+ *
+ * @note
+ * 适合用于：
+ * - 抓取前先占位等待
+ * - 跟 R1 配合时先进入稳定姿态
+ */
 int build_r2_head_wait_path(Path_struct* p_path, Point_struct start) {
     Trajectory trajectories[2];
     uint8_t trajectory_num = 0;
@@ -613,6 +763,15 @@ int build_r2_head_wait_path(Path_struct* p_path, Point_struct start) {
     return init_custom_path(p_path, trajectories, trajectory_num, start_angle, g_r2_mc_head_route_cfg.wait_angle);
 }
 
+/**
+ * @brief 生成“从端头架抓取位离开”的业务路径。
+ *
+ * @note
+ * 离开时不建议直接从抓取位大转向去远处目标，而是：
+ * grab_point -> retreat_point -> end
+ *
+ * 这样做是为了把端头架附近最容易卡顿/碰撞/姿态发散的这一小段单独处理掉。
+ */
 int build_r2_head_retreat_path(Path_struct* p_path, Point_struct start, Point_struct end, float end_angle) {
     Point_struct waypoints[1];
     const float start_angle = point_near((Point_struct){lcResult.x, lcResult.y}, start, R2_START_ANGLE_NEAR_MM) ? lcResult.r : g_r2_mc_head_route_cfg.grab_angle;
@@ -630,6 +789,16 @@ int build_r2_head_retreat_path(Path_struct* p_path, Point_struct start, Point_st
     );
 }
 
+/**
+ * @brief 构建 R2 在“非树林区可达区域”内的普通业务路径。
+ *
+ * @note
+ * 该函数负责大区域之间的规则约束：
+ * 1. 同一区域内：直接规划到目标姿态
+ * 2. 一区 <-> 二区入口区：允许直接规划
+ * 3. 二区出口区 <-> 三区：强制经过坡道锚点
+ * 4. 其他组合：返回失败，让上层决定是否走树林规划或别的业务逻辑
+ */
 int build_r2_accessible_path(Path_struct* p_path, Point_struct start, Point_struct end, float end_angle) {
     Trajectory trajectories[5];
     uint8_t trajectory_num = 0;
@@ -675,6 +844,19 @@ int build_r2_accessible_path(Path_struct* p_path, Point_struct start, Point_stru
     return -1;
 }
 
+/**
+ * @brief R2 路径规划的业务总入口。
+ *
+ * @note
+ * 上层状态机只传 start / end / end_angle，不关心底层应该走哪一种路径。
+ * 这里按“业务意图”自动分流：
+ * 1. 如果终点接近端头架抓取位 -> 走抓取路径
+ * 2. 如果终点接近端头架等待位 -> 走等待路径
+ * 3. 如果起点接近抓取位且终点已不是抓取位 -> 走回撤路径
+ * 4. 否则 -> 走普通非树林区路径
+ *
+ * 这样状态机层就不需要自己判断“我现在该拼直线还是圆弧还是先回撤”。
+ */
 int build_r2_business_path(Path_struct* p_path, Point_struct start, Point_struct end, float end_angle) {
     if (point_near(end, g_r2_mc_head_route_cfg.grab_point, R2_HEAD_NEAR_THRESHOLD_MM)) {
         return build_r2_head_grab_path(p_path, start);
