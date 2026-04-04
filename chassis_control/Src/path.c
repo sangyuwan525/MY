@@ -238,6 +238,8 @@ Trajectory generate_line_trajectory(Point_struct start, Point_struct end, Ifvoid
 
     tra.point_start = start;
     tra.point_end = end;
+    tra.bezier_p1 = start;
+    tra.bezier_p2 = end;
     tra.traceType = line;
     tra.ifvoid = is_end;
 
@@ -260,6 +262,8 @@ Trajectory generate_circle_trajectory(Point_struct start, Point_struct end, Poin
 
     tra.point_start = start;
     tra.point_end = end;
+    tra.bezier_p1 = start;
+    tra.bezier_p2 = end;
     tra.traceType = circle;
     tra.ifvoid = is_end;
 
@@ -284,6 +288,161 @@ Trajectory generate_circle_trajectory(Point_struct start, Point_struct end, Poin
     tra.trace[circle_angle] = central_angle;
     tra.length = radius * central_angle;
 
+    return tra;
+}
+
+/**
+ * @brief 计算三次贝塞尔曲线在参数 t 处的坐标点。
+ *
+ * @param p0 起点控制点
+ * @param p1 第一控制点
+ * @param p2 第二控制点
+ * @param p3 终点控制点
+ * @param t  参数，范围 [0,1]
+ * @return Point_struct 曲线上对应点
+ *
+ * @note
+ * 采用标准三次贝塞尔公式：
+ * B(t) = (1-t)^3*p0 + 3(1-t)^2*t*p1 + 3(1-t)*t^2*p2 + t^3*p3
+ */
+static Point_struct bezier_point(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, float t) {
+    Point_struct p;
+    const float u = 1.0f - t;
+    const float uu = u * u;
+    const float tt = t * t;
+    const float uuu = uu * u;
+    const float ttt = tt * t;
+
+    p.x = uuu * p0.x + 3.0f * uu * t * p1.x + 3.0f * u * tt * p2.x + ttt * p3.x;
+    p.y = uuu * p0.y + 3.0f * uu * t * p1.y + 3.0f * u * tt * p2.y + ttt * p3.y;
+    return p;
+}
+
+/**
+ * @brief 计算三次贝塞尔曲线在参数 t 处的一阶导数。
+ */
+static vec2 bezier_derivative(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, float t) {
+    vec2 d;
+    const float u = 1.0f - t;
+    d.x = 3.0f * u * u * (p1.x - p0.x) + 6.0f * u * t * (p2.x - p1.x) + 3.0f * t * t * (p3.x - p2.x);
+    d.y = 3.0f * u * u * (p1.y - p0.y) + 6.0f * u * t * (p2.y - p1.y) + 3.0f * t * t * (p3.y - p2.y);
+    return d;
+}
+
+/**
+ * @brief 线性插值两个点。
+ */
+static Point_struct point_lerp(Point_struct a, Point_struct b, float t) {
+    Point_struct p;
+    p.x = a.x + (b.x - a.x) * t;
+    p.y = a.y + (b.y - a.y) * t;
+    return p;
+}
+
+/**
+ * @brief 将三次贝塞尔按参数 t 分割为左右两段。
+ * @note left 为 [0,t]，right 为 [t,1]。
+ */
+static void bezier_split(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3,
+                         float t,
+                         Point_struct* l0, Point_struct* l1, Point_struct* l2, Point_struct* l3,
+                         Point_struct* r0, Point_struct* r1, Point_struct* r2, Point_struct* r3) {
+    const Point_struct q0 = point_lerp(p0, p1, t);
+    const Point_struct q1 = point_lerp(p1, p2, t);
+    const Point_struct q2 = point_lerp(p2, p3, t);
+    const Point_struct r01 = point_lerp(q0, q1, t);
+    const Point_struct r12 = point_lerp(q1, q2, t);
+    const Point_struct s = point_lerp(r01, r12, t);
+
+    *l0 = p0;  *l1 = q0;  *l2 = r01; *l3 = s;
+    *r0 = s;   *r1 = r12; *r2 = q2;  *r3 = p3;
+}
+
+/**
+ * @brief 提取原贝塞尔 [t0,t1] 子曲线，并输出等价三次贝塞尔控制点。
+ */
+static void bezier_subcurve(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3,
+                            float t0, float t1,
+                            Point_struct* q0, Point_struct* q1, Point_struct* q2, Point_struct* q3) {
+    Point_struct l0, l1, l2, l3, r0, r1, r2, r3;
+    Point_struct ll0, ll1, ll2, ll3, rr0, rr1, rr2, rr3;
+
+    if (t0 <= 0.0f && t1 >= 1.0f) {
+        *q0 = p0; *q1 = p1; *q2 = p2; *q3 = p3;
+        return;
+    }
+    if (t1 <= 1e-6f) {
+        *q0 = p0; *q1 = p0; *q2 = p0; *q3 = p0;
+        return;
+    }
+
+    // 先分割出 [0,t1]
+    bezier_split(p0, p1, p2, p3, t1, &l0, &l1, &l2, &l3, &r0, &r1, &r2, &r3);
+
+    // 再在 [0,t1] 内按 u=t0/t1 分割，取右段即 [t0,t1]
+    {
+        const float u = (t0 <= 0.0f) ? 0.0f : (t0 / t1);
+        bezier_split(l0, l1, l2, l3, u, &ll0, &ll1, &ll2, &ll3, &rr0, &rr1, &rr2, &rr3);
+    }
+
+    *q0 = rr0; *q1 = rr1; *q2 = rr2; *q3 = rr3;
+}
+
+/**
+ * @brief 数值估计三次贝塞尔弧长。
+ */
+static float bezier_length(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, uint16_t samples) {
+    float total = 0.0f;
+    Point_struct prev = p0;
+    if (samples < 8U) {
+        samples = 8U;
+    }
+    for (uint16_t i = 1U; i <= samples; i++) {
+        const float t = (float)i / (float)samples;
+        const Point_struct cur = bezier_point(p0, p1, p2, p3, t);
+        total += vec_module(cur.x - prev.x, cur.y - prev.y);
+        prev = cur;
+    }
+    return total;
+}
+
+/**
+ * @brief 生成贝塞尔轨迹段（traceType=bezier，不再离散为直线）。
+ */
+Trajectory generate_bezier_trajectory_segment(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, float t0, float t1, Ifvoid is_end) {
+    Trajectory tra;
+    Point_struct q0, q1, q2, q3;
+    vec2 d0, d1;
+
+    if (t0 < 0.0f) t0 = 0.0f;
+    if (t0 > 1.0f) t0 = 1.0f;
+    if (t1 < 0.0f) t1 = 0.0f;
+    if (t1 > 1.0f) t1 = 1.0f;
+    if (t1 < t0) {
+        const float temp = t0;
+        t0 = t1;
+        t1 = temp;
+    }
+
+    bezier_subcurve(p0, p1, p2, p3, t0, t1, &q0, &q1, &q2, &q3);
+    d0 = bezier_derivative(q0, q1, q2, q3, 0.0f);
+    d1 = bezier_derivative(q0, q1, q2, q3, 1.0f);
+
+    tra.point_start = q0;
+    tra.point_end = q3;
+    tra.bezier_p1 = q1;
+    tra.bezier_p2 = q2;
+    tra.traceType = bezier;
+    tra.ifvoid = is_end;
+
+    // trace[] 用于给控制层留可读信息：起点/终点切向角
+    tra.trace[0] = atan2f(d0.y, d0.x);
+    tra.trace[1] = atan2f(d1.y, d1.x);
+    tra.trace[2] = t0;
+    tra.trace[3] = t1;
+
+    // 用较高采样精度估算弧长，保证速度规划更接近真实路径长度
+    tra.length = bezier_length(q0, q1, q2, q3, 120U);
     return tra;
 }
 
@@ -315,6 +474,24 @@ void init_single_circle_path(Path_struct *p_path, Point_struct start, Point_stru
     p_path->end_angle = end_angle;
 
     p_path->trajectories[0] = generate_circle_trajectory(start, end, center, central_angle, empty);
+    p_path->length = p_path->trajectories[0].length;
+}
+
+/**
+ * @brief 初始化单条贝塞尔曲线路径（单段 bezier traceType）。
+ *
+ * @param segment_count 兼容旧接口保留；当前实现不离散，参数仅保留向后兼容。
+ */
+void init_single_bezier_path(Path_struct* p_path, Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, uint8_t segment_count, float start_angle, float end_angle) {
+    (void)segment_count;
+
+    if (prepare_path_storage(p_path, 1) != 0) {
+        return;
+    }
+
+    p_path->start_angle = start_angle;
+    p_path->end_angle = end_angle;
+    p_path->trajectories[0] = generate_bezier_trajectory_segment(p0, p1, p2, p3, 0.0f, 1.0f, empty);
     p_path->length = p_path->trajectories[0].length;
 }
 

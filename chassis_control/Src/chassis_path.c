@@ -70,6 +70,121 @@ float get_angle(vec2 a, vec2 b) {
     else if (cos_angle < -1.0f) cos_angle = -1.0f;
     return acosf(cos_angle);
 }
+
+/**
+ * @brief 计算三次贝塞尔在参数 t 的点。
+ */
+static Point_struct bezier_eval_tra(const Trajectory *tra, float t) {
+    const Point_struct p0 = tra->point_start;
+    const Point_struct p1 = tra->bezier_p1;
+    const Point_struct p2 = tra->bezier_p2;
+    const Point_struct p3 = tra->point_end;
+    const float u = 1.0f - t;
+    const float uu = u * u;
+    const float tt = t * t;
+    const float uuu = uu * u;
+    const float ttt = tt * t;
+    Point_struct p;
+    p.x = uuu * p0.x + 3.0f * uu * t * p1.x + 3.0f * u * tt * p2.x + ttt * p3.x;
+    p.y = uuu * p0.y + 3.0f * uu * t * p1.y + 3.0f * u * tt * p2.y + ttt * p3.y;
+    return p;
+}
+
+/**
+ * @brief 计算三次贝塞尔在参数 t 的一阶导。
+ */
+static vec2 bezier_d1_tra(const Trajectory *tra, float t) {
+    const Point_struct p0 = tra->point_start;
+    const Point_struct p1 = tra->bezier_p1;
+    const Point_struct p2 = tra->bezier_p2;
+    const Point_struct p3 = tra->point_end;
+    const float u = 1.0f - t;
+    vec2 d;
+    d.x = 3.0f * u * u * (p1.x - p0.x) + 6.0f * u * t * (p2.x - p1.x) + 3.0f * t * t * (p3.x - p2.x);
+    d.y = 3.0f * u * u * (p1.y - p0.y) + 6.0f * u * t * (p2.y - p1.y) + 3.0f * t * t * (p3.y - p2.y);
+    return d;
+}
+
+/**
+ * @brief 计算三次贝塞尔在参数 t 的二阶导。
+ */
+static vec2 bezier_d2_tra(const Trajectory *tra, float t) {
+    const Point_struct p0 = tra->point_start;
+    const Point_struct p1 = tra->bezier_p1;
+    const Point_struct p2 = tra->bezier_p2;
+    const Point_struct p3 = tra->point_end;
+    const float u = 1.0f - t;
+    vec2 d2;
+    d2.x = 6.0f * u * (p2.x - 2.0f * p1.x + p0.x) + 6.0f * t * (p3.x - 2.0f * p2.x + p1.x);
+    d2.y = 6.0f * u * (p2.y - 2.0f * p1.y + p0.y) + 6.0f * t * (p3.y - 2.0f * p2.y + p1.y);
+    return d2;
+}
+
+/**
+ * @brief 近似求“当前点到贝塞尔曲线”的最近参数 t。
+ */
+static float bezier_project_t(Point_struct now_point, const Trajectory *tra) {
+    // 先粗采样，再在最优区间做三分迭代，兼顾稳定性和实时性。
+    const int coarse_n = 40;
+    int best_i = 0;
+    float best_d2 = 1e30f;
+
+    for (int i = 0; i <= coarse_n; i++) {
+        const float t = (float)i / (float)coarse_n;
+        const Point_struct p = bezier_eval_tra(tra, t);
+        const float dx = p.x - now_point.x;
+        const float dy = p.y - now_point.y;
+        const float d2 = dx * dx + dy * dy;
+        if (d2 < best_d2) {
+            best_d2 = d2;
+            best_i = i;
+        }
+    }
+
+    float lo = ((float)best_i - 1.0f) / (float)coarse_n;
+    float hi = ((float)best_i + 1.0f) / (float)coarse_n;
+    if (lo < 0.0f) lo = 0.0f;
+    if (hi > 1.0f) hi = 1.0f;
+
+    for (int k = 0; k < 14; k++) {
+        const float m1 = lo + (hi - lo) / 3.0f;
+        const float m2 = hi - (hi - lo) / 3.0f;
+        const Point_struct p1 = bezier_eval_tra(tra, m1);
+        const Point_struct p2 = bezier_eval_tra(tra, m2);
+        const float d1x = p1.x - now_point.x;
+        const float d1y = p1.y - now_point.y;
+        const float d2x = p2.x - now_point.x;
+        const float d2y = p2.y - now_point.y;
+        const float f1 = d1x * d1x + d1y * d1y;
+        const float f2 = d2x * d2x + d2y * d2y;
+        if (f1 < f2) {
+            hi = m2;
+        } else {
+            lo = m1;
+        }
+    }
+
+    return 0.5f * (lo + hi);
+}
+
+/**
+ * @brief 近似计算贝塞尔从 0 到 t 的弧长。
+ */
+static float bezier_length_0_to_t(const Trajectory *tra, float t) {
+    float total = 0.0f;
+    const int n = 40;
+    if (t <= 0.0f) return 0.0f;
+    if (t > 1.0f) t = 1.0f;
+
+    Point_struct prev = tra->point_start;
+    for (int i = 1; i <= n; i++) {
+        const float ti = t * ((float)i / (float)n);
+        const Point_struct cur = bezier_eval_tra(tra, ti);
+        total += vec_module(cur.x - prev.x, cur.y - prev.y);
+        prev = cur;
+    }
+    return total;
+}
 /**
  * @brief  计算当前点到给定轨迹的垂足 (Foot Point)。
  *
@@ -118,6 +233,10 @@ Point_struct get_foot_point(Point_struct now_point,Trajectory tra) {
         const float k = R / dist_to_center;
         foot_point.x = O_to_p.x * k + Cx;
         foot_point.y = O_to_p.y * k + Cy;
+    }
+    else if (tra.traceType == bezier) {
+        const float t = bezier_project_t(now_point, &tra);
+        foot_point = bezier_eval_tra(&tra, t);
     }
     return foot_point;
 }
@@ -292,6 +411,10 @@ float get_length_in_path(Point_struct foot_point,Trajectory* tra_array,uint8_t c
         const float angle = get_central_angle(foot_point, tra_array[current_tra_index]);
         const float r = tra_array[current_tra_index].trace[circle_r];
         total_length += angle * r;
+    }
+    else if (tra_array[current_tra_index].traceType == bezier) {
+        const float t = bezier_project_t(foot_point, &tra_array[current_tra_index]);
+        total_length += bezier_length_0_to_t(&tra_array[current_tra_index], t);
     }
     return total_length;
 }
@@ -471,6 +594,10 @@ static vec2 get_spd_dir_stable(Point_struct foot_point, Trajectory tra) {
             dir.x = ry;
             dir.y = -rx;
         }
+    } else if (tra.traceType == bezier) {
+        // 用投影点对应参数处的一阶导作为切向方向，保证贝塞尔轨迹切向连续。
+        const float t = bezier_project_t(foot_point, &tra);
+        dir = bezier_d1_tra(&tra, t);
     }
 
     const float n = vec_module(dir.x, dir.y);
@@ -618,10 +745,30 @@ int go_path_control_smooth(Path_struct* path, path_spd_data_t path_spd)
     vec2 spd_dir = get_spd_dir_stable(foot_point, (*path).trajectories[(*path).trajectory_count]);
     vec2 target_spd_world = get_spd_on_path_calculate_adaptive(path_spd, path_pos, (*path).length, spd_dir);
 
-    // 圆弧段自动降速：半径越小降得越多，降低切弯抖动和“折线感”
-    if ((*path).trajectories[(*path).trajectory_count].traceType == circle) {
-        const float r = (*path).trajectories[(*path).trajectory_count].trace[circle_r];
-        const float curve_ratio = fmaxf(0.60f, fminf(0.95f, r / (r + 700.0f)));
+    // 曲率相关自动降速：圆弧按半径，贝塞尔按局部曲率半径。
+    {
+        const Trajectory *cur_tra = &(*path).trajectories[(*path).trajectory_count];
+        float curve_ratio = 1.0f;
+
+        if (cur_tra->traceType == circle) {
+            const float r = cur_tra->trace[circle_r];
+            curve_ratio = fmaxf(0.60f, fminf(0.95f, r / (r + 700.0f)));
+        } else if (cur_tra->traceType == bezier) {
+            const float t = bezier_project_t(foot_point, cur_tra);
+            const vec2 d1 = bezier_d1_tra(cur_tra, t);
+            const vec2 d2 = bezier_d2_tra(cur_tra, t);
+            const float cross = fabsf(d1.x * d2.y - d1.y * d2.x);
+            const float n = vec_module(d1.x, d1.y);
+            float radius = 1e6f;
+            if (n > 1e-4f && cross > 1e-6f) {
+                const float kappa = cross / (n * n * n);
+                if (kappa > 1e-6f) {
+                    radius = 1.0f / kappa;
+                }
+            }
+            curve_ratio = fmaxf(0.58f, fminf(0.98f, radius / (radius + 700.0f)));
+        }
+
         target_spd_world.x *= curve_ratio;
         target_spd_world.y *= curve_ratio;
     }

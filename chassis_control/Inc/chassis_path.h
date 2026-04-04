@@ -29,7 +29,8 @@
  */
 typedef enum {
     line = 0,
-    circle
+    circle,
+    bezier
 }trace_type;
 /**
  * @brief 轨迹结构体是否为轨迹最后一段枚举
@@ -72,6 +73,10 @@ typedef struct {
     //用于区分轨迹类型
     Point_struct point_end;//记录轨迹终点坐标
     Point_struct point_start;//记录轨迹起点坐标
+    // 当轨迹类型为 bezier 时，point_start/point_end 分别代表 P0/P3，
+    // bezier_p1/bezier_p2 代表三次贝塞尔的中间控制点 P1/P2。
+    Point_struct bezier_p1;
+    Point_struct bezier_p2;
     float length;
     //记录轨迹长度
     Ifvoid ifvoid;

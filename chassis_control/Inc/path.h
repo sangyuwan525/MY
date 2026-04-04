@@ -15,10 +15,12 @@ void path_init_test();
 // Trajectory generators.
 Trajectory generate_line_trajectory(Point_struct start, Point_struct end, Ifvoid is_end);
 Trajectory generate_circle_trajectory(Point_struct start, Point_struct end, Point_struct center, float central_angle, Ifvoid is_end);
+Trajectory generate_bezier_trajectory_segment(Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, float t0, float t1, Ifvoid is_end);
 
 // Single-segment paths.
 void init_single_line_path(Path_struct* p_path, Point_struct start, Point_struct end, float start_angle, float end_angle);
 void init_single_circle_path(Path_struct* p_path, Point_struct start, Point_struct end, Point_struct center, float central_angle, float start_angle, float end_angle);
+void init_single_bezier_path(Path_struct* p_path, Point_struct p0, Point_struct p1, Point_struct p2, Point_struct p3, uint8_t segment_count, float start_angle, float end_angle);
 
 // Multi-segment paths.
 void init_line_circle_path(Path_struct* p_path, Point_struct line_start, Point_struct line_end_arc_start, Point_struct arc_end, Point_struct center, float central_angle, float start_angle, float end_angle);
