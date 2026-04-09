@@ -21,14 +21,14 @@
 
 // 路径长度上限、R1 使用上限、允许移除的 R2 数量等常量
 #define MAX_PATH_LEN 64
-#define MAX_R1_LIMIT 2
+#define MAX_R1_LIMIT 3
 #define MAX_R2_REMOVE 2
 // INF 用作不可达或初始大值
 #define INF 32767
 
 #define MOVE_COST 10
-#define SIDE_GRAB_PENALTY 12
-#define REMOVE_PENALTY 15
+#define SIDE_GRAB_PENALTY 15
+#define REMOVE_PENALTY 5
 
 // KFS 类型说明：
 // - KFS_NONE: 无特殊设施

@@ -106,8 +106,8 @@ bool run_dijkstra(
     // =========================================================
     if (map[1] == KFS_R2) {
         // 1 号有，强制优先拿 1 号
-        if (t1 == 1) dist[start][0][0][1] = SIDE_GRAB_PENALTY;
-        else if (t2 == 1) dist[start][0][0][2] = SIDE_GRAB_PENALTY;
+        if (t1 == 1) dist[start][0][0][1] = 0;
+        else if (t2 == 1) dist[start][0][0][2] = 0;
         else return false;
     } else if (entry_has_r2) {
         // 1 号没有，但 0 或 2 有 R2。此时【必须】交出探身代价去拿目标

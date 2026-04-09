@@ -103,10 +103,10 @@ void StartTask_chassis(void *argument)
                         }
                         //DownStairs();
                     }else if (rc_engineer_data.test_mode==UP_MODE) {
-                        Change_dji_loc(DJI_M_CLIMB_LF,100000);
-                        Change_dji_loc(DJI_M_CLIMB_RF,-100000);
-                        Change_dji_loc(DJI_M_CLIMB_RB,100000);
-                        Change_dji_loc(DJI_M_CLIMB_LB,-100000);
+                        Change_dji_loc(DJI_M_CLIMB_LF,-100000);
+                        Change_dji_loc(DJI_M_CLIMB_RF,100000);
+                        Change_dji_loc(DJI_M_CLIMB_RB,-100000);
+                        Change_dji_loc(DJI_M_CLIMB_LB,100000);
 
                     }
                 }
@@ -129,11 +129,6 @@ void StartTask_chassis(void *argument)
                         Change_dji_loc(DJI_M_CLIMB_RF,0);
                         Change_dji_loc(DJI_M_CLIMB_RB,0);
                         Change_dji_loc(DJI_M_CLIMB_LB,0);
-                    }else {
-                        Change_dji_loc(DJI_M_CLIMB_LF,100000);
-                        Change_dji_loc(DJI_M_CLIMB_RF,-100000);
-                        Change_dji_loc(DJI_M_CLIMB_RB,100000);
-                        Change_dji_loc(DJI_M_CLIMB_LB,-100000);
                     }
                     climb_cnt=0;
                     down_cnt=0;
@@ -251,8 +246,8 @@ void StartTask_chassis(void *argument)
                 {
                     Change_dji_loc(DJI_M_CLIMB_LF, 0);
                     Change_dji_loc(DJI_M_CLIMB_RF, 0);
-                    Change_dji_loc(DJI_M_CLIMB_LB, front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RB, -front_up);
+                    Change_dji_loc(DJI_M_CLIMB_LB, climb_front_up);
+                    Change_dji_loc(DJI_M_CLIMB_RB, -climb_front_up);
                     // 按钮5被按下，四个3508一起抬升底盘
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);

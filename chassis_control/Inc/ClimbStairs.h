@@ -58,11 +58,13 @@ typedef enum
 //int upstairs_flag;
 
 //上楼梯所用距离
-#define front_up -300000
-#define  front_up_400
+#define climb_front_up 300000
+#define  climb_behind_up 20000
+#define  CLIMB_2006_SPEED 8000
+#define  DOWN_2006_SPEED 6000
 
-#define back_up 320000//305000  325000
-#define front_up2 (30000)//-20000  -40000
+#define back_up -305000//305000  325000
+#define front_up2 (-20000)//-20000  -40000
 
 #define CYLINDER_GPIO_PORT GPIOC
 #define CYLINDER_PIN1 GPIO_PIN_5
