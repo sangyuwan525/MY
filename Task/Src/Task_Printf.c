@@ -35,14 +35,15 @@ void StartTask_Printf(void *argument)
         // printf("x=%.1f,",lcResult.x);
         // printf("y=%.1f,",lcResult.y);
         // printf("r=%.3f\n",lcResult.r);
-        //RTT_Printf("vx=%f  vy=%f\n",remote_engineer.vx,remote_engineer.vy);
+        RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
+        //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
         //RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         //printf("top:%d, mc:%d, mf:%d, cf:%d\n",g_robot_ctx.current_top_state,g_robot_ctx.sub_state.mc,g_robot_ctx.sub_state.mf,g_robot_ctx.sub_state.cf);
         //printf("MC_flag:%d,MF_flag:%d,CF_flag:%d\n",MC_flag,MF_flag,CF_flag);
         //printf("cid=%d,tid=%d,r2_taken=%d,c_step=%d,path_len=%d\n",g_robot_ctx.current_stair_id,g_robot_ctx.target_stair_id,g_robot_ctx.already_taken,g_robot_ctx.current_step,g_robot_ctx.plan.path_len);
-        RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
-        RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
+        // RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
+        // RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
         //RTT_Printf("face %d\n",get_face(1,0));
         osDelay(1000);
     }

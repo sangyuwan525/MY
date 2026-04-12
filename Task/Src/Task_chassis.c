@@ -116,7 +116,10 @@ void StartTask_chassis(void *argument)
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_TEST)
                 {
-
+                    Change_dji_loc(DJI_M_CLIMB_LF,MF_flag*20000);
+                    Change_dji_loc(DJI_M_CLIMB_RF,-MF_flag*20000);
+                    Change_dji_loc(DJI_M_CLIMB_LB,-MF_flag*20000);
+                    Change_dji_loc(DJI_M_CLIMB_RB,MF_flag*20000);
                 }
                 else // 其他模式 (待机/自动)，底盘速度清零
                 {
