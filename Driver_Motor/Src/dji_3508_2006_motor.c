@@ -25,6 +25,35 @@ const uint8_t SYNC_GROUP_IDS[MAX_SYNC_MOTORS_PER_GROUP] = {4, 5, 6, 0, 0, 0, 0, 
 Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES];
 static void Get_total_angle(motor_measure_t *p);
 static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4);
+static bool Is_Climb_Motor(int motor_id);
+static float Clampf(float value, float min_value, float max_value);
+static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id);
+
+/* Gravity feedforward config for 4 climb 3508 motors only.
+ * sign: current direction that means "lifting up" (+1/-1).
+ * hold: hold current near target; up/down: extra bias by move direction.
+ */
+static const int8_t g_climb_ff_sign[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	1, 1, 1, 1,
+	0, 0
+};
+static const int16_t g_climb_ff_hold[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	1750, 1750, 900, 900,
+	0, 0
+};
+static const int16_t g_climb_ff_up[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	2900, 2900, 400, 400,
+	0, 0
+};
+static const int16_t g_climb_ff_down[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	2850, 2850, 400, 400,
+	0, 0
+};
+static const int32_t g_climb_loc_hold_deadband = 180;
 
 /**************内部变量与函数end**************/
 
@@ -420,6 +449,50 @@ static float Calculate_Group_Average_Angle(void)
 	}
 }
 
+/* Enable gravity feedforward only for lift-axis motors. */
+static bool Is_Climb_Motor(int motor_id)
+{
+	return (motor_id == DJI_M_CLIMB_LF ||
+			motor_id == DJI_M_CLIMB_RF ||
+			motor_id == DJI_M_CLIMB_LB ||
+			motor_id == DJI_M_CLIMB_RB);
+}
+
+/* Clamp helper to keep final current inside PID configured bounds. */
+static float Clampf(float value, float min_value, float max_value)
+{
+	if (value < min_value) {
+		return min_value;
+	}
+	if (value > max_value) {
+		return max_value;
+	}
+	return value;
+}
+
+/* Compute gravity FF current for climb motors by loc error and sign. */
+static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id)
+{
+	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
+	int32_t abs_err = (loc_err >= 0) ? loc_err : (-loc_err);
+	int32_t ff_mag = 0;
+	int8_t sign = g_climb_ff_sign[motor_id];
+
+	if (sign == 0) {
+		return 0;
+	}
+
+	if (abs_err <= g_climb_loc_hold_deadband) {
+		ff_mag = g_climb_ff_hold[motor_id];
+	} else if ((loc_err * sign) > 0) {
+		ff_mag = g_climb_ff_up[motor_id];
+	} else {
+		ff_mag = g_climb_ff_down[motor_id];
+	}
+
+	return (int16_t)(sign * ff_mag);
+}
+
 void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t *data)
 {
 	int index = -1;
@@ -538,7 +611,21 @@ void Dji_3508_all_motor_control(void) {
             }
 
             // 最终电流值
-            motor->current_set = (int16_t)motor->pid_params.spd.now_out;
+            // Final command: PID output + gravity FF (lift motors in LOC/GROUP) + clamp.
+            {
+                float current_cmd = motor->pid_params.spd.now_out;
+
+                if (Is_Climb_Motor(i) &&
+                    (motor->control_mode == LOC_MODE || motor->control_mode == GROUP_MODE))
+                {
+                    current_cmd += (float)Get_Gravity_FF_Current(motor, i);
+                }
+
+                current_cmd = Clampf(current_cmd,
+                                     motor->pid_params.spd.out_limit_down,
+                                     motor->pid_params.spd.out_limit_up);
+                motor->current_set = (int16_t)current_cmd;
+            }
         }
         else
         {
