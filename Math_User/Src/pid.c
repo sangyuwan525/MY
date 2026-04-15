@@ -60,10 +60,10 @@ void Pid_parameter_init(void){
 	Pid_increment_struct_init(&motor_3508_pid_g[3].loc,  0.15, 	0.001,	0.035,  200,    -200);
 	Pid_increment_struct_init(&motor_3508_pid_g[3].spd,  16.7f,	0.98f,	0.024314f,  9500,  -9500);
 
-	Pid_increment_struct_init(&motor_3508_pid_g[4].loc,  0.15, 	0.001,	0.03,   5000,    -5000);
+	Pid_increment_struct_init(&motor_3508_pid_g[4].loc,  0.15, 	0.001,	0.03,   7000,    -7000);
 	Pid_increment_struct_init(&motor_3508_pid_g[4].spd,  12,	0.98f,	0.024314f,  10000,  -10000);// 10.7f,	0.98f,	0.024314f,  10000,  -10000
 
-	Pid_increment_struct_init(&motor_3508_pid_g[5].loc, 0.15,	0.001,	0.03,   5000,    -5000);//2006
+	Pid_increment_struct_init(&motor_3508_pid_g[5].loc, 0.15,	0.001,	0.03,   7000,    -7000);//2006
 	Pid_increment_struct_init(&motor_3508_pid_g[5].spd,   12.7f,	0.98f,	0.034314f,  10000,  -10000);
 
 	// Pid_increment_struct_init(&motor_3508_pid_g[4].loc,  0.15, 	0.001,	0.03,   1000,    -1000);
@@ -71,12 +71,12 @@ void Pid_parameter_init(void){
 	// Pid_increment_struct_init(&motor_3508_pid_g[5].loc, 0.15,	0.001,	0.03,   1000,    -1000);//2006
 	// Pid_increment_struct_init(&motor_3508_pid_g[5].spd,   12.7f,	0.98f,	0.034314f,  0,  0);
 
-	Pid_increment_struct_init(&motor_3508_pid_g[6].loc,  0.15, 	0.001,	0.03,  5000,    -5000);
+	Pid_increment_struct_init(&motor_3508_pid_g[6].loc,  0.15, 	0.001,	0.03,  7000,    -7000);
 	Pid_increment_struct_init(&motor_3508_pid_g[6].spd,  12.0, 	1.2,	  0.035,   10000,  -10000);
 	// Pid_increment_struct_init(&motor_3508_pid_g[6].loc,  0.15, 	0.001,	0.03,  3000,    -3000);
 	// Pid_increment_struct_init(&motor_3508_pid_g[6].spd,  12.0, 	1.2,	  0.035,   0,  0);
 
-	Pid_increment_struct_init(&motor_3508_pid_g[7].loc,  0.15, 	0.001,	0.03,  5000,    -5000);//2006
+	Pid_increment_struct_init(&motor_3508_pid_g[7].loc,  0.15, 	0.001,	0.03,  7000,    -7000);//2006
 	Pid_increment_struct_init(&motor_3508_pid_g[7].spd,  15.0, 	0.98,	  0.035,   10000,  -10000);
 
     Pid_increment_struct_init(&motor_3508_pid_g[8].loc,  0.15, 	0.001,	0.03,  4000,    -4000);
