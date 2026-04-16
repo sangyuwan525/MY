@@ -28,6 +28,10 @@ static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_res
 static bool Is_Climb_Motor(int motor_id);
 static float Clampf(float value, float min_value, float max_value);
 static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id);
+static float Apply_Climb_Remain_Brake(const Dji_Motor_t *motor, int motor_id, float up_axis_cmd);
+static float Shape_Climb_Spd_Target(const Dji_Motor_t *motor, int motor_id, float raw_spd_target);
+//static float Apply_Climb_Downforce_Floor(const Dji_Motor_t *motor, int motor_id, float current_cmd);
+static ElemType Pid_incremental_cal_climb_spd_aw(pid_incremental_struct* pid_struct, ElemType position, ElemType target);
 
 /* Gravity feedforward config for 4 climb 3508 motors only.
  * sign: current direction that means "lifting up" (+1/-1).
@@ -35,12 +39,12 @@ static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id);
  */
 static const int8_t g_climb_ff_sign[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	1, 1, 1, 1,
+	-1, 1, 1, -1,
 	0, 0
 };
 static const int16_t g_climb_ff_hold[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	1750, 1750, 900, 900,
+	0, 0, 0, 0,
 	0, 0
 };
 static const int16_t g_climb_ff_up[DJI_MOTOR_COUNT] = {
@@ -50,10 +54,60 @@ static const int16_t g_climb_ff_up[DJI_MOTOR_COUNT] = {
 };
 static const int16_t g_climb_ff_down[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	2850, 2850, 400, 400,
+	4000, 4000, 600, 600,
 	0, 0
 };
 static const int32_t g_climb_loc_hold_deadband = 180;
+
+/*
+ * 下降“慢但有力量”参数：
+ * 1) 速度整形：限制下降/上抬速度目标与变化斜率；
+ * 2) 保力下限：下降且远离目标时，保证最小支撑电流。
+ */
+static const float g_climb_down_spd_limit_rpm[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	220.0f, 220.0f, 220.0f, 220.0f,
+	0, 0
+};
+static const float g_climb_up_spd_limit_rpm[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	3500.0f, 3500.0f, 3500.0f, 3500.0f,
+	0, 0
+};
+static const float g_climb_spd_slew_up_rpm_per_cycle = 100.0f;    // 1ms周期
+static const float g_climb_spd_slew_down_rpm_per_cycle = 10.0f;  // 1ms周期
+static float g_climb_spd_target_last[DJI_MOTOR_COUNT] = {0};
+
+/*
+ * 末段防超调限速参数（仅升降电机）：
+ * - 当位置误差进入 brake_window 后，按剩余距离限制速度上限：
+ *   v_max = sqrt(120 * a_rpm_s * s_rev)
+ *   其中 s_rev = |loc_err| / 8192
+ * - 这样越接近目标，允许速度越小，避免“冲过头”。
+ */
+static const float g_climb_loc_count_per_rev = 8192.0f;
+static const float g_climb_brake_window_loc[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	30000.0f, 30000.0f, 30000.0f, 30000.0f,
+	0, 0
+};
+static const float g_climb_brake_acc_rpm_s[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	3000.0f, 3000.0f, 3000.0f, 3000.0f,
+	0, 0
+};
+static const float g_climb_brake_min_rpm[DJI_MOTOR_COUNT] = {
+	0, 0, 0, 0,
+	25.0f, 25.0f, 25.0f, 25.0f,
+	0, 0
+};
+
+// static const float g_climb_down_current_floor[DJI_MOTOR_COUNT] = {
+// 	0, 0, 0, 0,
+// 	0.0f, 0.0f, 0.0f, 0.0f,
+// 	0, 0
+// };
+// static const int32_t g_climb_down_floor_release_deadband = 220;
 
 /**************内部变量与函数end**************/
 
@@ -493,6 +547,105 @@ static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id)
 	return (int16_t)(sign * ff_mag);
 }
 
+/*
+ * 抬升轴速度整形：
+ * - 统一到“向上轴”判断（正=上抬，负=下降）；
+ * - 分别限幅 up/down；
+ * - 每周期做斜率限制，避免目标突变。
+ */
+/* Remaining-distance braking cap for climb motors (up-axis command in rpm). */
+static float Apply_Climb_Remain_Brake(const Dji_Motor_t *motor, int motor_id, float up_axis_cmd)
+{
+	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
+	float abs_loc_err = (loc_err >= 0) ? (float)loc_err : (float)(-loc_err);
+	float brake_window = g_climb_brake_window_loc[motor_id];
+	float decel_rpm_s = g_climb_brake_acc_rpm_s[motor_id];
+	float min_rpm = g_climb_brake_min_rpm[motor_id];
+	float s_rev;
+	float remain_cap_rpm;
+
+	if (brake_window <= 0.0f || decel_rpm_s <= 0.0f) {
+		return up_axis_cmd;
+	}
+	if (abs_loc_err > brake_window) {
+		return up_axis_cmd;
+	}
+
+	s_rev = abs_loc_err / g_climb_loc_count_per_rev;
+	remain_cap_rpm = sqrtf(120.0f * decel_rpm_s * s_rev);
+
+	if (abs_loc_err > (float)g_climb_loc_hold_deadband && remain_cap_rpm < min_rpm) {
+		remain_cap_rpm = min_rpm;
+	}
+
+	if (up_axis_cmd >= 0.0f) {
+		return Clampf(up_axis_cmd, 0.0f, remain_cap_rpm);
+	}
+	return -Clampf(-up_axis_cmd, 0.0f, remain_cap_rpm);
+}
+
+static float Shape_Climb_Spd_Target(const Dji_Motor_t *motor, int motor_id, float raw_spd_target)
+{
+	float desired = raw_spd_target;
+	float last = g_climb_spd_target_last[motor_id];
+	float shaped = desired;
+	int8_t sign = g_climb_ff_sign[motor_id];
+	(void)motor;
+
+	if (sign == 0) {
+		return raw_spd_target;
+	}
+
+	{
+		float up_axis_cmd = desired * sign;
+		if (up_axis_cmd >= 0.0f) {
+			up_axis_cmd = Clampf(up_axis_cmd, 0.0f, g_climb_up_spd_limit_rpm[motor_id]);
+		} else {
+			float down_mag = Clampf(-up_axis_cmd, 0.0f, g_climb_down_spd_limit_rpm[motor_id]);
+			up_axis_cmd = -down_mag;
+		}
+		up_axis_cmd = Apply_Climb_Remain_Brake(motor, motor_id, up_axis_cmd);
+		desired = up_axis_cmd * sign;
+	}
+
+	{
+		float delta = desired - last;
+		delta = Clampf(delta, -g_climb_spd_slew_down_rpm_per_cycle, g_climb_spd_slew_up_rpm_per_cycle);
+		shaped = last + delta;
+	}
+
+	g_climb_spd_target_last[motor_id] = shaped;
+	return shaped;
+}
+
+// /*
+//  * 下降保力：下降且远离目标时，给最小支撑电流下限。
+//  * 这样可在“降速”时仍保持抬升轴有效力矩，不会变软。
+//  */
+// static float Apply_Climb_Downforce_Floor(const Dji_Motor_t *motor, int motor_id, float current_cmd)
+// {
+// 	int8_t sign = g_climb_ff_sign[motor_id];
+// 	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
+// 	int32_t abs_err = (loc_err >= 0) ? loc_err : (-loc_err);
+// 	bool is_down_cmd = ((loc_err * sign) < 0);
+// 	float floor_mag = g_climb_down_current_floor[motor_id];
+// 	float support_cmd;
+//
+// 	if (sign == 0 || floor_mag <= 0.0f) {
+// 		return current_cmd;
+// 	}
+//
+// 	if (!is_down_cmd || abs_err <= g_climb_down_floor_release_deadband) {
+// 		return current_cmd;
+// 	}
+//
+// 	support_cmd = sign * floor_mag; // “向上轴”支撑电流
+// 	if ((current_cmd * sign) < floor_mag) {
+// 		return support_cmd;
+// 	}
+// 	return current_cmd;
+// }
+
 void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t *data)
 {
 	int index = -1;
@@ -573,6 +726,12 @@ void Dji_3508_all_motor_control(void) {
         if (motor->is_enabled && motor->feedback.first == 1  && can_index != -1) { // 检查是否启用且已接收第一帧
 
             // 模式控制
+            if (Is_Climb_Motor(i) &&
+                !(motor->control_mode == LOC_MODE || motor->control_mode == GROUP_MODE))
+            {
+                g_climb_spd_target_last[i] = 0.0f;
+            }
+
             if (motor->control_mode == LOC_MODE)
             {
                 // LOC_MODE (普通位置-速度双环)
@@ -580,9 +739,15 @@ void Dji_3508_all_motor_control(void) {
                                     (ElemType)motor->feedback.total_angle,
                                     (ElemType)motor->target_loc); // ✅ 使用注册表目标
 
-                Pid_incremental_cal(&motor->pid_params.spd,
-                                    (ElemType)motor->feedback.speed_rpm,
-                                    motor->pid_params.loc.now_out);
+                {
+                    ElemType spd_target = motor->pid_params.loc.now_out;
+                    if (Is_Climb_Motor(i)) {
+                        spd_target = (ElemType)Shape_Climb_Spd_Target(motor, i, (float)spd_target);
+                    }
+                    Pid_incremental_cal(&motor->pid_params.spd,
+                                        (ElemType)motor->feedback.speed_rpm,
+                                        spd_target);
+                }
             }
             else if (motor->control_mode == SPEED_MODE)
             {
@@ -605,9 +770,15 @@ void Dji_3508_all_motor_control(void) {
                                     average_angle);                  // 目标值 (A_avg)
 
                 // 3. 速度环 (内环)：目标速度 = 位置环目标 - 同步差值环修正
-                Pid_incremental_cal(&motor->pid_params.spd,
-                                    (ElemType)motor->feedback.speed_rpm,
-                                    (motor->pid_params.loc.now_out - motor->pid_params.diff.now_out));
+                {
+                    ElemType spd_target = (motor->pid_params.loc.now_out - motor->pid_params.diff.now_out);
+                    if (Is_Climb_Motor(i)) {
+                        spd_target = (ElemType)Shape_Climb_Spd_Target(motor, i, (float)spd_target);
+                    }
+                    Pid_incremental_cal(&motor->pid_params.spd,
+                                        (ElemType)motor->feedback.speed_rpm,
+                                        spd_target);
+                }
             }
 
             // 最终电流值
@@ -619,6 +790,7 @@ void Dji_3508_all_motor_control(void) {
                     (motor->control_mode == LOC_MODE || motor->control_mode == GROUP_MODE))
                 {
                     current_cmd += (float)Get_Gravity_FF_Current(motor, i);
+                    //current_cmd = Apply_Climb_Downforce_Floor(motor, i, current_cmd);
                 }
 
                 current_cmd = Clampf(current_cmd,
@@ -630,6 +802,9 @@ void Dji_3508_all_motor_control(void) {
         else
         {
             motor->current_set = 0;
+            if (Is_Climb_Motor(i)) {
+                g_climb_spd_target_last[i] = 0.0f;
+            }
         }
 
         // 全局控制关闭，清零
