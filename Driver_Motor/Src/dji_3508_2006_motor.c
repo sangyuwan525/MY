@@ -41,17 +41,17 @@ static const int8_t g_climb_ff_sign[DJI_MOTOR_COUNT] = {
 };
 static const int16_t g_climb_ff_hold[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	3750, 3750, 900, 900,
+	0, 0, 0, 0,
 	0, 0
 };
 static const int16_t g_climb_ff_up[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	4000, 4000, 600, 600,
+	2900, 2900, 400, 400,
 	0, 0
 };
 static const int16_t g_climb_ff_down[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	5500, 5500, 600, 600,
+	4000, 4000, 600, 600,
 	0, 0
 };
 static const int32_t g_climb_loc_hold_deadband = 180;
@@ -67,16 +67,16 @@ static const int32_t g_climb_loc_hold_deadband = 180;
  */
 static const float g_climb_down_spd_limit_rpm[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	7000.0f, 7000.0f, 7000.0f, 7000.0f,
+	3500.0f, 3500.0f, 3500.0f, 3500.0f,
 	0, 0
 };
 static const float g_climb_up_spd_limit_rpm[DJI_MOTOR_COUNT] = {
 	0, 0, 0, 0,
-	7000.0f, 7000.0f, 7000.0f, 7000.0f,
+	200.0f, 200.0f, 200.0f, 200.0f,
 	0, 0
 };
 static const float g_climb_spd_slew_up_rpm_per_cycle = 100.0f;
-static const float g_climb_spd_slew_down_rpm_per_cycle = 800.0f;
+static const float g_climb_spd_slew_down_rpm_per_cycle = 50.0f;
 static float g_climb_spd_target_last[DJI_MOTOR_COUNT] = {0};
 
 /**************内部变量与函数end**************/
