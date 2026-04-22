@@ -17,6 +17,8 @@
 #include "chassis_pid.h"
 #include "locator_driver.h"
 #include "Hfsm.h"
+#include "motor_registry.h"
+#include "global_motor_conf.h"
 
 int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
@@ -24,8 +26,6 @@ int button3_flag=0;
 int button4_flag=0;
 bool valve_state=0;
 int climb_test_cnt=0;
-
-
 
 void StartTask_chassis(void *argument)
 {
@@ -247,10 +247,11 @@ void StartTask_chassis(void *argument)
             //     }
                 if (rc_engineer_data.button5 == 1)
                 {
-                    Change_dji_loc(DJI_M_CLIMB_LF, 0);
-                    Change_dji_loc(DJI_M_CLIMB_RF, 0);
-                    Change_dji_loc(DJI_M_CLIMB_LB, climb_front_up);
-                    Change_dji_loc(DJI_M_CLIMB_RB, -climb_front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_LF, 0);
+                    // Change_dji_loc(DJI_M_CLIMB_RF, 0);
+                    // Change_dji_loc(DJI_M_CLIMB_LB, climb_front_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RB, -climb_front_up);
+                    g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G], 0.8f);
                     // 按钮5被按下，四个3508一起抬升底盘
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
@@ -263,6 +264,7 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button6 == 1)
                 {
+                    g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G], 0);
                     // 按钮3被按下，一起抬升
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);

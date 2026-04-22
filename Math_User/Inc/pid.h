@@ -34,6 +34,7 @@ typedef struct {
 //extern motor_pid_parameter motor_3508_pid_g[DJI_MOTOR_COUNT];
 void Pid_parameter_init(void);/*各套pid参数初始化参数,在使用电机前必须先进行调用*/
 ElemType Pid_incremental_cal(pid_incremental_struct* pid_struct, ElemType position, ElemType target);/*增量式pid计算*/
+void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemType Kp, ElemType Ki, ElemType Kd, ElemType out_limit_up, ElemType out_limit_down);
 /**************Public_end**************/
 
 #endif

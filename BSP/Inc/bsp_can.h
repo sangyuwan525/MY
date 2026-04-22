@@ -1,55 +1,46 @@
-#ifndef __BSP_CAN_H
-#define __BSP_CAN_H
+//
+// Created by 91818 on 2025/11/30.
+//
+
+#ifndef R1_SUPERSTRUCTURE_BSP_CAN_H
+#define R1_SUPERSTRUCTURE_BSP_CAN_H
 
 #include "fdcan.h"
-#include "dji_3508_2006_motor.h"
-#include "vesc.h"
 #include "stm32g4xx.h"
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
+#include "queue.h"
+#define hcan_t FDCAN_HandleTypeDef
+// FDCAN 最大负载是 64 字节
+typedef struct {
+    uint32_t id;       // 电机id
+    uint8_t  len;      // 数据长度
+    uint8_t  data[64]; // 支持 FDCAN 长帧
+    FDCAN_HandleTypeDef *hfdcan; // 标记数据来自哪个CAN口(可选，方便调试)
+} can_msg_t;
 
+typedef can_msg_t Motor_Rx_Queue_t;
 
-
-#ifndef NULL
-	#define NULL ((void *)0)//此处的NULL指示candatabase中的NULL
-#endif
-#define READ_ONLY  0    //主控读，外设写
-#define WRITE_ONLY 1    //主控写，外设读
-
-
-
-typedef enum{
-	vesc_motor1=0x001+(/*CAN_PACKET_SET_RPM*/3<<8),//新增vesc电机ID号
-	vesc_motor2=0x002+(/*CAN_PACKET_SET_RPM*/3<<8),
-	vesc_motor3=0x003+(/*CAN_PACKET_SET_RPM*/3<<8),
-} ID_NUMDEF;
-
-typedef struct
+// FDCAN 类型
+typedef enum
 {
-	uint8_t  Data_type;
-	ID_NUMDEF  Data_ID;
-	uint8_t* Data_ptr;
-	uint8_t  Data_length;
-	void (*MenuFunc)(void);//入口函数
-	uint8_t  Channel;
-	uint32_t  Fifo_num;//在接收方将该ID配置的fifo号
-} Can_Data;
+    CAN_ID_STD = 0,
+    CAN_ID_EXT = 1
+} CAN_Id_Type_e;
 
-void FDCAN1_RxFilter_Config(void);
-void FDCAN2_RxFilter_Config(void);
-void FDCAN3_RxFilter_Config(void);
+// 外部引用的队列句柄
+extern osMessageQueueId_t motor_rx_queueHandle;
 
-uint8_t FDCAN1_Transmit(uint8_t *TxData, uint32_t id, uint32_t len, uint8_t EXTflag);
-uint8_t FDCAN2_Transmit(uint8_t *TxData, uint32_t id, uint32_t len, uint8_t EXTflag);
-uint8_t FDCAN3_Transmit(uint8_t *TxData, uint32_t id, uint32_t len, uint8_t EXTflag);
+// 初始化：配置过滤器并启动
+void bsp_can_init(osMessageQueueId_t motor_q, osMessageQueueId_t chassis_q);
 
-void Hash_table_init(void);
+// 发送标准帧 (针对 DJI 电机)
+uint8_t bsp_can_send_std_msg(FDCAN_HandleTypeDef *hfdcan, uint32_t id, uint8_t *Txdata, uint8_t len, CAN_Id_Type_e id_type);
 
-void send_message(uint32_t id,uint8_t data);
+// 接受 FDCAN 帧 (针对底盘，如果需要)
+uint8_t bsp_can_rev_fd_msg(FDCAN_HandleTypeDef *hfdcan, uint32_t id, uint8_t *data, uint8_t len, CAN_Id_Type_e id_type);
 
-int shoot_dis(float dis_sub);
 
-extern uint8_t can_data_num_g;//结构体数组can_database_g的大小，在Hash_table_init(void)中更新
-extern Can_Data can_database_g[];
-extern uint16_t hash_table[1000];
-// extern ak80_motor_measure_t ak80_motor_inf[8];
-
-#endif
+uint8_t fdcanx_send_data(hcan_t *hfdcan, uint16_t id, uint8_t *data, uint32_t len);
+uint8_t fdcanx_receive(hcan_t *hfdcan, uint16_t *rec_id, uint8_t *buf);
+#endif //R1_SUPERSTRUCTURE_BSP_CAN_H

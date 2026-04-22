@@ -6,7 +6,7 @@
 // #include "basic.h"
 /**************内部变量与函数begin**************/
 /*增量式pid初始化*/
-static void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemType Kp, ElemType Ki, ElemType Kd, ElemType out_limit_up, ElemType out_limit_down);
+void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemType Kp, ElemType Ki, ElemType Kd, ElemType out_limit_up, ElemType out_limit_down);
 /**************内部变量与函数end**************/
 
 
@@ -23,7 +23,7 @@ ElemType Pid_incremental_cal(pid_incremental_struct* pid_struct, ElemType positi
 4.用法及调用要求：
 5.其它：
 */
-static void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemType Kp, ElemType Ki, ElemType Kd, ElemType out_limit_up, ElemType out_limit_down) {
+void Pid_increment_struct_init(pid_incremental_struct* pid_struct, ElemType Kp, ElemType Ki, ElemType Kd, ElemType out_limit_up, ElemType out_limit_down) {
 	pid_struct->Kp = Kp;
 	pid_struct->Ki = Ki;
 	pid_struct->Kd = Kd;

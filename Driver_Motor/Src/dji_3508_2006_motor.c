@@ -1,271 +1,172 @@
-#include "FreeRTOS.h"
 #include "dji_3508_2006_motor.h"
 #include "main.h"
-#include "bsp_can.h"
 #include "fdcan.h"
 #include "pid.h"
+//#include "basic.h"
 #include "math.h"
-#include "task.h"
-#include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
-
 
 //3508电流范围   -16384-16384
 //2006电流范围   -10000-10000
 
-/**************内部宏定义与重命名begin**************/
-
-//#define ALL_Send_Flag //收到所有电机报文后发送一条报文的标志
-
-/**************内部宏定义与重命名end**************/
+static int first_time = 0;
 
 /**************内部变量与函数begin**************/
+// static Dji_Send_Buffer_t g_send_buffers[MAX_CAN_HANDLES];
+static motor_pid_parameter motor_3508_pid_g[9];/*电机pid参数*/
 static int control_flag=1;
-const uint8_t SYNC_GROUP_IDS[MAX_SYNC_MOTORS_PER_GROUP] = {4, 5, 6, 0, 0, 0, 0, 0}; // 示例：ID 1, 3, 5, 7 同步
-Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES];
+// --- 内部静态函数声明 ---
 static void Get_total_angle(motor_measure_t *p);
+static void Dji_pid_parameter_init(void);
 static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4);
-static bool Is_Climb_Motor(int motor_id);
-static float Clampf(float value, float min_value, float max_value);
-static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id);
-static float Apply_Climb_Remain_Brake(const Dji_Motor_t *motor, int motor_id, float up_axis_cmd);
-static float Shape_Climb_Spd_Target(const Dji_Motor_t *motor, int motor_id, float raw_spd_target);
-//static float Apply_Climb_Downforce_Floor(const Dji_Motor_t *motor, int motor_id, float current_cmd);
-static ElemType Pid_incremental_cal_climb_spd_aw(pid_incremental_struct* pid_struct, ElemType position, ElemType target);
-
-/* Gravity feedforward config for 4 climb 3508 motors only.
- * sign: current direction that means "lifting up" (+1/-1).
- * hold: hold current near target; up/down: extra bias by move direction.
- */
-static const int8_t g_climb_ff_sign[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	-1, 1, 1, -1,
-	0, 0
-};
-static const int16_t g_climb_ff_hold[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0
-};
-static const int16_t g_climb_ff_up[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	2900, 2900, 400, 400,
-	0, 0
-};
-static const int16_t g_climb_ff_down[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	4000, 4000, 600, 600,
-	0, 0
-};
-static const int32_t g_climb_loc_hold_deadband = 180;
-
-/*
- * 下降“慢但有力量”参数：
- * 1) 速度整形：限制下降/上抬速度目标与变化斜率；
- * 2) 保力下限：下降且远离目标时，保证最小支撑电流。
- */
-static const float g_climb_down_spd_limit_rpm[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	220.0f, 220.0f, 220.0f, 220.0f,
-	0, 0
-};
-static const float g_climb_up_spd_limit_rpm[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	3500.0f, 3500.0f, 3500.0f, 3500.0f,
-	0, 0
-};
-static const float g_climb_spd_slew_up_rpm_per_cycle = 100.0f;    // 1ms周期
-static const float g_climb_spd_slew_down_rpm_per_cycle = 10.0f;  // 1ms周期
-static float g_climb_spd_target_last[DJI_MOTOR_COUNT] = {0};
-
-/*
- * 末段防超调限速参数（仅升降电机）：
- * - 当位置误差进入 brake_window 后，按剩余距离限制速度上限：
- *   v_max = sqrt(120 * a_rpm_s * s_rev)
- *   其中 s_rev = |loc_err| / 8192
- * - 这样越接近目标，允许速度越小，避免“冲过头”。
- */
-static const float g_climb_loc_count_per_rev = 8192.0f;
-static const float g_climb_brake_window_loc[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	30000.0f, 30000.0f, 30000.0f, 30000.0f,
-	0, 0
-};
-static const float g_climb_brake_acc_rpm_s[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	3000.0f, 3000.0f, 3000.0f, 3000.0f,
-	0, 0
-};
-static const float g_climb_brake_min_rpm[DJI_MOTOR_COUNT] = {
-	0, 0, 0, 0,
-	25.0f, 25.0f, 25.0f, 25.0f,
-	0, 0
-};
-
-// static const float g_climb_down_current_floor[DJI_MOTOR_COUNT] = {
-// 	0, 0, 0, 0,
-// 	0.0f, 0.0f, 0.0f, 0.0f,
-// 	0, 0
-// };
-// static const int32_t g_climb_down_floor_release_deadband = 220;
-
 /**************内部变量与函数end**************/
 
+const uint8_t SYNC_GROUP_IDS[TOTAL_SYNC_GROUPS][MAX_MOTORS_PER_GROUP] ={
+    {DJI_YL,DJI_YR},
+    {DJI_XL,DJI_XR}
+};
 
 /**************外部接口begin**************/
-void Change_dji_speed(int motor_id,int target_spd);
-void Change_dji_loc(int motor_id,int target_loc);
-motor_measure_t Get_dji_information(int motor_id);
-void Discontrol_dji_motor(void);
-void Recontrol_dji_motor(void);
-
-void Set_motor_enabled(int motor_id, bool enabled);
-void Dji_3508_all_motor_control(void); // 新增：集成 PID 计算和发送函数
+//Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT];//全局注册表
 /**************外部接口end**************/
+
 /**
- * @brief 统一的DJI电机注册表
- * @note  电机数量为 DJI_MOTOR_COUNT。配置必须在这里明确定义，包括嵌入的 PID 参数。
+ * @brief  各套 PID 参数初始化参数
+ * @note   必须先调用
  */
+static void Dji_pid_parameter_init(void){
+    Pid_increment_struct_init(&motor_3508_pid_g[0].loc,   0.15f, 	0.001f,	0.035f,  400,    -400);
+    Pid_increment_struct_init(&motor_3508_pid_g[0].spd,    16.7f,	0.98f,	0.024314f,  10000,  -10000);
+
+
+    Pid_increment_struct_init(&motor_3508_pid_g[1].loc,   0.15f, 	0.001f,	0.035f,   400,    -400);
+    Pid_increment_struct_init(&motor_3508_pid_g[1].spd,  16.7f,	0.98f,	0.024314f,  10000,  -10000);
+
+    Pid_increment_struct_init(&(motor_3508_pid_g[2].loc), 0.15f, 	0.001f,	0.035f,  400,    -400);
+    Pid_increment_struct_init(&(motor_3508_pid_g[2].spd),   16.7f,	0.98f,	0.024314f,  10000,  -10000);
+
+    Pid_increment_struct_init(&motor_3508_pid_g[3].loc,  0.15f, 	0.001f,	0.035f,  400,    -400);
+    Pid_increment_struct_init(&motor_3508_pid_g[3].spd,  16.7f,	0.98f,	0.024314f,  10000,  -10000);
+
+    Pid_increment_struct_init(&motor_3508_pid_g[4].loc,  0.15f, 	0.001f,	0.035f,   600,    -600);
+    Pid_increment_struct_init(&motor_3508_pid_g[4].spd,  16.7f,	0.98f,	0.024314f,  10000,  -10000);// 10.7f,	0.98f,	0.024314f,  10000,  -10000
+
+    Pid_increment_struct_init(&motor_3508_pid_g[5].loc, 0.15f,	0.001f,	0.035f,   600,    -600);//3508-J1
+    Pid_increment_struct_init(&motor_3508_pid_g[5].spd,   16.7f,	0.98f,	0.024314f,  10000,  -10000);
+
+    Pid_increment_struct_init(&motor_3508_pid_g[6].loc,  0.3f, 	0.001f,	0.03f,  600,    -600);//2006-R1
+    Pid_increment_struct_init(&motor_3508_pid_g[6].spd,  12.7f, 	0.98f,	  0.035f,   10000,  -10000);
+
+    Pid_increment_struct_init(&motor_3508_pid_g[7].loc,  0.15f, 	0.001f,	0.03f,  1000,    -1000);//2006
+    Pid_increment_struct_init(&motor_3508_pid_g[7].spd,  15.0f, 	0.98f,	  0.035f,   10000,  -10000);
+
+    Pid_increment_struct_init(&motor_3508_pid_g[8].loc,  0.15f, 	0.001f,	0.03f,  4000,    -4000);
+    Pid_increment_struct_init(&motor_3508_pid_g[8].spd,  24.0f, 	1.2f,	  0.035f,   9500,  -9500);
+
+    //同步
+    //参数要调试
+    // Y轴组 (ID 0, 1)
+    Pid_increment_struct_init(&motor_3508_pid_g[0].diff, 0.015f, 0.0f, 0.0f, 600, -600);
+    Pid_increment_struct_init(&motor_3508_pid_g[1].diff, 0.015f, 0.0f, 0.0f, 600, -600);
+
+    // X轴组 (ID 2, 3)
+    Pid_increment_struct_init(&motor_3508_pid_g[2].diff, 0.015f, 0.0f, 0.0f, 600, -600);
+    Pid_increment_struct_init(&motor_3508_pid_g[3].diff, 0.015f, 0.0f, 0.0f, 600, -600);
+}
+/**
+  * @brief  统一的DJI电机注册表
+  * @note   电机数量为 DJI_MOTOR_COUNT。配置必须在这里明确定义，包括嵌入的 PID 参数。
+  */
 Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT] =
 {
     // ------------------------------------------------------------------------
-    // 索引 0: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
+    // 索引 0: DJI_YL - 上下(Y轴)左边电机 - CAN1 - ID 0x201
     // ------------------------------------------------------------------------
-    [DJI_M_CHASSIS_LF] = {
+    [DJI_YL] = {
         .hcan_tx          = &hfdcan1,
         .can_rx_id        = CAN_3508_M1_ID,
         .can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
         .tx_index         = 0,
         .target_spd       = 0,
-        .control_mode     = SPEED_MODE,
+        .target_loc       = 0,
+        .control_mode     = GROUP_MODE,
         .is_enabled       = true,
     },
-
     // ------------------------------------------------------------------------
-    // 索引 1: DJI_M_CHASSIS_LB - CAN1 - ID 0x202
+    // 索引 1: DJI_YR - 上下(Y轴)右边电机 - CAN1 - ID 0x202
     // ------------------------------------------------------------------------
-    [DJI_M_CHASSIS_LB] = {
+    [DJI_YR] = {
         .hcan_tx          = &hfdcan1,
         .can_rx_id        = CAN_3508_M2_ID,
         .can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
         .tx_index         = 1,
         .target_spd       = 0,
-        .control_mode     = SPEED_MODE,
+        .target_loc       = 0,
+        .control_mode     = GROUP_MODE,
+        .is_enabled       = true,
+    },
+    // ------------------------------------------------------------------------
+    // 索引 2: DJI_XL - 前后(X轴)左边电机 - CAN1 - ID 0x203
+    // ------------------------------------------------------------------------
+    [DJI_XL] = {
+        .hcan_tx          = &hfdcan1,
+        .can_rx_id        = CAN_3508_M3_ID,
+        .can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
+        .tx_index         = 2,
+        .target_spd       = 0,
+        .target_loc       = 0,
+        .control_mode     = GROUP_MODE,
+        .is_enabled       = true,
+    },
+    // ------------------------------------------------------------------------
+    // 索引 3: DJI_XR - 前后(X轴)右边电机 - CAN1 - ID 0x204
+    // ------------------------------------------------------------------------
+    [DJI_XR] = {
+        .hcan_tx          = &hfdcan1,
+        .can_rx_id        = CAN_3508_M4_ID,
+        .can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
+        .tx_index         = 3,
+        .target_spd       = 0,
+        .target_loc       = 0,
+        .control_mode     = GROUP_MODE,
         .is_enabled       = true,
     },
 
-	// ------------------------------------------------------------------------
-	// 索引 2: DJI_M_CHASSIS_RF - CAN1 - ID 0x203
-	// ------------------------------------------------------------------------
-	[DJI_M_CHASSIS_RF] = {
-    	.hcan_tx          = &hfdcan1,
-		.can_rx_id        = CAN_3508_M3_ID,
-		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 2,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// ------------------------------------------------------------------------
-	// 索引 3: DJI_M_CHASSIS_RB - CAN1 - ID 0x204
-	// ------------------------------------------------------------------------
-	[DJI_M_CHASSIS_RB] = {
-    	.hcan_tx          = &hfdcan1,
-		.can_rx_id        = CAN_3508_M4_ID,
-		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 3,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// ------------------------------------------------------------------------
-	// 索引 4: DJI_M_CLIMB_LF - CAN1 - ID 0x205
-	// ------------------------------------------------------------------------
-	[DJI_M_CLIMB_LF] = {
-    	.hcan_tx          = &hfdcan1,
-		.can_rx_id        = CAN_3508_M5_ID,
-		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 0,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// ------------------------------------------------------------------------
-	// 索引 5: DJI_M_CLIMB_RF - CAN1 - ID 0x206
-	// ------------------------------------------------------------------------
-	[DJI_M_CLIMB_RF] = {
-    	.hcan_tx          = &hfdcan2,
-		.can_rx_id        = CAN_3508_M6_ID,
-		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 1,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// ------------------------------------------------------------------------
-	// 索引 6: DJI_M_CLIMB_LB - CAN1 - ID 0x204
-	// ------------------------------------------------------------------------
-	[DJI_M_CLIMB_LB] = {
-    	.hcan_tx          = &hfdcan2,
-		.can_rx_id        = CAN_3508_M7_ID,
-		.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 2,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// ------------------------------------------------------------------------
-	// 索引 7: DJI_M_CLIMB_RB - CAN1 - ID 0x204
-	// ------------------------------------------------------------------------
-	[DJI_M_CLIMB_RB] = {
-    		.hcan_tx          = &hfdcan2,
-			.can_rx_id        = CAN_3508_M8_ID,
-			.can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
-			.tx_index         = 3,
-			.target_spd       = 0,
-			.control_mode     = SPEED_MODE,
-			.is_enabled       = true,
-		},
-
-	// ------------------------------------------------------------------------
-	// 索引 8: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
-	// ------------------------------------------------------------------------
-	[DJI_2006_L] = {
-    	.hcan_tx          = &hfdcan2,
-		.can_rx_id        = CAN_3508_M1_ID,
-		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 0,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-	// // // ------------------------------------------------------------------------
-	// // // 索引 9: DJI_M_CHASSIS_LF - CAN1 - ID 0x201
-	// // // ------------------------------------------------------------------------
-	[DJI_2006_R] = {
-    	.hcan_tx          = &hfdcan2,
-		.can_rx_id        = CAN_3508_M2_ID,
-		.can_tx_header_id = CAN_FIRST_FOUR_MOTOR_ALL_ID,
-		.tx_index         = 1,
-		.target_spd       = 0,
-		.control_mode     = SPEED_MODE,
-		.is_enabled       = true,
-	},
-
-    // ... 更多电机实例 ...
+    // ------------------------------------------------------------------------
+    // 索引 4: DJI_JOINT1_3508 - 机械臂关节1 - CAN2 - ID 0x205
+    // ------------------------------------------------------------------------
+    [DJI_JOINT1_3508] = {
+        .hcan_tx          = &hfdcan2,
+        .can_rx_id        = CAN_3508_M5_ID,
+        .can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
+        .tx_index         = 0,
+        .target_spd       = 0,
+        .target_loc       = 0,
+        .control_mode     = LOC_MODE,
+        .is_enabled       = true,
+    },
+    // ------------------------------------------------------------------------
+    // 索引 5: DJI_JOINT2_2006 - 机械臂关节2 - CAN2 - ID 0x206
+    // ------------------------------------------------------------------------
+    [DJI_JOINT2_2006] = {
+        .hcan_tx          = &hfdcan2,
+        .can_rx_id        = CAN_2006_M6_ID,
+        .can_tx_header_id = CAN_LAST_FOUR_MOTOR_ALL_ID,
+        .tx_index         = 1,
+        .target_spd       = 0,
+        .target_loc       = 0,
+        .control_mode     = LOC_MODE,
+        .is_enabled       = true,
+    },
 };
 
 Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES] = {
-	{.hcan = &hfdcan1, .need_to_send = false}, // Index 0: FDCAN1
-	{.hcan = &hfdcan2, .need_to_send = false}, // Index 1: FDCAN2
-	{.hcan = &hfdcan3, .need_to_send = false}  // Index 2: FDCAN3
+    {.hcan = &hfdcan1, .need_to_send = false}, // Index 0: FDCAN1
+    {.hcan = &hfdcan2, .need_to_send = false}, // Index 1: FDCAN2
+    {.hcan = &hfdcan3, .need_to_send = false}  // Index 2: FDCAN3
 };
+
 /**
  * @brief  初始化DJI电机注册表中的所有配置。
  *
@@ -273,175 +174,335 @@ Can_Tx_Buffer_t g_can_tx_buffers[MAX_CAN_HANDLES] = {
  *
  * @return None
  *
- * @note   1. 调用外部 Pid_parameter_init() 初始化 motor_3508_pid_g 数组。
+ * @note   1. 调用 Dji_pid_parameter_init() 初始化 motor_3508_pid_g 数组。
  * @note   2. 将初始化好的 PID 参数拷贝到注册表中的相应电机实例。
- * @see    Pid_parameter_init
- * @date   2025-12-01
+ * @see    Dji_pid_parameter_init
  */
 void Dji_Motor_Registry_Init(void)
 {
-	Pid_parameter_init();
-	g_can_tx_buffers[0].hcan = &hfdcan1;
-	g_can_tx_buffers[1].hcan = &hfdcan2;
-	g_can_tx_buffers[2].hcan = &hfdcan3;
-	for (int i = 0; i < DJI_MOTOR_COUNT; i++)
-	{
-		Dji_Motor_t *motor = &g_dji_motor_registry[i];
+    Dji_pid_parameter_init();
+    g_can_tx_buffers[0].hcan = &hfdcan1;
+    g_can_tx_buffers[1].hcan = &hfdcan2;
+    g_can_tx_buffers[2].hcan = &hfdcan3;
+    for (int i = 0; i < DJI_MOTOR_COUNT; i++)
+    {
+        Dji_Motor_t *motor = &g_dji_motor_registry[i];
 
-		// 初始化通用状态
-		motor->feedback.first = 0;
-		motor->current_set = 0;
-		motor->is_online = false;
-		// 假设 motor_3508_pid_g 的索引 i 对应注册表中的电机实例 i
-		if (i < DJI_MOTOR_COUNT) // 确保不越界访问 motor_3508_pid_g 数组 (大小为 9)
-		{
-			memcpy(&motor->pid_params,
-				   &motor_3508_pid_g[i],
-				   sizeof(motor_pid_parameter));
-		}
-	}
+        // 初始化通用状态
+        motor->feedback.first = 0;
+        motor->current_set = 0;
+        motor->is_online = false;
+
+        motor->sync_group_id = -1;
+        motor->average_loc = 0;
+
+        // 遍历查找该电机属于哪个组
+        for(int g = 0; g < TOTAL_SYNC_GROUPS; g++) {
+            for(int m = 0; m < MAX_MOTORS_PER_GROUP; m++) {
+                if(SYNC_GROUP_IDS[g][m] == i) {
+                    motor->sync_group_id = g;
+                    motor->pid_params.diff.err = 0;
+                    motor->pid_params.diff.err_last = 0;
+                    break;
+                }
+            }
+        }
+        // 假设 motor_3508_pid_g 的索引 i 对应注册表中的电机实例 i
+        if (i < DJI_MOTOR_COUNT) // 确保不越界访问 motor_3508_pid_g 数组 (大小为 9)
+        {
+            memcpy(&motor->pid_params,
+                   &motor_3508_pid_g[i],
+                   sizeof(motor_pid_parameter));
+        }
+    }
 }
 
 /**
- * @brief  计算一个整数的绝对值
- *
- * @param  x 待计算的整数
- *
- * @return int 绝对值
- *
- * @note   用于 Get_total_angle 中
+ * @brief 计算某一组的平均位置
+ * @param group_id
  */
-int Basic_int_abs(int x){/*绝对值*/
-	return x>=0 ? x:-x;
-}
+static float Calculate_Group_Average_Angle(int group_id)
+{
+    if (group_id < 0 || group_id >= TOTAL_SYNC_GROUPS) return 0.0f;
 
-/**
-1.函数功能：请求dji电机信息，包括速度、位置等
-2.入参：电机ID
-3.返回值：电机信息结构体
-4.用法及调用要求：
-5.其它：
-*/
-motor_measure_t Get_dji_information(int motor_id){
-	motor_measure_t temp_info = {0};
-	if (motor_id < DJI_MOTOR_COUNT)
-	{
-		taskENTER_CRITICAL();
-		{
-			temp_info = g_dji_motor_registry[motor_id].feedback;
-		}
-		taskEXIT_CRITICAL();
-	}
-	return temp_info;
-}
+    int32_t total_sum = 0;
+    int count = 0;
 
-/**
-1.函数功能：设定dji电机的速度大小
-2.入参：电机ID，speed（RPM）
-3.返回值：无
-4.用法及调用要求：
-5.其它：
-*/
-void Change_dji_speed(int motor_id,int target_spd){
-	if (motor_id < DJI_MOTOR_COUNT)
-	{
-		g_dji_motor_registry[motor_id].target_spd = -1 * target_spd; // 注意该代码为调整电机方向有*-1
-		g_dji_motor_registry[motor_id].control_mode = SPEED_MODE; // 自动切换模式
-	}
-}
-/**
-1.函数功能：设定dji电机的位置
-2.入参：电机ID，整数值，编码器相关
-3.返回值：无
-4.用法及调用要求：
-5.其它：
-*/
-void Change_dji_loc(int motor_id,int target_loc){
-	if (motor_id < DJI_MOTOR_COUNT)
-	{
-		// ✅ 修改注册表中的目标位置
-		g_dji_motor_registry[motor_id].target_loc = target_loc;
-		g_dji_motor_registry[motor_id].control_mode = LOC_MODE; // 自动切换模式
-	}
-}
-/**
-1.函数功能：是否控制3508电机
-2.入参：
-3.返回值：无
-4.用法及调用要求：
-5.其它：
-*/
-void Discontrol_dji_motor(void){
-	control_flag=0;
-}
-void Recontrol_dji_motor(void){
-	control_flag=1;
-}
-/**
-1.函数功能：得到dji电调的电机信息返回值
-2.入参：
-3.返回值：无
-4.用法及调用要求：
-5.其它：宏函数
-*/
-#define Get_motor_measure(ptr, data)                                    \
-    {                                                                  \
-        (ptr)->last_angle = (ptr)->angle;                                   \
-        (ptr)->angle = (uint16_t)((data)[0] << 8 | (data)[1]);            \
-        (ptr)->speed_rpm = (uint16_t)((data)[2] << 8 | (data)[3]);      \
-        (ptr)->given_current = (uint16_t)((data)[4] << 8 | (data)[5]);  \
-        (ptr)->temperate = (data)[6];                                   \
+    for (int i = 0; i < MAX_MOTORS_PER_GROUP; i++)
+    {
+        uint8_t motor_id = SYNC_GROUP_IDS[group_id][i];
+        Dji_Motor_t *motor = &g_dji_motor_registry[motor_id];
+
+        // 只有当电机启用了 GROUP_MODE 且已在线时才参与计算
+        if (motor->control_mode == GROUP_MODE && motor->feedback.first == 1)
+        {
+            total_sum += motor->feedback.total_angle;
+            count++;
+        }
     }
 
-#ifdef ALL_Send_Flag
-		int can1_send_flag[8]={0};//收到所有电机报文后发送一条报文的标志
-#endif
-/**
-1.函数功能：得到dji电机的总转程
-2.入参：
-3.返回值：无
-4.用法及调用要求：
-5.其它：
-*/
-static void Get_total_angle(motor_measure_t *p){
-
-		int res1, res2, delta;
-		if(p->angle < p->last_angle){			//可能的情况
-			res1 = p->angle + 8192 - p->last_angle;	//正转，delta=+
-			res2 = p->angle - p->last_angle;				//反转	delta=-
-		}else{	//angle > last
-			res1 = p->angle - 8192 - p->last_angle ;//反转	delta -
-			res2 = p->angle - p->last_angle;				//正转	delta +
-		}
-		//不管正反转，肯定是转的角度小的那个是真的
-		if(Basic_int_abs(res1)<Basic_int_abs(res2))
-			delta = res1;
-		else
-			delta = res2;
-
-		p->total_angle += delta;
-		p->last_angle = p->angle;
+    if (count > 0) return (float)total_sum / count;
+    return 0.0f;
 }
-/*
-1.函数功能：发送四个dji电机的电流值
-2.入参：
-3.返回值：无
-4.用法及调用要求：注意修改发送通道为CAN1或CAN2
-5.其它：
-*/
-static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4){
-	static FDCAN_TxHeaderTypeDef  	first_four_motor_tx_message;
-	static uint8_t              	first_four_motor_can_send_data[8];
 
-	first_four_motor_tx_message.Identifier 	=	all_response_id;
-	first_four_motor_tx_message.IdType		=	FDCAN_STANDARD_ID;
-	first_four_motor_tx_message.TxFrameType = 	FDCAN_DATA_FRAME;
-	first_four_motor_tx_message.DataLength 	= 	0x08;
-	first_four_motor_tx_message.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	first_four_motor_tx_message.BitRateSwitch = FDCAN_BRS_OFF;
-	first_four_motor_tx_message.FDFormat = FDCAN_FD_CAN;
-	first_four_motor_tx_message.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	first_four_motor_tx_message.MessageMarker = 0;
+/**
+  * @brief  获取指定电机的反馈信息
+  * @param  motor_id: 电机索引 (0 - DJI_MOTOR_COUNT-1)
+  * @return motor_measure_t 结构体，包含电机的反馈数据
+  */
+motor_measure_t Get_dji_information(int motor_id){
+    motor_measure_t temp_info = {0};
+    if (motor_id < DJI_MOTOR_COUNT)
+    {
+        taskENTER_CRITICAL();
+        {
+            temp_info = g_dji_motor_registry[motor_id].feedback;
+        }
+        taskEXIT_CRITICAL();
+    }
+    return temp_info;
+}
+
+void Change_dji_loc(int motor_id, float location)
+{
+    if (motor_id < 0 || motor_id >= DJI_MOTOR_COUNT) {
+        return;
+    }
+    Dji_Motor_SetLoc((Dji_MotorID_e)motor_id, location);
+}
+
+void Change_dji_speed(int motor_id, float speed)
+{
+    if (motor_id < 0 || motor_id >= DJI_MOTOR_COUNT) {
+        return;
+    }
+    Dji_Motor_SetSpeed((Dji_MotorID_e)motor_id, speed);
+}
+
+void Dji_Motor_Update_Status(FDCAN_HandleTypeDef *hcan, uint32_t identifier, uint8_t *rx_data)
+{
+    for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
+        Dji_Motor_t *motor = &g_dji_motor_registry[i];
+        if (motor->hcan_tx == hcan && motor->can_rx_id == identifier) {
+            Dji_Motor_Update(motor, rx_data);
+            return;
+        }
+    }
+}
+
+/**
+  * @brief  设置电机位置控制目标
+  * @param  id:       电机索引 (0 - DJI_MOTOR_COUNT-1)
+  * @param  location: 目标位置 (单位：编码器计数)
+  */
+void Dji_Motor_SetLoc(Dji_MotorID_e id, float location)
+{
+    Dji_Motor_t *motor = &g_dji_motor_registry[id];
+
+    // 2. 设置目标值
+    motor->target_loc = location;
+
+    // 3. 核心：自动切换控制模式！
+    // 这样你就不用担心忘记切模式导致电机乱跑了
+    if (motor->control_mode != LOC_MODE) {
+        motor->control_mode = LOC_MODE;
+
+        // 可选：切换模式时清空 PID 积分项，防止瞬间突变
+        // motor->pid_params.loc.err = 0;
+        // motor->pid_params.loc.now_out = 0;
+    }
+}
+
+/**
+  * @brief  设置电机速度控制目标
+  * @param  id:    电机索引 (0 - DJI_MOTOR_COUNT-1)
+  * @param  speed: 目标速度 (单位：RPM)
+  */
+void Dji_Motor_SetSpeed(Dji_MotorID_e id, float speed)
+{
+
+    Dji_Motor_t *motor = &g_dji_motor_registry[id];
+
+    motor->target_spd = speed;
+
+    // 核心：自动切换为速度模式
+    if (motor->control_mode != SPEED_MODE) {
+        motor->control_mode = SPEED_MODE;
+
+        // 切换模式时的平滑处理
+        motor->pid_params.spd.err = 0;
+    }
+}
+
+/**
+ * @brief 设置群组电机位置
+ * @param group_id
+ * @param target_loc
+ */
+void Dji_Motor_SetGroupLoc(int group_id, float target_loc) {
+    if (group_id < 0 || group_id >= TOTAL_SYNC_GROUPS) return;
+
+    for (int i = 0; i < MAX_MOTORS_PER_GROUP; i++) {
+        uint8_t motor_id = SYNC_GROUP_IDS[group_id][i];
+        Dji_Motor_t *motor = &g_dji_motor_registry[motor_id];
+
+        motor->target_loc = target_loc;
+        if (motor->control_mode != GROUP_MODE)
+        {
+            motor->control_mode = GROUP_MODE; // 自动切入同步模式
+        }
+    }
+}
+
+/**
+ * @brief 是否控制电机
+ */
+void Discontrol_dji_motor(void){
+    control_flag=0;
+}
+void Recontrol_dji_motor(void){
+    control_flag=1;
+}
+
+// 检查电机 ID 是否需要反向
+// 假设 右侧电机 (XR, YR) 是镜像安装的
+static bool Is_Motor_Inverted(int motor_id) {
+    if (motor_id == DJI_XL || motor_id == DJI_YL) {
+        return true;
+    }
+    return false;
+}
+
+/**
+  * @brief  更新电机反馈数据 (在 CAN 接收任务中调用)
+  * @param  motor:   电机结构体指针
+  * @param  rx_data: CAN 接收到的 8 字节原始数据
+  */
+void Dji_Motor_Update(Dji_Motor_t *motor, uint8_t *rx_data) {
+
+    // 1. 先解析出原始数据
+    uint16_t raw_angle   = (uint16_t)((rx_data[0] << 8) | rx_data[1]);
+    int16_t  raw_speed   = (int16_t)((rx_data[2] << 8) | rx_data[3]);
+    int16_t  raw_current = (int16_t)((rx_data[4] << 8) | rx_data[5]);
+    uint8_t  temp        = rx_data[6];
+
+    // 保存上一时刻的角度（注意：这里保存的是修正前的还是修正后的？
+    // 为了多圈解算正确，我们应该保存逻辑角度。
+    // 所以这一行放到修正逻辑之后比较好，或者直接用结构体里的旧值）
+    motor->feedback.last_angle = motor->feedback.angle;
+
+    // 2. 【核心修改】方向修正
+    // 获取当前电机在数组中的索引 (通过指针倒推或者结构体里存个ID)
+    // 你的结构体里没有直接存 ID，我们通过指针判断
+    int motor_id = motor - g_dji_motor_registry;
+
+    if (Is_Motor_Inverted(motor_id) && g_dji_motor_registry[motor_id].control_mode == GROUP_MODE) {
+        // --- 反向电机处理 ---
+
+        // 角度取反 (0~8191)
+        // 比如物理是 100，逻辑上认为是 -100 (对应编码器就是 8192-100)
+        if (raw_angle == 0) {
+            motor->feedback.angle = 0;
+        } else {
+            motor->feedback.angle = 8192 - raw_angle;
+        }
+
+        // 速度和电流直接取负
+        motor->feedback.speed_rpm = -raw_speed;
+        motor->feedback.given_current = -raw_current;
+    }
+    else {
+        // --- 正向电机：原样赋值 ---
+        motor->feedback.angle = raw_angle;
+        motor->feedback.speed_rpm = raw_speed;
+        motor->feedback.given_current = raw_current;
+    }
+
+    motor->feedback.temperate = temp;
+
+    // 3. 初始化处理
+    if (motor->feedback.first == 0) {
+        motor->feedback.first = 1;
+        motor->feedback.last_angle = motor->feedback.angle;
+        motor->feedback.total_angle = 0;
+        return;
+    }
+
+    // 4. 多圈解算
+    Get_total_angle(&motor->feedback);
+
+    motor->is_online = true;
+
+}
+
+/**
+  * @brief  计算 PID 输出 (在控制任务中定时调用)
+  * @param  motor: 电机结构体指针
+  */
+void Dji_Motor_Calc(Dji_Motor_t *motor)
+{
+    // 如果还没收到过反馈数据，不要计算，防止误差累积导致飞车
+    if (motor->feedback.first == 0) {
+        motor->current_set = 0;
+        return;
+    }
+
+    // ----------------------
+    // 模式 1: 位置模式 (串级 PID)
+    // ----------------------
+    if (motor->control_mode == LOC_MODE)
+    {
+        // 1. 外环 (位置环)
+        // 输入: 当前总角度 (total_angle)
+        // 目标: 目标角度 (target_loc)
+        // 输出: 存入 pid.loc.now_out，作为内环的目标速度
+        Pid_incremental_cal(&motor->pid_params.loc, (ElemType)motor->feedback.total_angle, (ElemType)motor->target_loc);
+
+        // 2. 内环 (速度环)
+        // 输入: 当前转速 (speed_rpm)
+        // 目标: 外环输出 (pid.loc.now_out)
+        Pid_incremental_cal(&motor->pid_params.spd, (ElemType)motor->feedback.total_angle, (ElemType)motor->pid_params.loc.now_out);
+    }
+    // ----------------------
+    // 模式 2: 速度模式 (单环 PID)
+    // ----------------------
+    else if (motor->control_mode == SPEED_MODE)
+    {
+        // 1. 速度环
+        // 输入: 当前转速
+        // 目标: 目标速度 (target_speed)
+        Pid_incremental_cal(&motor->pid_params.spd, (float)motor->feedback.speed_rpm, motor->target_spd);
+    }
+
+    // ----------------------
+    // 输出赋值
+    // ----------------------
+    // 最终电流值取自速度环的输出
+    motor->current_set = (int16_t)motor->pid_params.spd.now_out;
+}
+
+/**
+  * @brief  发送四个DJI电机的电流指令
+  * @param  hcan:            FDCAN句柄指针
+  * @param  all_response_id: 四电机统一发送ID
+  * @param  motor1:         电机1电流指令
+  * @param  motor2:         电机2电流指令
+  * @param  motor3:         电机3电流指令
+  * @param  motor4:         电机4电流指令
+  */
+static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_response_id , int16_t motor1, int16_t motor2, int16_t motor3, int16_t motor4){
+    static FDCAN_TxHeaderTypeDef  	first_four_motor_tx_message;
+    static uint8_t              	first_four_motor_can_send_data[8];
+
+    first_four_motor_tx_message.Identifier 	=	all_response_id;
+    first_four_motor_tx_message.IdType		=	FDCAN_STANDARD_ID;
+    first_four_motor_tx_message.TxFrameType = 	FDCAN_DATA_FRAME;
+    first_four_motor_tx_message.DataLength 	= 	0x08;
+    first_four_motor_tx_message.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    first_four_motor_tx_message.BitRateSwitch = FDCAN_BRS_OFF;
+    first_four_motor_tx_message.FDFormat = FDCAN_FD_CAN;
+    first_four_motor_tx_message.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    first_four_motor_tx_message.MessageMarker = 0;
 
     first_four_motor_can_send_data[0] = motor1 >> 8;
     first_four_motor_can_send_data[1] = motor1;
@@ -452,236 +513,45 @@ static void Can_dji_3508_motor_send(FDCAN_HandleTypeDef* hcan , uint32_t all_res
     first_four_motor_can_send_data[6] = motor4 >> 8;
     first_four_motor_can_send_data[7] = motor4;
 
-	if(hcan==&hfdcan3){
-		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan3, &first_four_motor_tx_message, first_four_motor_can_send_data);
-	}
-	else if(hcan==&hfdcan1){
-		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &first_four_motor_tx_message, first_four_motor_can_send_data);
-	}
-	else if(hcan==&hfdcan2){
+    if(hcan==&hfdcan3){
+        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan3, &first_four_motor_tx_message, first_four_motor_can_send_data);
+    }
+    else if(hcan==&hfdcan1){
+        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &first_four_motor_tx_message, first_four_motor_can_send_data);
+    }
+    else if(hcan==&hfdcan2){
         HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &first_four_motor_tx_message, first_four_motor_can_send_data);
-	}
+    }
 }
 /**
- * @brief  计算当前同步群组内所有电机的平均总角度
- *
- * @param  无
- *
- * @return float 同步群组的平均总角度
- *
- * @note   仅遍历 SYNC_GROUP_IDS 数组中定义的、且处于 GROUP_MODE 的电机。
- * @see    SYNC_GROUP_IDS
- */
-static float Calculate_Group_Average_Angle(void)
+  * @brief  计算电机的多圈总角度
+  * @param  p: 指向 motor_measure_t 结构体的指针
+  */
+static void Get_total_angle(motor_measure_t *p)
 {
-	int32_t total_sum = 0;
-	int count = 0;
-	for (int i = 0; i < MAX_SYNC_MOTORS_PER_GROUP && SYNC_GROUP_IDS[i] != 0; i++)
-	{
-		uint8_t motor_id = SYNC_GROUP_IDS[i];
+    int res1, res2, delta;
 
-		if (motor_id < DJI_MOTOR_COUNT)
-		{
-			Dji_Motor_t *motor = &g_dji_motor_registry[motor_id];
+    // 计算跨越 0 点的两种可能情况
+    if (p->angle < p->last_angle) {
+        // 比如从 8100 变到 100，可能是正转跨过0点
+        res1 = p->angle + 8192 - p->last_angle;
+        // 也可能是反转了一大圈（极少见，除非转速极快）
+        res2 = p->angle - p->last_angle;
+    } else {
+        // 比如从 100 变到 8100
+        res1 = p->angle - 8192 - p->last_angle;
+        res2 = p->angle - p->last_angle;
+    }
 
-			// 1. 检查该电机是否被设置为 GROUP_MODE
-			// 2. 检查电机是否已接收到第一帧数据
-			if (motor->control_mode == GROUP_MODE && motor->feedback.first == 1)
-			{
-				total_sum += motor->feedback.total_angle; // ✅ 使用注册表反馈
-				count++;
-			}
-		}
-	}
+    // 取绝对值较小的那个作为真实变化量（假设采样周期内电机转不过半圈）
+    if (abs(res1) < abs(res2))
+        delta = res1;
+    else
+        delta = res2;
 
-	if (count > 0)
-	{
-		return (float)total_sum / count;
-	}
-	else {
-		return 0.0f;
-	}
-}
-
-/* Enable gravity feedforward only for lift-axis motors. */
-static bool Is_Climb_Motor(int motor_id)
-{
-	return (motor_id == DJI_M_CLIMB_LF ||
-			motor_id == DJI_M_CLIMB_RF ||
-			motor_id == DJI_M_CLIMB_LB ||
-			motor_id == DJI_M_CLIMB_RB);
-}
-
-/* Clamp helper to keep final current inside PID configured bounds. */
-static float Clampf(float value, float min_value, float max_value)
-{
-	if (value < min_value) {
-		return min_value;
-	}
-	if (value > max_value) {
-		return max_value;
-	}
-	return value;
-}
-
-/* Compute gravity FF current for climb motors by loc error and sign. */
-static int16_t Get_Gravity_FF_Current(const Dji_Motor_t *motor, int motor_id)
-{
-	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
-	int32_t abs_err = (loc_err >= 0) ? loc_err : (-loc_err);
-	int32_t ff_mag = 0;
-	int8_t sign = g_climb_ff_sign[motor_id];
-
-	if (sign == 0) {
-		return 0;
-	}
-
-	if (abs_err <= g_climb_loc_hold_deadband) {
-		ff_mag = g_climb_ff_hold[motor_id];
-	} else if ((loc_err * sign) > 0) {
-		ff_mag = g_climb_ff_up[motor_id];
-	} else {
-		ff_mag = g_climb_ff_down[motor_id];
-	}
-
-	return (int16_t)(sign * ff_mag);
-}
-
-/*
- * 抬升轴速度整形：
- * - 统一到“向上轴”判断（正=上抬，负=下降）；
- * - 分别限幅 up/down；
- * - 每周期做斜率限制，避免目标突变。
- */
-/* Remaining-distance braking cap for climb motors (up-axis command in rpm). */
-static float Apply_Climb_Remain_Brake(const Dji_Motor_t *motor, int motor_id, float up_axis_cmd)
-{
-	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
-	float abs_loc_err = (loc_err >= 0) ? (float)loc_err : (float)(-loc_err);
-	float brake_window = g_climb_brake_window_loc[motor_id];
-	float decel_rpm_s = g_climb_brake_acc_rpm_s[motor_id];
-	float min_rpm = g_climb_brake_min_rpm[motor_id];
-	float s_rev;
-	float remain_cap_rpm;
-
-	if (brake_window <= 0.0f || decel_rpm_s <= 0.0f) {
-		return up_axis_cmd;
-	}
-	if (abs_loc_err > brake_window) {
-		return up_axis_cmd;
-	}
-
-	s_rev = abs_loc_err / g_climb_loc_count_per_rev;
-	remain_cap_rpm = sqrtf(120.0f * decel_rpm_s * s_rev);
-
-	if (abs_loc_err > (float)g_climb_loc_hold_deadband && remain_cap_rpm < min_rpm) {
-		remain_cap_rpm = min_rpm;
-	}
-
-	if (up_axis_cmd >= 0.0f) {
-		return Clampf(up_axis_cmd, 0.0f, remain_cap_rpm);
-	}
-	return -Clampf(-up_axis_cmd, 0.0f, remain_cap_rpm);
-}
-
-static float Shape_Climb_Spd_Target(const Dji_Motor_t *motor, int motor_id, float raw_spd_target)
-{
-	float desired = raw_spd_target;
-	float last = g_climb_spd_target_last[motor_id];
-	float shaped = desired;
-	int8_t sign = g_climb_ff_sign[motor_id];
-	(void)motor;
-
-	if (sign == 0) {
-		return raw_spd_target;
-	}
-
-	{
-		float up_axis_cmd = desired * sign;
-		if (up_axis_cmd >= 0.0f) {
-			up_axis_cmd = Clampf(up_axis_cmd, 0.0f, g_climb_up_spd_limit_rpm[motor_id]);
-		} else {
-			float down_mag = Clampf(-up_axis_cmd, 0.0f, g_climb_down_spd_limit_rpm[motor_id]);
-			up_axis_cmd = -down_mag;
-		}
-		up_axis_cmd = Apply_Climb_Remain_Brake(motor, motor_id, up_axis_cmd);
-		desired = up_axis_cmd * sign;
-	}
-
-	{
-		float delta = desired - last;
-		delta = Clampf(delta, -g_climb_spd_slew_down_rpm_per_cycle, g_climb_spd_slew_up_rpm_per_cycle);
-		shaped = last + delta;
-	}
-
-	g_climb_spd_target_last[motor_id] = shaped;
-	return shaped;
-}
-
-// /*
-//  * 下降保力：下降且远离目标时，给最小支撑电流下限。
-//  * 这样可在“降速”时仍保持抬升轴有效力矩，不会变软。
-//  */
-// static float Apply_Climb_Downforce_Floor(const Dji_Motor_t *motor, int motor_id, float current_cmd)
-// {
-// 	int8_t sign = g_climb_ff_sign[motor_id];
-// 	int32_t loc_err = motor->target_loc - motor->feedback.total_angle;
-// 	int32_t abs_err = (loc_err >= 0) ? loc_err : (-loc_err);
-// 	bool is_down_cmd = ((loc_err * sign) < 0);
-// 	float floor_mag = g_climb_down_current_floor[motor_id];
-// 	float support_cmd;
-//
-// 	if (sign == 0 || floor_mag <= 0.0f) {
-// 		return current_cmd;
-// 	}
-//
-// 	if (!is_down_cmd || abs_err <= g_climb_down_floor_release_deadband) {
-// 		return current_cmd;
-// 	}
-//
-// 	support_cmd = sign * floor_mag; // “向上轴”支撑电流
-// 	if ((current_cmd * sign) < floor_mag) {
-// 		return support_cmd;
-// 	}
-// 	return current_cmd;
-// }
-
-void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t *data)
-{
-	int index = -1;
-	for (int i = 0; i < DJI_MOTOR_COUNT; i++)
-	{
-		if (g_dji_motor_registry[i].hcan_tx == hcan_rx && g_dji_motor_registry[i].can_rx_id == id)
-		{
-			index = i;
-			break; // 找到唯一匹配的电机
-		}
-	}
-	if (index == -1) {
-		// 未找到匹配的电机实例 (可能是未配置的 ID 或 CAN 句柄不匹配)
-		return;
-	}
-	// 找到匹配的电机实例
-	Dji_Motor_t *motor = &g_dji_motor_registry[index];
-	taskENTER_CRITICAL();
-	{
-		//  解析原始 CAN 数据并填充 feedback 结构体
-		Get_motor_measure(&motor->feedback, data);
-
-		// 处理上电第一帧数据的初始化逻辑 (仅执行一次)
-		if (motor->feedback.first == 0)
-		{
-			motor->feedback.first = 1;
-			motor->feedback.last_angle = motor->feedback.angle;
-			motor->feedback.total_angle = 0; // 首次启动，总角度归零
-			motor->is_online = true;         // 首次收到信号，标记为在线
-		}
-		// 计算多圈绝对角度 (total_angle, total_round_cnt)
-		Get_total_angle(&motor->feedback);
-		// 更新在线状态 (每次收到报文都更新计数/标记)
-		motor->is_online = true; // 每次收到都重置在线标记（如果采用超时机制，还需要一个计数器）
-	}
-	taskEXIT_CRITICAL();
+    p->total_angle += delta;
+    p->last_angle = p->angle;
+    // p->last_angle 已经在 Update 函数开头更新过了，这里不需要再更新
 }
 
 /**
@@ -695,157 +565,159 @@ void Dji_Motor_Update_Status(FDCAN_HandleTypeDef* hcan_rx, uint32_t id, uint8_t 
  * @see    Calculate_Group_Average_Angle
  */
 void Dji_3508_all_motor_control(void) {
-    float average_angle = 0.0f;
-    bool group_mode_active = false;
+    // 1. 定义局部变量作为“快照”
+    // 为什么要用局部变量？因为局部变量是私有的，别的任务改不了，不用加锁，算起来最安全。
+    motor_measure_t feedback_snapshot[DJI_MOTOR_COUNT];
 
-	for (int i = 0; i < MAX_CAN_HANDLES; i++) {
-		memset(g_can_tx_buffers[i].currents_0x200, 0, sizeof(g_can_tx_buffers[i].currents_0x200));
-		memset(g_can_tx_buffers[i].currents_0x1FF, 0, sizeof(g_can_tx_buffers[i].currents_0x1FF));
-		g_can_tx_buffers[i].need_to_send = false; // 每次控制循环前重置发送标记
-	}
-    // 遍历注册表，检查 GROUP_MODE 是否激活
-    for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
-        if (g_dji_motor_registry[i].control_mode == GROUP_MODE) {
-            group_mode_active = true;
-            break;
+    // ================= 阶段1：读取数据 (临界区保护) =================
+    taskENTER_CRITICAL();
+
+    // A. 顺便把发送缓冲区清了（因为这个很快）
+    for (int i = 0; i < MAX_CAN_HANDLES; i++) {
+       memset(g_can_tx_buffers[i].currents_0x200, 0, sizeof(g_can_tx_buffers[i].currents_0x200));
+       memset(g_can_tx_buffers[i].currents_0x1FF, 0, sizeof(g_can_tx_buffers[i].currents_0x1FF));
+       g_can_tx_buffers[i].need_to_send = false;
+    }
+
+    // B. 【核心】拍摄快照
+    // 瞬间把所有电机的当前状态复制到局部变量里
+    for(int i=0; i<DJI_MOTOR_COUNT; i++) {
+        feedback_snapshot[i] = g_dji_motor_registry[i].feedback;
+    }
+
+    taskEXIT_CRITICAL();
+
+    // ================= 阶段2：复杂计算 (无锁，放心算) =================
+    // 注意：下面的代码全部使用 feedback_snapshot[i]，不要直接读 g_dji_motor_registry
+
+    float group_avgs[TOTAL_SYNC_GROUPS] = {0};
+
+    // 1. 计算平均值 (这里简化了逻辑，直接在这里算，不用调外部函数了，方便用snapshot)
+    for(int g=0; g<TOTAL_SYNC_GROUPS; g++) {
+        float sum = 0; int cnt = 0;
+        for(int m=0; m<MAX_MOTORS_PER_GROUP; m++) {
+            int mid = SYNC_GROUP_IDS[g][m];
+            // 模式判断读全局没事，因为模式不会频繁变
+            if(g_dji_motor_registry[mid].control_mode == GROUP_MODE && feedback_snapshot[mid].first == 1) {
+                sum += feedback_snapshot[mid].total_angle; // 读快照！
+                cnt++;
+            }
         }
-    }
-    if (group_mode_active) {
-        average_angle = Calculate_Group_Average_Angle();
+        if(cnt > 0) group_avgs[g] = sum / cnt;
     }
 
-	taskENTER_CRITICAL();
+    // 2. PID 计算
     for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
-        Dji_Motor_t *motor = &g_dji_motor_registry[i];
+        Dji_Motor_t *motor = &g_dji_motor_registry[i]; // 指针指向全局对象，用来存结果和读参数
+        motor_measure_t *fb = &feedback_snapshot[i];   // 指针指向快照，用来读反馈
 
-    	int can_index = -1;
-    	if (motor->hcan_tx == &hfdcan1) can_index = FDCNA1;
-    	else if (motor->hcan_tx == &hfdcan2) can_index = FDCNA2;
-    	else if (motor->hcan_tx == &hfdcan3) can_index = FDCNA3;
+        int can_index = -1;
+        if (motor->hcan_tx == &hfdcan1) can_index = FDCNA1;
+        else if (motor->hcan_tx == &hfdcan2) can_index = FDCNA2;
+        else if (motor->hcan_tx == &hfdcan3) can_index = FDCNA3;
 
-        if (motor->is_enabled && motor->feedback.first == 1  && can_index != -1) { // 检查是否启用且已接收第一帧
+        // 检查快照里的状态
+        if (motor->is_enabled && fb->first == 1  && can_index != -1) {
 
-            // 模式控制
-            if (Is_Climb_Motor(i) &&
-                !(motor->control_mode == LOC_MODE || motor->control_mode == GROUP_MODE))
-            {
-                g_climb_spd_target_last[i] = 0.0f;
+            // 将计算好的平均值填入电机结构体 (更新全局变量，没事)
+            if(motor->sync_group_id != -1) {
+                motor->average_loc = (int32_t)group_avgs[motor->sync_group_id];
             }
 
+            // --- PID 计算 (耗时操作) ---
             if (motor->control_mode == LOC_MODE)
             {
-                // LOC_MODE (普通位置-速度双环)
                 Pid_incremental_cal(&motor->pid_params.loc,
-                                    (ElemType)motor->feedback.total_angle,
-                                    (ElemType)motor->target_loc); // ✅ 使用注册表目标
+                                    (ElemType)fb->total_angle, // 读快照
+                                    (ElemType)motor->target_loc);
 
-                {
-                    ElemType spd_target = motor->pid_params.loc.now_out;
-                    if (Is_Climb_Motor(i)) {
-                        spd_target = (ElemType)Shape_Climb_Spd_Target(motor, i, (float)spd_target);
-                    }
-                    Pid_incremental_cal(&motor->pid_params.spd,
-                                        (ElemType)motor->feedback.speed_rpm,
-                                        spd_target);
-                }
+                Pid_incremental_cal(&motor->pid_params.spd,
+                                    (ElemType)fb->speed_rpm,   // 读快照
+                                    motor->pid_params.loc.now_out);
             }
             else if (motor->control_mode == SPEED_MODE)
             {
-                // SPEED_MODE (纯速度环)
                 Pid_incremental_cal(&motor->pid_params.spd,
-                                    (ElemType)motor->feedback.speed_rpm,
-                                    (ElemType)motor->target_spd); // ✅ 使用注册表目标
+                                    (ElemType)fb->speed_rpm,   // 读快照
+                                    (ElemType)motor->target_spd);
             }
             else if (motor->control_mode == GROUP_MODE)
             {
-                // GROUP_MODE (群组同步模式 - 位置环输出为速度环目标)
-                // 1. 位置环 (外环)：控制电机跟踪平均位置 (可用于大范围运动)
                 Pid_incremental_cal(&motor->pid_params.loc,
-                                    (ElemType)motor->feedback.total_angle,
-                                    (ElemType)motor->target_loc); // ✅ 使用注册表目标
+                                    (float)fb->total_angle,    // 读快照
+                                    (float)motor->target_loc);
 
-                // 2. 同步差值环 (差值环)：控制电机修正与平均值的偏差
                 Pid_incremental_cal(&motor->pid_params.diff,
-                                    (ElemType)motor->feedback.total_angle, // 实际值 (A_current)
-                                    average_angle);                  // 目标值 (A_avg)
+                                    (float)fb->total_angle,    // 读快照
+                                    (float)motor->average_loc);
 
-                // 3. 速度环 (内环)：目标速度 = 位置环目标 - 同步差值环修正
-                {
-                    ElemType spd_target = (motor->pid_params.loc.now_out - motor->pid_params.diff.now_out);
-                    if (Is_Climb_Motor(i)) {
-                        spd_target = (ElemType)Shape_Climb_Spd_Target(motor, i, (float)spd_target);
-                    }
-                    Pid_incremental_cal(&motor->pid_params.spd,
-                                        (ElemType)motor->feedback.speed_rpm,
-                                        spd_target);
-                }
+                float spd_ref = motor->pid_params.loc.now_out + motor->pid_params.diff.now_out;
+
+                Pid_incremental_cal(&motor->pid_params.spd,
+                                    (float)fb->speed_rpm,      // 读快照
+                                    spd_ref);
             }
 
-            // 最终电流值
-            // Final command: PID output + gravity FF (lift motors in LOC/GROUP) + clamp.
-            {
-                float current_cmd = motor->pid_params.spd.now_out;
+            // 存入暂存变量
+            motor->current_set = (int16_t)motor->pid_params.spd.now_out;
 
-                if (Is_Climb_Motor(i) &&
-                    (motor->control_mode == LOC_MODE || motor->control_mode == GROUP_MODE))
-                {
-                    current_cmd += (float)Get_Gravity_FF_Current(motor, i);
-                    //current_cmd = Apply_Climb_Downforce_Floor(motor, i, current_cmd);
-                }
-
-                current_cmd = Clampf(current_cmd,
-                                     motor->pid_params.spd.out_limit_down,
-                                     motor->pid_params.spd.out_limit_up);
-                motor->current_set = (int16_t)current_cmd;
+            if (Is_Motor_Inverted(i)) {
+                motor->current_set = -motor->current_set;
             }
         }
         else
         {
             motor->current_set = 0;
-            if (Is_Climb_Motor(i)) {
-                g_climb_spd_target_last[i] = 0.0f;
-            }
         }
 
-        // 全局控制关闭，清零
         if (control_flag == 0) {
             motor->current_set = 0;
         }
-
-        // 填充 CAN 发送数组
-    	if (can_index != -1) {
-    		if (motor->can_tx_header_id == CAN_FIRST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
-    			g_can_tx_buffers[can_index].currents_0x200[motor->tx_index] = motor->current_set;
-    			g_can_tx_buffers[can_index].need_to_send = true; // 标记该 CAN 句柄需要发送
-    		} else if (motor->can_tx_header_id == CAN_LAST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
-    			g_can_tx_buffers[can_index].currents_0x1FF[motor->tx_index] = motor->current_set;
-    			g_can_tx_buffers[can_index].need_to_send = true; // 标记该 CAN 句柄需要发送
-    		}
-    	}
     }
-	taskEXIT_CRITICAL();
-    // **发送 CAN 报文**
-	for (int i = 0; i < MAX_CAN_HANDLES; i++) {
-		Can_Tx_Buffer_t *buffer = &g_can_tx_buffers[i];
-		if (buffer->need_to_send) {
-			// 发送 0x200 报文 (M1-M4)
-			Can_dji_3508_motor_send(
-				buffer->hcan,
-				CAN_FIRST_FOUR_MOTOR_ALL_ID,
-				buffer->currents_0x200[0],
-				buffer->currents_0x200[1],
-				buffer->currents_0x200[2],
-				buffer->currents_0x200[3]
-			);
-			// 发送 0x1FF 报文 (M5-M8)
-			Can_dji_3508_motor_send(
-				buffer->hcan,
-				CAN_LAST_FOUR_MOTOR_ALL_ID,
-				buffer->currents_0x1FF[0],
-				buffer->currents_0x1FF[1],
-				buffer->currents_0x1FF[2],
-				buffer->currents_0x1FF[3]
-			);
-		}
-	}
+
+    // ================= 阶段3：填充缓冲区 (临界区保护) =================
+    // 因为这涉及到写 g_can_tx_buffers，要防止冲突（虽然这里单任务写，但加上更规范）
+    taskENTER_CRITICAL();
+
+    for (int i = 0; i < DJI_MOTOR_COUNT; i++) {
+        Dji_Motor_t *motor = &g_dji_motor_registry[i];
+
+        // 重新判断一下索引
+        int can_index = -1;
+        if (motor->hcan_tx == &hfdcan1) can_index = FDCNA1;
+        else if (motor->hcan_tx == &hfdcan2) can_index = FDCNA2;
+        else if (motor->hcan_tx == &hfdcan3) can_index = FDCNA3;
+
+        if (can_index != -1 && motor->current_set != 0) {
+           if (motor->can_tx_header_id == CAN_FIRST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
+              g_can_tx_buffers[can_index].currents_0x200[motor->tx_index] = motor->current_set;
+              g_can_tx_buffers[can_index].need_to_send = true;
+           } else if (motor->can_tx_header_id == CAN_LAST_FOUR_MOTOR_ALL_ID && motor->tx_index < 4) {
+              g_can_tx_buffers[can_index].currents_0x1FF[motor->tx_index] = motor->current_set;
+              g_can_tx_buffers[can_index].need_to_send = true;
+           }
+        }
+    }
+
+    taskEXIT_CRITICAL(); // <--- 再次开中断
+
+    // ================= 阶段4：发送 (外部IO操作，无需保护) =================
+    for (int i = 0; i < MAX_CAN_HANDLES; i++) {
+       Can_Tx_Buffer_t *buffer = &g_can_tx_buffers[i];
+       if (buffer->need_to_send) {
+          // 发送代码不变...
+          Can_dji_3508_motor_send(buffer->hcan,
+              CAN_FIRST_FOUR_MOTOR_ALL_ID,
+              buffer->currents_0x200[0],
+              buffer->currents_0x200[1],
+              buffer->currents_0x200[2],
+              buffer->currents_0x200[3]);
+          Can_dji_3508_motor_send(buffer->hcan,
+              CAN_LAST_FOUR_MOTOR_ALL_ID,
+              buffer->currents_0x1FF[0],
+              buffer->currents_0x1FF[1],
+              buffer->currents_0x1FF[2],
+              buffer->currents_0x1FF[3]);
+       }
+    }
 }

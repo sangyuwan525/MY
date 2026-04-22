@@ -41,7 +41,6 @@ add_executable(${CMAKE_PROJECT_NAME}
         chassis_control/Src/path_plan.c
         Driver_remote/Src/remote_driver.c
         Driver_Motor/Src/dji_3508_2006_motor.c
-        Driver_Motor/Src/vesc.c
         Task/Src/Task_LED.c
         Task/Src/Task_Printf.c
         BSP/Src/bsp_dwt.c
@@ -56,6 +55,9 @@ add_executable(${CMAKE_PROJECT_NAME}
         SEGGER_RTT/RTT/SEGGER_RTT_printf.c
         Task/Src/Task_locator_recv.c
         Debug/debug.c
+        Driver_Motor/Src/dm_motor_ctrl.c
+        Driver_Motor/Src/dm_motor_drv.c
+        Driver_Motor/Src/motor_registry.c
 )
 
 # Add STM32CubeMX generated sources

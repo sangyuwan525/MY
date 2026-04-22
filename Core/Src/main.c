@@ -28,7 +28,9 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "Task_command.h"
+#include "Task_dji_control.h"
 #include "bsp_can.h"
+#include "motor_registry.h"
 #include "pid.h"
 #include "SEGGER_RTT.h"
 #include "path_plan.h"
@@ -113,7 +115,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   printf("Initial Success\r\n");
 
-  Dji_Motor_Registry_Init();
+
   SEGGER_RTT_Init();
   SEGGER_RTT_ConfigUpBuffer(0,                              // 通道0
                             "Buffer0Up",                    // 通道名字
@@ -147,6 +149,7 @@ int main(void)
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
+  bsp_can_init(motorRxQueueHandle, NULL);
 
   /* Start scheduler */
   osKernelStart();
