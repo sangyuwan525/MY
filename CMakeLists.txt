@@ -57,6 +57,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Debug/debug.c
         Driver_Motor/Src/dm_motor_ctrl.c
         Driver_Motor/Src/dm_motor_drv.c
+        Driver_Motor/Src/xiaomi_motor_ctrl.c
         Driver_Motor/Src/motor_registry.c
 )
 
@@ -99,6 +100,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
+    m
 
     # Add user defined libraries
 )

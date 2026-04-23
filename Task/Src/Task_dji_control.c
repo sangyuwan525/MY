@@ -20,7 +20,8 @@ void StartTask_dji(void *argument)
     Motor_Registry_Init();
     // g_dm_motor_registry[DM_Motor1].ctrl.mode = mit_mode;
     // dm_motor_enable(&g_dm_motor_registry[DM_Motor1]);
-
+    //g_dm_motor_registry[DM_Motor1].ctrl.mode = pos_mode;
+    //dm_motor_enable(&g_dm_motor_registry[DM_Motor1]);
     xLastWakeTime = xTaskGetTickCount();
     /* Infinite loop */
     for(;;)
@@ -28,8 +29,9 @@ void StartTask_dji(void *argument)
         //Motor_Registry_Init();
         // g_dm_motor_registry[DM_Motor1].ctrl.mode = mit_mode;
         // dm_motor_enable(&g_dm_motor_registry[DM_Motor1]);
-        // g_motor_list[DM_JOINT_G].set_mit(&g_motor_list[DM_JOINT_G], 10.0f,0.0f,10.0f,5.0f,0.0f);
-        Motor_SetMIT(DM_JOINT_G, 5.0f, 0.0f, 2.0f, 0.1f, 0.0f);
+         g_motor_list[DM_JOINT_G].set_mit(&g_motor_list[DM_JOINT_G], 10.0f,0.0f,2.0f,0.1f,0.0f);
+        //g_motor_list[DM_JOINT_G].set_position(&g_motor_list[DM_JOINT_G], 10.0f, 2.0f);
+        //Motor_SetMIT(DM_JOINT_G, 5.0f, 0.0f, 2.0f, 0.1f, 0.0f);
         while (xQueueReceive((QueueHandle_t)motorRxQueueHandle, &rx_msg_tmp, 0) == pdPASS) // 0表示不等待
         {
             Motor_Feedback_Dispatch(rx_msg_tmp.hfdcan, rx_msg_tmp.id, rx_msg_tmp.data);
