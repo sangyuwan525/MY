@@ -212,6 +212,7 @@ static void XIAOMI_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
     }
 
     xiaomi->ctrl.run_mode = XIAOMI_MODE_SPEED;
+    xiaomi->ctrl.mode_configured = 1U;
     xiaomi->ctrl.speed_set = speed;
     xiaomi->ctrl.pending_cycles = 3;
 }
@@ -224,6 +225,7 @@ static void XIAOMI_Adapter_SetPosition(Motor_Class_t *self, float position, floa
     }
 
     xiaomi->ctrl.run_mode = XIAOMI_MODE_POSITION;
+    xiaomi->ctrl.mode_configured = 1U;
     xiaomi->ctrl.pos_set = position;
     xiaomi->ctrl.speed_limit = vel_limit;
     xiaomi->ctrl.pending_cycles = 3;
@@ -237,6 +239,7 @@ static void XIAOMI_Adapter_SetMIT(Motor_Class_t *self, float position, float spe
     }
 
     xiaomi->ctrl.run_mode = XIAOMI_MODE_MOTION;
+    xiaomi->ctrl.mode_configured = 1U;
     xiaomi->ctrl.pos_set = position;
     xiaomi->ctrl.speed_set = speed;
     xiaomi->ctrl.kp_set = kp;
@@ -254,6 +257,7 @@ static void XIAOMI_Adapter_SetPSI(Motor_Class_t *self, float position, float spe
     }
 
     xiaomi->ctrl.run_mode = XIAOMI_MODE_CURRENT;
+    xiaomi->ctrl.mode_configured = 1U;
     xiaomi->ctrl.current_set = current;
     xiaomi->ctrl.pending_cycles = 3;
 }

@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
     Xiaomi_Run_Mode_e run_mode;
     Xiaomi_Run_Mode_e applied_mode;
+    uint8_t mode_configured;
     float torque_set;
     float pos_set;
     float speed_set;

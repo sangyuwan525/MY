@@ -156,13 +156,13 @@ static void xiaomi_send_motion_control(Xiaomi_Motor_t *motor) {
 
 Xiaomi_Motor_t g_xiaomi_motor_registry[XIAOMI_MOTOR_COUNT] = {
     [XIAOMI_Motor1] = {
-        .hcan = &hfdcan2,
+        .hcan = &hfdcan1,
         .can_id = XIAOMI_Motor1_CAN_ID,
         .feedback_id = XIAOMI_Motor1_FEEDBACK_ID,
         .master_id = XIAOMI_MASTER_CAN_ID,
     },
     [XIAOMI_Motor2] = {
-        .hcan = &hfdcan2,
+        .hcan = &hfdcan1,
         .can_id = XIAOMI_Motor2_CAN_ID,
         .feedback_id = XIAOMI_Motor2_FEEDBACK_ID,
         .master_id = XIAOMI_MASTER_CAN_ID,
@@ -174,7 +174,7 @@ void xiaomi_motor_init(void) {
         Xiaomi_Motor_t *motor = &g_xiaomi_motor_registry[i];
 
         memset(&motor->feedback, 0, sizeof(motor->feedback));
-        motor->ctrl.run_mode = XIAOMI_MODE_MOTION;
+        memset(&motor->ctrl, 0, sizeof(motor->ctrl));
         motor->ctrl.applied_mode = (Xiaomi_Run_Mode_e)0xFF;
         motor->ctrl.kp_set = 100.0f;
         motor->ctrl.kd_set = 5.0f;
@@ -226,6 +226,10 @@ void xiaomi_motor_set_zero(Xiaomi_Motor_t *motor) {
 
 void xiaomi_motor_ctrl_send(Xiaomi_Motor_t *motor) {
     if (motor == NULL) {
+        return;
+    }
+
+    if (motor->ctrl.mode_configured == 0U) {
         return;
     }
 
