@@ -9,6 +9,7 @@ extern Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT];
 extern Damiao_Motor_t g_dm_motor_registry[DM_MOTOR_COUNT];
 extern Xiaomi_Motor_t g_xiaomi_motor_registry[XIAOMI_MOTOR_COUNT];
 extern Unitree_GO_M8010_6_Motor_t g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_MOTOR_COUNT];
+extern Blazer_FOC_Motor_t g_blazer_foc_motor_registry[BLAZER_FOC_MOTOR_COUNT];
 
 Motor_Class_t g_motor_list[MOTOR_TOTAL_NUM];
 
@@ -381,6 +382,92 @@ static Motor_State_t UNITREE_GO_Adapter_GetState(Motor_Class_t *self) {
     return state;
 }
 
+static void BLAZER_FOC_Adapter_Init(Motor_Class_t *self) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetMode(blazer, BLAZER_FOC_MODE_DISABLE);
+}
+
+/* Unified registry speed API -> Blazer FOC speed mode.
+ * Unit: mechanical r/s, following the Blazer manual.
+ */
+static void BLAZER_FOC_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetSpeed(blazer, speed);
+}
+
+/* Unified registry position API -> Blazer FOC position mode.
+ * Unit: mechanical revolutions. vel_limit is ignored because Blazer uses its
+ * own pos_maxspd/pos_acc/pos_dec parameters configured inside the ESC.
+ */
+static void BLAZER_FOC_Adapter_SetPosition(Motor_Class_t *self, float position, float vel_limit) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+    (void)vel_limit;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetPosition(blazer, position);
+}
+
+/* Blazer FOC has no MIT mode; map the torque/current-like argument to i_set. */
+static void BLAZER_FOC_Adapter_SetMIT(Motor_Class_t *self, float position, float speed, float kp, float kd, float torque) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+    (void)position;
+    (void)speed;
+    (void)kp;
+    (void)kd;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetCurrent(blazer, torque);
+}
+
+/* PSI current command maps directly to Blazer current mode. */
+static void BLAZER_FOC_Adapter_SetPSI(Motor_Class_t *self, float position, float speed, float current) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+    (void)position;
+    (void)speed;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetCurrent(blazer, current);
+}
+
+static void BLAZER_FOC_Adapter_Update(Motor_Class_t *self, uint8_t *rx_data, uint32_t identifier) {
+    Blazer_FOC_Update_Feedback((Blazer_FOC_Motor_t *)self->instance, identifier, rx_data);
+}
+
+static Motor_State_t BLAZER_FOC_Adapter_GetState(Motor_Class_t *self) {
+    Motor_State_t state = {0};
+    Blazer_FOC_Motor_t *blazer;
+
+    if (self == NULL || self->instance == NULL) {
+        return state;
+    }
+
+    blazer = (Blazer_FOC_Motor_t *)self->instance;
+    state.angle = blazer->feedback.enc_raw;
+    state.speed = blazer->feedback.speed;
+    state.torque = blazer->feedback.iq;
+    state.temp = blazer->feedback.temp;
+    return state;
+}
+
 void Motor_Registry_Init(void) {
     memset(g_motor_list, 0, sizeof(g_motor_list));
 
@@ -395,6 +482,9 @@ void Motor_Registry_Init(void) {
 
     unitree_go_m8010_6_motor_init();
     SEGGER_RTT_printf(0, "finish unitree go m8010-6 init\r\n");
+
+    Blazer_FOC_Motor_Init();
+    SEGGER_RTT_printf(0, "finish blazer foc init\r\n");
 
     for (int i = 0; i < DJI_MOTOR_COUNT; ++i) {
         g_motor_list[i].type = MOTOR_TYPE_DJI;
@@ -450,6 +540,20 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].get_state = UNITREE_GO_Adapter_GetState;
     }
 
+    for (int i = 0; i < BLAZER_FOC_MOTOR_COUNT; ++i) {
+        int global_idx = DJI_MOTOR_COUNT + DM_MOTOR_COUNT + XIAOMI_MOTOR_COUNT + UNITREE_GO_M8010_6_MOTOR_COUNT + i;
+
+        g_motor_list[global_idx].type = MOTOR_TYPE_BLAZER_FOC;
+        g_motor_list[global_idx].instance = &g_blazer_foc_motor_registry[i];
+        g_motor_list[global_idx].init = BLAZER_FOC_Adapter_Init;
+        g_motor_list[global_idx].set_speed = BLAZER_FOC_Adapter_SetSpeed;
+        g_motor_list[global_idx].set_position = BLAZER_FOC_Adapter_SetPosition;
+        g_motor_list[global_idx].set_mit = BLAZER_FOC_Adapter_SetMIT;
+        g_motor_list[global_idx].set_psi = BLAZER_FOC_Adapter_SetPSI;
+        g_motor_list[global_idx].update_feedback = BLAZER_FOC_Adapter_Update;
+        g_motor_list[global_idx].get_state = BLAZER_FOC_Adapter_GetState;
+    }
+
     for (int i = 0; i < MOTOR_TOTAL_NUM; ++i) {
         if (g_motor_list[i].init != NULL) {
             g_motor_list[i].init(&g_motor_list[i]);
@@ -486,6 +590,10 @@ void Motor_Feedback_Dispatch(FDCAN_HandleTypeDef *hfdcan, uint32_t identifier, u
                 (comm_type == 0x02U || comm_type == 0x15U)) {
                 is_match = true;
             }
+        } else if (motor_obj->type == MOTOR_TYPE_BLAZER_FOC) {
+            if (Blazer_FOC_Match_Feedback((Blazer_FOC_Motor_t *)motor_obj->instance, hfdcan, identifier) != 0U) {
+                is_match = true;
+            }
         }
 
         if (is_match && motor_obj->update_feedback != NULL) {
@@ -511,6 +619,8 @@ void Motor_All_Control_Loop(void) {
             xiaomi_motor_ctrl_send((Xiaomi_Motor_t *)cls->instance);
         } else if (cls->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
             unitree_go_m8010_6_motor_ctrl_send((Unitree_GO_M8010_6_Motor_t *)cls->instance);
+        } else if (cls->type == MOTOR_TYPE_BLAZER_FOC) {
+            Blazer_FOC_Control_Send((Blazer_FOC_Motor_t *)cls->instance);
         }
     }
 }

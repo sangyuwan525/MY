@@ -4,6 +4,9 @@
 #include <string.h>
 #include "cmsis_os.h"
 
+#define BLAZER_FOC_NODE_ID_MAX 0x07U
+#define BLAZER_FOC_PARAM_ID_MAX 0x47U
+
 static osMessageQueueId_t g_motor_queue = NULL;
 static osMessageQueueId_t g_chassis_queue = NULL;
 
@@ -51,6 +54,8 @@ static uint8_t FDCAN_DlcToBytes(uint32_t dlc) {
 
 static bool Is_Motor_Rx_Message(const FDCAN_RxHeaderTypeDef *rx_header) {
     uint8_t comm_type;
+    uint8_t blazer_node_id;
+    uint8_t blazer_param_id;
 
     if (rx_header == NULL) {
         return false;
@@ -62,7 +67,23 @@ static bool Is_Motor_Rx_Message(const FDCAN_RxHeaderTypeDef *rx_header) {
     }
 
     comm_type = (uint8_t)((rx_header->Identifier >> 24) & 0x1FU);
-    return (comm_type == 0x02U || comm_type == 0x15U);
+    if (comm_type == 0x02U || comm_type == 0x15U) {
+        return true;
+    }
+
+    /*
+     * Blazer FOC uses extended frames with:
+     *   ID = node_id << 8 | param_id
+     * Read replies use odd param_id values, and valid node IDs are 0..7.
+     * Keep this narrow so unrelated extended-frame chassis messages are not
+     * accidentally routed into the motor feedback queue.
+     */
+    blazer_node_id = (uint8_t)((rx_header->Identifier >> 8) & 0xFFU);
+    blazer_param_id = (uint8_t)(rx_header->Identifier & 0xFFU);
+    return ((rx_header->Identifier & 0xFFFF0000U) == 0U &&
+            blazer_node_id <= BLAZER_FOC_NODE_ID_MAX &&
+            blazer_param_id <= BLAZER_FOC_PARAM_ID_MAX &&
+            (blazer_param_id & 0x01U) != 0U);
 }
 
 static uint8_t fdcanx_send_impl(hcan_t *hfdcan, uint32_t id, uint8_t *data, uint32_t len, CAN_Id_Type_e id_type) {

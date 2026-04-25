@@ -19,6 +19,11 @@ void StartTask_dji(void *argument)
     //osDelay(100);
      Motor_Registry_Init();
 
+    g_motor_list[BLAZER_FOC_MOTOR1_G].set_speed(
+    &g_motor_list[BLAZER_FOC_MOTOR1_G],
+    5.0f   // 5 r/s = 300 RPM
+);
+
 //     g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_speed(
 //     &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
 //     0.08f
