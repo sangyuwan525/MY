@@ -6,13 +6,15 @@
 #include "dm_motor_ctrl.h"
 #include "dm_motor_drv.h"
 #include "xiaomi_motor_ctrl.h"
+#include "unitree_go_m8010_6_motor.h"
 
-#define MOTOR_TOTAL_NUM (DJI_MOTOR_COUNT + DM_MOTOR_COUNT + XIAOMI_MOTOR_COUNT)
+#define MOTOR_TOTAL_NUM (DJI_MOTOR_COUNT + DM_MOTOR_COUNT + XIAOMI_MOTOR_COUNT + UNITREE_GO_M8010_6_MOTOR_COUNT)
 
 typedef enum {
     MOTOR_TYPE_DJI = 0,
     MOTOR_TYPE_DAMIAO,
     MOTOR_TYPE_XIAOMI,
+    MOTOR_TYPE_UNITREE_GO_M8010_6,
 } Motor_Type_e;
 
 typedef struct {

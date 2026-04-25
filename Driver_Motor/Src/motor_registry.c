@@ -8,6 +8,7 @@
 extern Dji_Motor_t g_dji_motor_registry[DJI_MOTOR_COUNT];
 extern Damiao_Motor_t g_dm_motor_registry[DM_MOTOR_COUNT];
 extern Xiaomi_Motor_t g_xiaomi_motor_registry[XIAOMI_MOTOR_COUNT];
+extern Unitree_GO_M8010_6_Motor_t g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_MOTOR_COUNT];
 
 Motor_Class_t g_motor_list[MOTOR_TOTAL_NUM];
 
@@ -288,6 +289,98 @@ static Motor_State_t XIAOMI_Adapter_GetState(Motor_Class_t *self) {
     return state;
 }
 
+static void UNITREE_GO_Adapter_Init(Motor_Class_t *self) {
+    (void)self;
+}
+
+static void UNITREE_GO_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+    unitree->ctrl.mode_configured = 1U;
+    unitree->ctrl.pos_set = 0.0f;
+    unitree->ctrl.speed_set = speed;
+    unitree->ctrl.torque_set = 0.0f;
+    unitree->ctrl.kp_set = 0.0f;
+    unitree->ctrl.kd_set = 0.01f;
+}
+
+static void UNITREE_GO_Adapter_SetPosition(Motor_Class_t *self, float position, float vel_limit) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+    (void)vel_limit;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+    unitree->ctrl.mode_configured = 1U;
+    unitree->ctrl.pos_set = position;
+    unitree->ctrl.speed_set = 0.0f;
+    unitree->ctrl.torque_set = 0.0f;
+    unitree->ctrl.kp_set = 0.05f;
+    unitree->ctrl.kd_set = 0.01f;
+}
+
+static void UNITREE_GO_Adapter_SetMIT(Motor_Class_t *self, float position, float speed, float kp, float kd, float torque) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+    unitree->ctrl.mode_configured = 1U;
+    unitree->ctrl.pos_set = position;
+    unitree->ctrl.speed_set = speed;
+    unitree->ctrl.kp_set = kp;
+    unitree->ctrl.kd_set = kd;
+    unitree->ctrl.torque_set = torque;
+}
+
+static void UNITREE_GO_Adapter_SetPSI(Motor_Class_t *self, float position, float speed, float current) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+    (void)position;
+    (void)speed;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+    unitree->ctrl.mode_configured = 1U;
+    unitree->ctrl.pos_set = 0.0f;
+    unitree->ctrl.speed_set = 0.0f;
+    unitree->ctrl.kp_set = 0.0f;
+    unitree->ctrl.kd_set = 0.0f;
+    unitree->ctrl.torque_set = current;
+}
+
+static void UNITREE_GO_Adapter_Update(Motor_Class_t *self, uint8_t *rx_data, uint32_t identifier) {
+    (void)identifier;
+    unitree_go_m8010_6_update_feedback((Unitree_GO_M8010_6_Motor_t *)self->instance, rx_data);
+}
+
+static Motor_State_t UNITREE_GO_Adapter_GetState(Motor_Class_t *self) {
+    Motor_State_t state = {0};
+    Unitree_GO_M8010_6_Motor_t *unitree;
+
+    if (self == NULL || self->instance == NULL) {
+        return state;
+    }
+
+    unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+    state.angle = unitree->feedback.angle;
+    state.speed = unitree->feedback.speed;
+    state.torque = unitree->feedback.torque;
+    state.temp = unitree->feedback.temp;
+    return state;
+}
+
 void Motor_Registry_Init(void) {
     memset(g_motor_list, 0, sizeof(g_motor_list));
 
@@ -299,6 +392,9 @@ void Motor_Registry_Init(void) {
 
     xiaomi_motor_init();
     SEGGER_RTT_printf(0, "finish xiaomi init\r\n");
+
+    unitree_go_m8010_6_motor_init();
+    SEGGER_RTT_printf(0, "finish unitree go m8010-6 init\r\n");
 
     for (int i = 0; i < DJI_MOTOR_COUNT; ++i) {
         g_motor_list[i].type = MOTOR_TYPE_DJI;
@@ -338,6 +434,20 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].set_psi = XIAOMI_Adapter_SetPSI;
         g_motor_list[global_idx].update_feedback = XIAOMI_Adapter_Update;
         g_motor_list[global_idx].get_state = XIAOMI_Adapter_GetState;
+    }
+
+    for (int i = 0; i < UNITREE_GO_M8010_6_MOTOR_COUNT; ++i) {
+        int global_idx = DJI_MOTOR_COUNT + DM_MOTOR_COUNT + XIAOMI_MOTOR_COUNT + i;
+
+        g_motor_list[global_idx].type = MOTOR_TYPE_UNITREE_GO_M8010_6;
+        g_motor_list[global_idx].instance = &g_unitree_go_m8010_6_motor_registry[i];
+        g_motor_list[global_idx].init = UNITREE_GO_Adapter_Init;
+        g_motor_list[global_idx].set_speed = UNITREE_GO_Adapter_SetSpeed;
+        g_motor_list[global_idx].set_position = UNITREE_GO_Adapter_SetPosition;
+        g_motor_list[global_idx].set_mit = UNITREE_GO_Adapter_SetMIT;
+        g_motor_list[global_idx].set_psi = UNITREE_GO_Adapter_SetPSI;
+        g_motor_list[global_idx].update_feedback = UNITREE_GO_Adapter_Update;
+        g_motor_list[global_idx].get_state = UNITREE_GO_Adapter_GetState;
     }
 
     for (int i = 0; i < MOTOR_TOTAL_NUM; ++i) {
@@ -399,6 +509,8 @@ void Motor_All_Control_Loop(void) {
             dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
         } else if (cls->type == MOTOR_TYPE_XIAOMI) {
             xiaomi_motor_ctrl_send((Xiaomi_Motor_t *)cls->instance);
+        } else if (cls->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
+            unitree_go_m8010_6_motor_ctrl_send((Unitree_GO_M8010_6_Motor_t *)cls->instance);
         }
     }
 }

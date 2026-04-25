@@ -58,6 +58,7 @@ add_executable(${CMAKE_PROJECT_NAME}
         Driver_Motor/Src/dm_motor_ctrl.c
         Driver_Motor/Src/dm_motor_drv.c
         Driver_Motor/Src/xiaomi_motor_ctrl.c
+        Driver_Motor/Src/unitree_go_m8010_6_motor.c
         Driver_Motor/Src/motor_registry.c
 )
 

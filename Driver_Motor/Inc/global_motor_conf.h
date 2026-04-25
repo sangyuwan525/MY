@@ -11,6 +11,7 @@ typedef enum {
     DM_JOINT_G,
     XIAOMI_MOTOR1_G,
     XIAOMI_MOTOR2_G,
+    UNITREE_GO_M8010_6_MOTOR1_G,
 } Global_Motor_Index_e;
 
 #endif /* R1_SUPERSTRUCTURE_GLOBAL_MOTOR_CONF_H */
