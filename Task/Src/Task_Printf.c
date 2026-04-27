@@ -35,7 +35,8 @@ void StartTask_Printf(void *argument)
         // printf("x=%.1f,",lcResult.x);
         // printf("y=%.1f,",lcResult.y);
         // printf("r=%.3f\n",lcResult.r);
-        RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
+        // RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
+        RTT_Printf("dis=%f\n",lcResult.laser_current);
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
         //RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));

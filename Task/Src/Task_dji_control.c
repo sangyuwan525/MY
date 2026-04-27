@@ -33,14 +33,14 @@ void StartTask_dji(void *argument)
 //     0.0f, -1.0f, 0.0f, 0.01f, 0.0f
 // );
     // 2. 再测位置保持/位置运动
-    // g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
-    //     &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
-    //     0.5f, 0.0f, 0.05f, 0.01f, 0.0f
-    // );
+    g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
+        &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
+        0.5f, 0.0f, 0.05f, 0.01f, 0.0f
+    );
 
-    //g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G], 10.0f,0.0f,2.0f,0.1f,0.0f);
+    g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G], 10.0f,0.0f,2.0f,0.1f,0.0f);
 
-    // g_motor_list[DM_JOINT_G].set_mit(&g_motor_list[DM_JOINT_G], 10.0f,0.0f,2.0f,0.1f,0.0f);
+    g_motor_list[DM_JOINT_G].set_mit(&g_motor_list[DM_JOINT_G], 10.0f,0.0f,2.0f,0.1f,0.0f);
     // g_dm_motor_registry[DM_Motor1].ctrl.mode = pos_mode;
     // dm_motor_enable(&g_dm_motor_registry[DM_Motor1]);
     // g_motor_list[DM_JOINT_G].set_position(&g_motor_list[DM_JOINT_G], 1.0f, 2.0f);

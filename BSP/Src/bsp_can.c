@@ -3,12 +3,26 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cmsis_os.h"
+#include "locator_driver.h"
 
 #define BLAZER_FOC_NODE_ID_MAX 0x07U
 #define BLAZER_FOC_PARAM_ID_MAX 0x47U
+#define LOCATOR_CAN_ID_X_Y 0x12U
+#define LOCATOR_CAN_ID_Z_R 0x13U
+#define LOCATOR_CAN_ID_LASER 0x100U
 
 static osMessageQueueId_t g_motor_queue = NULL;
 static osMessageQueueId_t g_chassis_queue = NULL;
+
+static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHeaderTypeDef *rx_header) {
+    if (hfdcan != &hfdcan3 || rx_header == NULL || rx_header->IdType != FDCAN_STANDARD_ID) {
+        return false;
+    }
+
+    return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y ||
+            rx_header->Identifier == LOCATOR_CAN_ID_Z_R ||
+            rx_header->Identifier == LOCATOR_CAN_ID_LASER);
+}
 
 static void FDCAN_Filter_Config(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo_assignment, CAN_Id_Type_e id_type) {
     FDCAN_FilterTypeDef sFilterConfig = {0};
@@ -129,9 +143,32 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
     FDCAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[64];
     can_msg_t msg;
+    Locator_Rx_Queue_t locator_msg;
+    uint8_t locator_len;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     while (HAL_FDCAN_GetRxMessage(hfdcan, fifo, &rx_header, rx_data) == HAL_OK) {
+        if (Is_Locator_Rx_Message(hfdcan, &rx_header)) {
+            memset(&locator_msg, 0, sizeof(locator_msg));
+            locator_msg.msg_identifier = rx_header.Identifier;
+            locator_len = FDCAN_DlcToBytes(rx_header.DataLength);
+            if (locator_len > sizeof(locator_msg.rx_data)) {
+                locator_len = sizeof(locator_msg.rx_data);
+            }
+            if (locator_len > 0U) {
+                memcpy(locator_msg.rx_data, rx_data, locator_len);
+            }
+
+            if (rx_header.Identifier == LOCATOR_CAN_ID_X_Y && locatorQueue_x_yHandle != NULL) {
+                xQueueSendFromISR(locatorQueue_x_yHandle, &locator_msg, &xHigherPriorityTaskWoken);
+            } else if ((rx_header.Identifier == LOCATOR_CAN_ID_Z_R ||
+                        rx_header.Identifier == LOCATOR_CAN_ID_LASER) &&
+                       locatorQueue_z_rHandle != NULL) {
+                xQueueSendFromISR(locatorQueue_z_rHandle, &locator_msg, &xHigherPriorityTaskWoken);
+            }
+            continue;
+        }
+
         memset(&msg, 0, sizeof(msg));
         msg.id = rx_header.Identifier;
         msg.id_type = rx_header.IdType;

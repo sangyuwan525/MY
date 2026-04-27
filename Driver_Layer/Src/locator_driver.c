@@ -4,6 +4,7 @@
 #include "locator_driver.h"
 
 #include <stdio.h>
+#include <string.h>
 
 Locator_Result_t lcResult={0};
 
@@ -59,4 +60,24 @@ void analysis_locator_Z_R(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* 
         // 内存强转：解析R
         lcResult->r = *(float*)(&database_r);
     }
+}
+
+void analysis_locator_laser(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* rx_msg_tmp) {
+    float laser_current;
+
+    if (lcResult == NULL || rx_msg_tmp == NULL) {
+        return;
+    }
+
+    if (rx_msg_tmp->msg_identifier != 0x100U) {
+        return;
+    }
+
+    /*
+     * The laser board sends:
+     *   memcpy(can_data, &current, 4)
+     * on STM32, so the bytes are little-endian IEEE-754 float bytes.
+     */
+    memcpy(&laser_current, rx_msg_tmp->rx_data, sizeof(laser_current));
+    lcResult->laser_current = laser_current;
 }
