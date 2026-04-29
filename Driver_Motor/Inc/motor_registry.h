@@ -48,6 +48,9 @@ typedef struct Motor_Class {
     void *instance;
 
     void (*init)(struct Motor_Class *self);
+    void (*enable)(struct Motor_Class *self);
+    void (*stop)(struct Motor_Class *self, uint8_t clear_error);
+    void (*set_zero)(struct Motor_Class *self);
     void (*set_speed)(struct Motor_Class *self, float speed);
     void (*set_position)(struct Motor_Class *self, float position, float vel_limit);
     void (*set_mit)(struct Motor_Class *self, float position, float speed, float kp, float kd, float torque);
@@ -59,6 +62,9 @@ typedef struct Motor_Class {
 void Motor_Registry_Init(void);
 void Motor_All_Control_Loop(void);
 void Motor_Feedback_Dispatch(FDCAN_HandleTypeDef *hfdcan, uint32_t identifier, uint8_t *data);
+void Motor_Enable(int motor_index);
+void Motor_Stop(int motor_index, uint8_t clear_error);
+void Motor_SetZero(int motor_index);
 void Motor_SetMIT(int motor_index, float position, float speed, float kp, float kd, float torque);
 void Motor_SetPSI(int motor_index, float position, float speed, float current);
 void Motor_SineProfile_Init(Motor_Sine_Profile_t *profile,

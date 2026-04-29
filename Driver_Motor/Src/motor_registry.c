@@ -20,6 +20,35 @@ static void DJI_Adapter_Init(Motor_Class_t *self) {
     (void)self;
 }
 
+static void DJI_Adapter_Enable(Motor_Class_t *self) {
+    Dji_Motor_t *dji;
+
+    if (self == NULL || self->instance == NULL) {
+        return;
+    }
+
+    dji = (Dji_Motor_t *)self->instance;
+    dji->is_enabled = true;
+}
+
+static void DJI_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
+    Dji_Motor_t *dji;
+    (void)clear_error;
+
+    if (self == NULL || self->instance == NULL) {
+        return;
+    }
+
+    dji = (Dji_Motor_t *)self->instance;
+    dji->is_enabled = false;
+    dji->target_spd = 0.0f;
+    dji->target_loc = (float)dji->feedback.total_angle;
+}
+
+static void DJI_Adapter_SetZero(Motor_Class_t *self) {
+    (void)self;
+}
+
 static void DJI_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
     Dji_Motor_t *dji;
     int index;
@@ -115,6 +144,55 @@ static void DM_Adapter_Init(Motor_Class_t *self) {
     }
 }
 
+static uint16_t DM_Adapter_GetModeID(const Damiao_Motor_t *dm) {
+    if (dm == NULL) {
+        return MIT_MODE;
+    }
+
+    switch (dm->ctrl.mode) {
+        case pos_mode:
+            return POS_MODE;
+        case spd_mode:
+            return SPD_MODE;
+        case psi_mode:
+            return PSI_MODE;
+        case mit_mode:
+        default:
+            return MIT_MODE;
+    }
+}
+
+static void DM_Adapter_Enable(Motor_Class_t *self) {
+    Damiao_Motor_t *dm = (Damiao_Motor_t *)self->instance;
+
+    if (dm == NULL) {
+        return;
+    }
+
+    dm_motor_enable(dm);
+}
+
+static void DM_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
+    Damiao_Motor_t *dm = (Damiao_Motor_t *)self->instance;
+    (void)clear_error;
+
+    if (dm == NULL) {
+        return;
+    }
+
+    dm_motor_disable(dm);
+}
+
+static void DM_Adapter_SetZero(Motor_Class_t *self) {
+    Damiao_Motor_t *dm = (Damiao_Motor_t *)self->instance;
+
+    if (dm == NULL || dm->hcan == NULL) {
+        return;
+    }
+
+    save_pos_zero(dm->hcan, dm->id, DM_Adapter_GetModeID(dm));
+}
+
 static void DM_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
     Damiao_Motor_t *dm = (Damiao_Motor_t *)self->instance;
 
@@ -206,6 +284,36 @@ static void XIAOMI_Adapter_Init(Motor_Class_t *self) {
     osDelay(20);
 }
 
+static void XIAOMI_Adapter_Enable(Motor_Class_t *self) {
+    Xiaomi_Motor_t *xiaomi = (Xiaomi_Motor_t *)self->instance;
+
+    if (xiaomi == NULL) {
+        return;
+    }
+
+    xiaomi_motor_enable(xiaomi);
+}
+
+static void XIAOMI_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
+    Xiaomi_Motor_t *xiaomi = (Xiaomi_Motor_t *)self->instance;
+
+    if (xiaomi == NULL) {
+        return;
+    }
+
+    xiaomi_motor_stop(xiaomi, clear_error);
+}
+
+static void XIAOMI_Adapter_SetZero(Motor_Class_t *self) {
+    Xiaomi_Motor_t *xiaomi = (Xiaomi_Motor_t *)self->instance;
+
+    if (xiaomi == NULL) {
+        return;
+    }
+
+    xiaomi_motor_set_zero(xiaomi);
+}
+
 static void XIAOMI_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
     Xiaomi_Motor_t *xiaomi = (Xiaomi_Motor_t *)self->instance;
 
@@ -291,6 +399,31 @@ static Motor_State_t XIAOMI_Adapter_GetState(Motor_Class_t *self) {
 }
 
 static void UNITREE_GO_Adapter_Init(Motor_Class_t *self) {
+    (void)self;
+}
+
+static void UNITREE_GO_Adapter_Enable(Motor_Class_t *self) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree->ctrl.mode_configured = 1U;
+}
+
+static void UNITREE_GO_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+    (void)clear_error;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree_go_m8010_6_motor_stop(unitree);
+}
+
+static void UNITREE_GO_Adapter_SetZero(Motor_Class_t *self) {
     (void)self;
 }
 
@@ -392,6 +525,37 @@ static void BLAZER_FOC_Adapter_Init(Motor_Class_t *self) {
     Blazer_FOC_SetMode(blazer, BLAZER_FOC_MODE_DISABLE);
 }
 
+static void BLAZER_FOC_Adapter_Enable(Motor_Class_t *self) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    blazer->ctrl.enabled = 1U;
+}
+
+static void BLAZER_FOC_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+    (void)clear_error;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_Stop(blazer);
+}
+
+static void BLAZER_FOC_Adapter_SetZero(Motor_Class_t *self) {
+    Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;
+
+    if (blazer == NULL) {
+        return;
+    }
+
+    Blazer_FOC_SetMode(blazer, BLAZER_FOC_MODE_SET_ZERO);
+}
+
 /* Unified registry speed API -> Blazer FOC speed mode.
  * Unit: mechanical r/s, following the Blazer manual.
  */
@@ -490,6 +654,9 @@ void Motor_Registry_Init(void) {
         g_motor_list[i].type = MOTOR_TYPE_DJI;
         g_motor_list[i].instance = &g_dji_motor_registry[i];
         g_motor_list[i].init = DJI_Adapter_Init;
+        g_motor_list[i].enable = DJI_Adapter_Enable;
+        g_motor_list[i].stop = DJI_Adapter_Stop;
+        g_motor_list[i].set_zero = DJI_Adapter_SetZero;
         g_motor_list[i].set_speed = DJI_Adapter_SetSpeed;
         g_motor_list[i].set_position = DJI_Adapter_SetPosition;
         g_motor_list[i].set_mit = DJI_Adapter_SetMIT;
@@ -504,6 +671,9 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].type = MOTOR_TYPE_DAMIAO;
         g_motor_list[global_idx].instance = &g_dm_motor_registry[i];
         g_motor_list[global_idx].init = DM_Adapter_Init;
+        g_motor_list[global_idx].enable = DM_Adapter_Enable;
+        g_motor_list[global_idx].stop = DM_Adapter_Stop;
+        g_motor_list[global_idx].set_zero = DM_Adapter_SetZero;
         g_motor_list[global_idx].set_speed = DM_Adapter_SetSpeed;
         g_motor_list[global_idx].set_position = DM_Adapter_SetPosition;
         g_motor_list[global_idx].set_mit = DM_Adapter_SetMIT;
@@ -518,6 +688,9 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].type = MOTOR_TYPE_XIAOMI;
         g_motor_list[global_idx].instance = &g_xiaomi_motor_registry[i];
         g_motor_list[global_idx].init = XIAOMI_Adapter_Init;
+        g_motor_list[global_idx].enable = XIAOMI_Adapter_Enable;
+        g_motor_list[global_idx].stop = XIAOMI_Adapter_Stop;
+        g_motor_list[global_idx].set_zero = XIAOMI_Adapter_SetZero;
         g_motor_list[global_idx].set_speed = XIAOMI_Adapter_SetSpeed;
         g_motor_list[global_idx].set_position = XIAOMI_Adapter_SetPosition;
         g_motor_list[global_idx].set_mit = XIAOMI_Adapter_SetMIT;
@@ -532,6 +705,9 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].type = MOTOR_TYPE_UNITREE_GO_M8010_6;
         g_motor_list[global_idx].instance = &g_unitree_go_m8010_6_motor_registry[i];
         g_motor_list[global_idx].init = UNITREE_GO_Adapter_Init;
+        g_motor_list[global_idx].enable = UNITREE_GO_Adapter_Enable;
+        g_motor_list[global_idx].stop = UNITREE_GO_Adapter_Stop;
+        g_motor_list[global_idx].set_zero = UNITREE_GO_Adapter_SetZero;
         g_motor_list[global_idx].set_speed = UNITREE_GO_Adapter_SetSpeed;
         g_motor_list[global_idx].set_position = UNITREE_GO_Adapter_SetPosition;
         g_motor_list[global_idx].set_mit = UNITREE_GO_Adapter_SetMIT;
@@ -546,6 +722,9 @@ void Motor_Registry_Init(void) {
         g_motor_list[global_idx].type = MOTOR_TYPE_BLAZER_FOC;
         g_motor_list[global_idx].instance = &g_blazer_foc_motor_registry[i];
         g_motor_list[global_idx].init = BLAZER_FOC_Adapter_Init;
+        g_motor_list[global_idx].enable = BLAZER_FOC_Adapter_Enable;
+        g_motor_list[global_idx].stop = BLAZER_FOC_Adapter_Stop;
+        g_motor_list[global_idx].set_zero = BLAZER_FOC_Adapter_SetZero;
         g_motor_list[global_idx].set_speed = BLAZER_FOC_Adapter_SetSpeed;
         g_motor_list[global_idx].set_position = BLAZER_FOC_Adapter_SetPosition;
         g_motor_list[global_idx].set_mit = BLAZER_FOC_Adapter_SetMIT;
@@ -622,6 +801,45 @@ void Motor_All_Control_Loop(void) {
         } else if (cls->type == MOTOR_TYPE_BLAZER_FOC) {
             Blazer_FOC_Control_Send((Blazer_FOC_Motor_t *)cls->instance);
         }
+    }
+}
+
+void Motor_Enable(int motor_index) {
+    Motor_Class_t *motor;
+
+    if (motor_index < 0 || motor_index >= MOTOR_TOTAL_NUM) {
+        return;
+    }
+
+    motor = &g_motor_list[motor_index];
+    if (motor->enable != NULL) {
+        motor->enable(motor);
+    }
+}
+
+void Motor_Stop(int motor_index, uint8_t clear_error) {
+    Motor_Class_t *motor;
+
+    if (motor_index < 0 || motor_index >= MOTOR_TOTAL_NUM) {
+        return;
+    }
+
+    motor = &g_motor_list[motor_index];
+    if (motor->stop != NULL) {
+        motor->stop(motor, clear_error);
+    }
+}
+
+void Motor_SetZero(int motor_index) {
+    Motor_Class_t *motor;
+
+    if (motor_index < 0 || motor_index >= MOTOR_TOTAL_NUM) {
+        return;
+    }
+
+    motor = &g_motor_list[motor_index];
+    if (motor->set_zero != NULL) {
+        motor->set_zero(motor);
     }
 }
 

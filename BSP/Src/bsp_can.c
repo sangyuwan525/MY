@@ -25,16 +25,7 @@ static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHea
 }
 
 static void FDCAN_Filter_Config(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo_assignment, CAN_Id_Type_e id_type) {
-    FDCAN_FilterTypeDef sFilterConfig = {0};
-
-    sFilterConfig.IdType = (id_type == CAN_ID_EXT) ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID;
-    sFilterConfig.FilterIndex = 0;
-    sFilterConfig.FilterType = FDCAN_FILTER_RANGE;
-    sFilterConfig.FilterConfig = fifo_assignment;
-    sFilterConfig.FilterID1 = 0x00000000U;
-    sFilterConfig.FilterID2 = 0x1FFFFFFFU;
-
-    (void)HAL_FDCAN_ConfigFilter(hfdcan, &sFilterConfig);
+    (void)id_type;
     (void)HAL_FDCAN_ConfigGlobalFilter(
         hfdcan,
         fifo_assignment == FDCAN_FILTER_TO_RXFIFO0 ? FDCAN_ACCEPT_IN_RX_FIFO0 : FDCAN_ACCEPT_IN_RX_FIFO1,
@@ -129,7 +120,7 @@ static uint8_t fdcanx_send_impl(hcan_t *hfdcan, uint32_t id, uint8_t *data, uint
 
     tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-    tx_header.FDFormat = FDCAN_FD_CAN;
+    tx_header.FDFormat = (len <= 8U) ? FDCAN_CLASSIC_CAN : FDCAN_FD_CAN;
     tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     tx_header.MessageMarker = 0;
 
@@ -146,6 +137,7 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
     Locator_Rx_Queue_t locator_msg;
     uint8_t locator_len;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    bool is_motor_msg;
 
     while (HAL_FDCAN_GetRxMessage(hfdcan, fifo, &rx_header, rx_data) == HAL_OK) {
         if (Is_Locator_Rx_Message(hfdcan, &rx_header)) {
@@ -179,7 +171,8 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
             memcpy(msg.data, rx_data, msg.len);
         }
 
-        if (Is_Motor_Rx_Message(&rx_header)) {
+        is_motor_msg = Is_Motor_Rx_Message(&rx_header);
+        if (is_motor_msg) {
             if (g_motor_queue != NULL) {
                 xQueueSendFromISR(g_motor_queue, &msg, &xHigherPriorityTaskWoken);
             }
@@ -195,10 +188,11 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
 
 void bsp_can_start(FDCAN_HandleTypeDef *hfdcan) {
     uint32_t fifo = (hfdcan == &hfdcan1) ? FDCAN_FILTER_TO_RXFIFO0 : FDCAN_FILTER_TO_RXFIFO1;
-    uint32_t it_flag = (hfdcan == &hfdcan1) ? FDCAN_IT_RX_FIFO0_NEW_MESSAGE : FDCAN_IT_RX_FIFO1_NEW_MESSAGE;
 
     FDCAN_Filter_Config(hfdcan, fifo, CAN_ID_STD);
-    HAL_FDCAN_ActivateNotification(hfdcan, it_flag, 0);
+    HAL_FDCAN_ActivateNotification(hfdcan,
+                                   FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_RX_FIFO1_NEW_MESSAGE,
+                                   0);
     HAL_FDCAN_Start(hfdcan);
 }
 
