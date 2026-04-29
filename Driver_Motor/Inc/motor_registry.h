@@ -57,6 +57,15 @@ typedef struct Motor_Class {
     void (*set_psi)(struct Motor_Class *self, float position, float speed, float current);
     void (*update_feedback)(struct Motor_Class *self, uint8_t *rx_data, uint32_t identifier);
     Motor_State_t (*get_state)(struct Motor_Class *self);
+
+    Motor_Smooth_Goto_Profile_t smooth_goto;
+    uint8_t smooth_pending;
+    uint8_t smooth_started;
+    float smooth_target;
+    float smooth_max_speed;
+    float smooth_kp;
+    float smooth_kd;
+    float smooth_torque_ff;
 } Motor_Class_t;
 
 void Motor_Registry_Init(void);
@@ -90,6 +99,12 @@ uint8_t Motor_RunSmoothGotoMIT(int motor_index,
                                float kp,
                                float kd,
                                float torque_ff);
+void Motor_StartSmoothGotoMIT(int motor_index,
+                              float target_position,
+                              float max_speed,
+                              float kp,
+                              float kd,
+                              float torque_ff);
 
 extern Motor_Class_t g_motor_list[MOTOR_TOTAL_NUM];
 

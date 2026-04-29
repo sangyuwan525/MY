@@ -632,6 +632,42 @@ static Motor_State_t BLAZER_FOC_Adapter_GetState(Motor_Class_t *self) {
     return state;
 }
 
+static uint8_t Motor_IsFeedbackOnline(const Motor_Class_t *motor) {
+    if (motor == NULL || motor->instance == NULL) {
+        return 0U;
+    }
+
+    if (motor->type == MOTOR_TYPE_XIAOMI) {
+        return ((Xiaomi_Motor_t *)motor->instance)->feedback.online ? 1U : 0U;
+    }
+
+    return 1U;
+}
+
+static void Motor_UpdateSmoothGotoMIT(int motor_index, Motor_Class_t *motor) {
+    if (motor == NULL || motor->smooth_pending == 0U) {
+        return;
+    }
+
+    if (motor->smooth_started == 0U) {
+        if (Motor_IsFeedbackOnline(motor) == 0U || motor->get_state == NULL) {
+            return;
+        }
+
+        Motor_SmoothGoto_Start(&motor->smooth_goto, motor_index, motor->smooth_target, motor->smooth_max_speed);
+        motor->smooth_started = 1U;
+    }
+
+    if (Motor_RunSmoothGotoMIT(motor_index,
+                               &motor->smooth_goto,
+                               motor->smooth_kp,
+                               motor->smooth_kd,
+                               motor->smooth_torque_ff) == 0U) {
+        motor->smooth_pending = 0U;
+        motor->smooth_started = 0U;
+    }
+}
+
 void Motor_Registry_Init(void) {
     memset(g_motor_list, 0, sizeof(g_motor_list));
 
@@ -791,6 +827,8 @@ void Motor_All_Control_Loop(void) {
         if (cls->instance == NULL) {
             continue;
         }
+
+        Motor_UpdateSmoothGotoMIT(i, cls);
 
         if (cls->type == MOTOR_TYPE_DAMIAO) {
             dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
@@ -1047,4 +1085,31 @@ uint8_t Motor_RunSmoothGotoMIT(int motor_index,
     }
 
     return active;
+}
+
+void Motor_StartSmoothGotoMIT(int motor_index,
+                              float target_position,
+                              float max_speed,
+                              float kp,
+                              float kd,
+                              float torque_ff) {
+    Motor_Class_t *motor;
+
+    if (motor_index < 0 || motor_index >= MOTOR_TOTAL_NUM) {
+        return;
+    }
+
+    motor = &g_motor_list[motor_index];
+    if (motor->set_mit == NULL || motor->get_state == NULL) {
+        return;
+    }
+
+    Motor_SmoothGoto_Reset(&motor->smooth_goto);
+    motor->smooth_target = target_position;
+    motor->smooth_max_speed = max_speed;
+    motor->smooth_kp = kp;
+    motor->smooth_kd = kd;
+    motor->smooth_torque_ff = torque_ff;
+    motor->smooth_started = 0U;
+    motor->smooth_pending = 1U;
 }

@@ -10,16 +10,6 @@
 #include "motor_registry.h"
 #include "queue.h"
 
-static Motor_Smooth_Goto_Profile_t xiaomi_profile;
-
-typedef enum {
-    XIAOMI_MOVE_WAIT_FEEDBACK = 0,
-    XIAOMI_MOVE_RUNNING,
-    XIAOMI_MOVE_DONE,
-} Xiaomi_Move_State_e;
-
-static Xiaomi_Move_State_e xiaomi_move_state = XIAOMI_MOVE_WAIT_FEEDBACK;
-
 void StartTask_dji(void *argument)
 {
     /* USER CODE BEGIN StartTask_dji */
@@ -28,7 +18,9 @@ void StartTask_dji(void *argument)
     const TickType_t xFrequency = pdMS_TO_TICKS(1);
     //osDelay(100);
      Motor_Registry_Init();
-
+    //g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
+     Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
+    //g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G],1.0f,0.0f,1.0f,0.01f,0.0f);
     xLastWakeTime = xTaskGetTickCount();
     /* Infinite loop */
     for(;;)
@@ -42,28 +34,6 @@ void StartTask_dji(void *argument)
         while (xQueueReceive((QueueHandle_t)motorRxQueueHandle, &rx_msg_tmp, 0) == pdPASS) // 0表示不等待
         {
             Motor_Feedback_Dispatch(rx_msg_tmp.hfdcan, rx_msg_tmp.id, rx_msg_tmp.data);
-        }
-
-        switch (xiaomi_move_state) {
-            case XIAOMI_MOVE_WAIT_FEEDBACK:
-                if (g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.online == true) {
-                    Motor_SmoothGoto_Start(&xiaomi_profile,
-                                           XIAOMI_MOTOR1_G,
-                                           g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.angle + 5.0f,
-                                           2.0f);
-                    xiaomi_move_state = XIAOMI_MOVE_RUNNING;
-                }
-                break;
-
-            case XIAOMI_MOVE_RUNNING:
-                if (Motor_RunSmoothGotoMIT(XIAOMI_MOTOR1_G, &xiaomi_profile, 50.0f, 1.0f, 0.0f) == 0U) {
-                    xiaomi_move_state = XIAOMI_MOVE_DONE;
-                }
-                break;
-
-            case XIAOMI_MOVE_DONE:
-            default:
-                break;
         }
 
         Motor_All_Control_Loop();
