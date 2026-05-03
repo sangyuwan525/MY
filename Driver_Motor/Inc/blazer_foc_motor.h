@@ -63,7 +63,7 @@ typedef enum {
  * Runtime modes from the manual. In normal robot control you will usually use:
  *   DISABLE: motor released
  *   CURRENT: current loop
- *   SPEED: speed loop, speed unit is mechanical revolutions per second
+ *   SPEED: speed loop. Firmware API uses RPM; the ESC protocol uses mechanical r/s
  *   POSITION: position loop, position unit is mechanical revolutions
  */
 typedef enum {
@@ -114,7 +114,7 @@ extern Blazer_FOC_Motor_t g_blazer_foc_motor_registry[BLAZER_FOC_MOTOR_COUNT];
 
 void Blazer_FOC_Motor_Init(void);
 void Blazer_FOC_SetMode(Blazer_FOC_Motor_t *motor, Blazer_FOC_Mode_e mode);
-void Blazer_FOC_SetSpeed(Blazer_FOC_Motor_t *motor, float speed_rps);
+void Blazer_FOC_SetSpeed(Blazer_FOC_Motor_t *motor, float speed_rpm);
 void Blazer_FOC_SetCurrent(Blazer_FOC_Motor_t *motor, float current_a);
 void Blazer_FOC_SetPosition(Blazer_FOC_Motor_t *motor, float position_rev);
 void Blazer_FOC_Stop(Blazer_FOC_Motor_t *motor);

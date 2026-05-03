@@ -19,8 +19,9 @@ void StartTask_dji(void *argument)
     //osDelay(100);
      Motor_Registry_Init();
     //g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
-     Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
+    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
     //g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G],1.0f,0.0f,1.0f,0.01f,0.0f);
+    g_motor_list[BLAZER_FOC_MOTOR1_G].set_speed(&g_motor_list[BLAZER_FOC_MOTOR1_G],100.f);
     xLastWakeTime = xTaskGetTickCount();
     /* Infinite loop */
     for(;;)

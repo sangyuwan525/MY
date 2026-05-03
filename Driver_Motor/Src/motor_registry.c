@@ -557,7 +557,7 @@ static void BLAZER_FOC_Adapter_SetZero(Motor_Class_t *self) {
 }
 
 /* Unified registry speed API -> Blazer FOC speed mode.
- * Unit: mechanical r/s, following the Blazer manual.
+ * Unit: RPM, matching DJI's registry-facing speed API.
  */
 static void BLAZER_FOC_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
     Blazer_FOC_Motor_t *blazer = (Blazer_FOC_Motor_t *)self->instance;

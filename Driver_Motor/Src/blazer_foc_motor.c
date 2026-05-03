@@ -6,6 +6,7 @@
 
 #define BLAZER_FOC_DEFAULT_CAN (&hfdcan3)
 #define BLAZER_FOC_READ_PARAM_COUNT 5U
+#define BLAZER_FOC_RPM_PER_RPS 60.0f
 
 /*
  * Blazer FOC device registry.
@@ -138,15 +139,16 @@ void Blazer_FOC_SetMode(Blazer_FOC_Motor_t *motor, Blazer_FOC_Mode_e mode) {
 }
 
 /*
- * Speed command in mechanical revolutions per second (r/s).
- * This matches the Blazer manual and is different from DJI RPM.
+ * Firmware speed command in RPM, matching DJI's external API.
+ * Blazer's CAN protocol uses mechanical revolutions per second, so the
+ * conversion happens when sending/receiving protocol parameters.
  */
-void Blazer_FOC_SetSpeed(Blazer_FOC_Motor_t *motor, float speed_rps) {
+void Blazer_FOC_SetSpeed(Blazer_FOC_Motor_t *motor, float speed_rpm) {
     if (motor == NULL) {
         return;
     }
 
-    motor->ctrl.speed_set = speed_rps;
+    motor->ctrl.speed_set = speed_rpm;
     motor->ctrl.setpoint_pending = 1U;
     Blazer_FOC_SetMode(motor, BLAZER_FOC_MODE_SPEED);
 }
@@ -205,7 +207,9 @@ void Blazer_FOC_Control_Send(Blazer_FOC_Motor_t *motor) {
     }
 
     if (motor->ctrl.mode == BLAZER_FOC_MODE_SPEED) {
-        Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_SPD_SET, motor->ctrl.speed_set);
+        Blazer_FOC_WriteParam(motor,
+                              BLAZER_FOC_PARAM_SPD_SET,
+                              motor->ctrl.speed_set / BLAZER_FOC_RPM_PER_RPS);
         motor->ctrl.setpoint_pending = 0U;
     } else if (motor->ctrl.setpoint_pending != 0U && motor->ctrl.mode == BLAZER_FOC_MODE_CURRENT) {
         Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_I_SET, motor->ctrl.current_set);
@@ -264,7 +268,7 @@ void Blazer_FOC_Update_Feedback(Blazer_FOC_Motor_t *motor, uint32_t identifier, 
             motor->feedback.iq = value;
             break;
         case BLAZER_FOC_PARAM_SPD_FILT:
-            motor->feedback.speed = value;
+            motor->feedback.speed = value * BLAZER_FOC_RPM_PER_RPS;
             break;
         case BLAZER_FOC_PARAM_ENC_RAW:
             motor->feedback.enc_raw = value;
