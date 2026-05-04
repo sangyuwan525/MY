@@ -11,13 +11,13 @@ typedef enum {
 } xiaomi_motor_num_e;
 
 typedef enum {
-    XIAOMI_Motor1_CAN_ID = 0x01,
+    XIAOMI_Motor1_CAN_ID = 0x0A,
     XIAOMI_Motor2_CAN_ID = 0x02,
 } xiaomi_motor_can_id_e;
 
 typedef enum {
-    XIAOMI_Motor1_FEEDBACK_ID = 0x01,
-    XIAOMI_Motor2_FEEDBACK_ID = 0x02,
+    XIAOMI_Motor1_FEEDBACK_ID = XIAOMI_Motor1_CAN_ID,
+    XIAOMI_Motor2_FEEDBACK_ID = XIAOMI_Motor2_CAN_ID,
 } xiaomi_motor_feedback_id_e;
 
 typedef enum {

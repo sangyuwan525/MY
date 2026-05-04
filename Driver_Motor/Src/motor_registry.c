@@ -15,6 +15,8 @@ Motor_Class_t g_motor_list[MOTOR_TOTAL_NUM];
 
 #define MOTOR_TRAJ_TWO_PI 6.28318530717958647692f
 #define MOTOR_TRAJ_PI     3.14159265358979323846f
+#define DM_CMODE_SAVE_DISABLE 0U
+#define DM_CMODE_SAVE_ENABLE  1U
 
 static void DJI_Adapter_Init(Motor_Class_t *self) {
     (void)self;
@@ -122,6 +124,17 @@ static Motor_State_t DJI_Adapter_GetState(Motor_Class_t *self) {
     return state;
 }
 
+static uint16_t DM_Adapter_GetModeID(const Damiao_Motor_t *dm);
+
+static void DM_Adapter_SetRuntimeControlMode(Damiao_Motor_t *dm, mode_e mode) {
+    if (dm == NULL) {
+        return;
+    }
+
+    dm_motor_set_control_mode(dm, mode, DM_CMODE_SAVE_DISABLE);
+    osDelay(100);
+}
+
 static void DM_Adapter_Init(Motor_Class_t *self) {
     Damiao_Motor_t *dm = (Damiao_Motor_t *)self->instance;
 
@@ -132,6 +145,8 @@ static void DM_Adapter_Init(Motor_Class_t *self) {
     dm_motor_clear_para(dm);
 
     if (dm->hcan != NULL) {
+        DM_Adapter_SetRuntimeControlMode(dm, (mode_e)dm->ctrl.mode);
+
         for (int i = 0; i < 3; ++i) {
             dm_motor_clear_err(dm);
             osDelay(10);

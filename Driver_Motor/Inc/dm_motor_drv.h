@@ -187,6 +187,7 @@ void dm_motor_disable(Damiao_Motor_t *motor);
 void dm_motor_clear_para(Damiao_Motor_t *motor);
 void dm_motor_clear_err(Damiao_Motor_t *motor);
 void dm_motor_fbdata(Damiao_Motor_t *motor, uint8_t *rx_data);
+void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save);
 
 void enable_motor_mode(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);
 void disable_motor_mode(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);
@@ -205,4 +206,3 @@ void write_motor_data(uint16_t id, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t 
 void save_motor_data(uint16_t id, uint8_t rid);
 
 #endif /* __DM_MOTOR_DRV_H__ */
-

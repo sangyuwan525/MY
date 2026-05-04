@@ -143,6 +143,36 @@ void dm_motor_clear_err(Damiao_Motor_t *motor)
 *               状态、位置、速度、扭矩以及相关温度参数
 ************************************************************************
 **/
+/* Write RID_CMODE. save != 0 stores the mode in ESC flash. */
+void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save)
+{
+	uint32_t mode_value;
+
+	if (motor == NULL) {
+		return;
+	}
+
+	if (mode != mit_mode && mode != pos_mode && mode != spd_mode && mode != psi_mode) {
+		return;
+	}
+
+	mode_value = (uint32_t)mode;
+	write_motor_data(motor->id,
+	                 RID_CMODE,
+	                 (uint8_t)(mode_value & 0xFFU),
+	                 (uint8_t)((mode_value >> 8) & 0xFFU),
+	                 (uint8_t)((mode_value >> 16) & 0xFFU),
+	                 (uint8_t)((mode_value >> 24) & 0xFFU));
+
+	if (save != 0U) {
+		save_motor_data(motor->id, RID_CMODE);
+	}
+
+	motor->ctrl.mode = mode;
+	motor->tmp.cmode = mode_value;
+}
+
+/* Parse DM motor feedback into the cached state. */
 void dm_motor_fbdata(Damiao_Motor_t *motor, uint8_t *rx_data)
 {
 	motor->para.id = (rx_data[0])&0x0F;
@@ -381,7 +411,7 @@ void spd_ctrl(hcan_t* hcan, uint16_t motor_id, float vel)
 {
 	uint16_t id;
 	uint8_t *vbuf;
-	uint8_t data[4];
+	uint8_t data[8] = {0};
 	
 	id = motor_id + SPD_MODE;
 	vbuf=(uint8_t*)&vel;
@@ -391,7 +421,7 @@ void spd_ctrl(hcan_t* hcan, uint16_t motor_id, float vel)
 	data[2] = *(vbuf+2);
 	data[3] = *(vbuf+3);
 	
-	fdcanx_send_data(hcan, id, data, 4);
+	fdcanx_send_data(hcan, id, data, 8);
 }
 
 /**
@@ -501,4 +531,3 @@ void save_motor_data(uint16_t id, uint8_t rid)
 	uint8_t data[4] = {can_id_l, can_id_h, 0xAA, 0x01};
 	fdcanx_send_data(&hfdcan1, 0x7FF, data, 4);
 }
-
