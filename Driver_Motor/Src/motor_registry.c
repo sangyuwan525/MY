@@ -671,17 +671,57 @@ static uint8_t Motor_IsFeedbackOnline(const Motor_Class_t *motor) {
     }
 }
 
+static void Motor_SmoothGoto_StartFromPosition(Motor_Smooth_Goto_Profile_t *profile,
+                                               float start_position,
+                                               float target_position,
+                                               float max_speed) {
+    float delta_pos;
+
+    if (profile == NULL) {
+        return;
+    }
+
+    memset(profile, 0, sizeof(*profile));
+    profile->start_position = start_position;
+    profile->target_position = target_position;
+    profile->max_speed = fabsf(max_speed);
+    profile->start_tick_ms = HAL_GetTick();
+
+    delta_pos = profile->target_position - profile->start_position;
+    if (fabsf(delta_pos) < 1e-6f || profile->max_speed < 1e-6f) {
+        profile->duration_s = 0.0f;
+        profile->active = 0U;
+        return;
+    }
+
+    profile->duration_s = fabsf(delta_pos) * MOTOR_TRAJ_PI / (2.0f * profile->max_speed);
+    if (profile->duration_s < 0.001f) {
+        profile->duration_s = 0.001f;
+    }
+    profile->active = 1U;
+}
+
 static void Motor_UpdateSmoothGotoMIT(int motor_index, Motor_Class_t *motor) {
     if (motor == NULL || motor->smooth_pending == 0U) {
         return;
     }
 
     if (motor->smooth_started == 0U) {
-        if (Motor_IsFeedbackOnline(motor) == 0U || motor->get_state == NULL) {
+        if (motor->get_state == NULL) {
             return;
         }
 
-        Motor_SmoothGoto_Start(&motor->smooth_goto, motor_index, motor->smooth_target, motor->smooth_max_speed);
+        if (Motor_IsFeedbackOnline(motor) != 0U) {
+            Motor_SmoothGoto_Start(&motor->smooth_goto, motor_index, motor->smooth_target, motor->smooth_max_speed);
+        } else if (motor->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
+            Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)motor->instance;
+            Motor_SmoothGoto_StartFromPosition(&motor->smooth_goto,
+                                               unitree->ctrl.pos_set,
+                                               motor->smooth_target,
+                                               motor->smooth_max_speed);
+        } else {
+            return;
+        }
         motor->smooth_started = 1U;
     }
 

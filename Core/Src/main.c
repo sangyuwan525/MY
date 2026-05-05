@@ -150,15 +150,6 @@ int main(void)
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
-  /* USER CODE BEGIN RTOS_CAN_START */
-  /*
-   * CAN RX must be started after FreeRTOS creates motorRxQueueHandle and before
-   * the scheduler starts running tasks. Otherwise HAL callbacks have no queue to
-   * push motor feedback into, and Motor_Feedback_Dispatch() will never see data.
-   */
-  bsp_can_init(motorRxQueueHandle, NULL);
-  /* USER CODE END RTOS_CAN_START */
-
   /* Start scheduler */
   osKernelStart();
 

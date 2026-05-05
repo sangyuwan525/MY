@@ -233,6 +233,12 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
     if (motor == NULL || data == NULL) {
         return;
     }
+    if (data[0] != UNITREE_GO_HEAD_0 || data[1] != UNITREE_GO_HEAD_1) {
+        return;
+    }
+    if ((data[2] & 0x0FU) != (motor->id & 0x0FU)) {
+        return;
+    }
 
     crc = unitree_crc_ccitt(0, data, UNITREE_GO_M8010_6_FB_PACKET_LEN - 2U);
     packet_crc = unitree_get_u16_le(&data[14]);
@@ -247,4 +253,57 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
     motor->feedback.temp = (float)((int8_t)data[11]);
     motor->feedback.error_code = data[12] & 0x07U;
     motor->feedback.online = true;
+}
+
+uint8_t unitree_go_m8010_6_process_rx_bytes(const uint8_t *data, uint16_t len) {
+    static uint8_t frame[UNITREE_GO_M8010_6_FB_PACKET_LEN];
+    static uint8_t frame_len = 0U;
+    uint8_t parsed_count = 0U;
+
+    if (data == NULL) {
+        return 0U;
+    }
+
+    for (uint16_t i = 0U; i < len; ++i) {
+        uint8_t byte = data[i];
+
+        if (frame_len == 0U) {
+            if (byte == UNITREE_GO_HEAD_0) {
+                frame[frame_len++] = byte;
+            }
+            continue;
+        }
+
+        if (frame_len == 1U) {
+            if (byte == UNITREE_GO_HEAD_1) {
+                frame[frame_len++] = byte;
+            } else if (byte == UNITREE_GO_HEAD_0) {
+                frame[0] = byte;
+                frame_len = 1U;
+            } else {
+                frame_len = 0U;
+            }
+            continue;
+        }
+
+        frame[frame_len++] = byte;
+        if (frame_len >= UNITREE_GO_M8010_6_FB_PACKET_LEN) {
+            uint8_t motor_id = frame[2] & 0x0FU;
+
+            if (unitree_crc_ccitt(0, frame, UNITREE_GO_M8010_6_FB_PACKET_LEN - 2U) == unitree_get_u16_le(&frame[14])) {
+                for (uint8_t motor_idx = 0U; motor_idx < UNITREE_GO_M8010_6_MOTOR_COUNT; ++motor_idx) {
+                    Unitree_GO_M8010_6_Motor_t *motor = &g_unitree_go_m8010_6_motor_registry[motor_idx];
+                    if ((motor->id & 0x0FU) == motor_id) {
+                        unitree_go_m8010_6_update_feedback(motor, frame);
+                        ++parsed_count;
+                        break;
+                    }
+                }
+            }
+
+            frame_len = 0U;
+        }
+    }
+
+    return parsed_count;
 }

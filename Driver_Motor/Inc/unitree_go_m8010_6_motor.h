@@ -74,6 +74,7 @@ void unitree_go_m8010_6_motor_init(void);
 void unitree_go_m8010_6_motor_ctrl_send(Unitree_GO_M8010_6_Motor_t *motor);
 void unitree_go_m8010_6_motor_stop(Unitree_GO_M8010_6_Motor_t *motor);
 void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const uint8_t data[UNITREE_GO_M8010_6_FB_PACKET_LEN]);
+uint8_t unitree_go_m8010_6_process_rx_bytes(const uint8_t *data, uint16_t len);
 uint8_t unitree_go_m8010_6_transport_send(UART_HandleTypeDef *huart, const uint8_t *data, uint16_t len);
 
 #endif /* R1_SUPERSTRUCTURE_UNITREE_GO_M8010_6_MOTOR_H */
