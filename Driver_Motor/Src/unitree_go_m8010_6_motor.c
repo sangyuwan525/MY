@@ -5,6 +5,8 @@
 
 #define UNITREE_GO_HEAD_0 0xFEU
 #define UNITREE_GO_HEAD_1 0xEEU
+#define UNITREE_GO_FB_HEAD_0 0xFDU
+#define UNITREE_GO_FB_HEAD_1 0xEEU
 #define UNITREE_GO_DEFAULT_GEAR_RATIO 6.33f
 #define UNITREE_GO_DEFAULT_KD 0.01f
 #define UNITREE_GO_DEFAULT_KP 0.05f
@@ -233,7 +235,7 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
     if (motor == NULL || data == NULL) {
         return;
     }
-    if (data[0] != UNITREE_GO_HEAD_0 || data[1] != UNITREE_GO_HEAD_1) {
+    if (data[0] != UNITREE_GO_FB_HEAD_0 || data[1] != UNITREE_GO_FB_HEAD_1) {
         return;
     }
     if ((data[2] & 0x0FU) != (motor->id & 0x0FU)) {
@@ -268,16 +270,16 @@ uint8_t unitree_go_m8010_6_process_rx_bytes(const uint8_t *data, uint16_t len) {
         uint8_t byte = data[i];
 
         if (frame_len == 0U) {
-            if (byte == UNITREE_GO_HEAD_0) {
+            if (byte == UNITREE_GO_FB_HEAD_0) {
                 frame[frame_len++] = byte;
             }
             continue;
         }
 
         if (frame_len == 1U) {
-            if (byte == UNITREE_GO_HEAD_1) {
+            if (byte == UNITREE_GO_FB_HEAD_1) {
                 frame[frame_len++] = byte;
-            } else if (byte == UNITREE_GO_HEAD_0) {
+            } else if (byte == UNITREE_GO_FB_HEAD_0) {
                 frame[0] = byte;
                 frame_len = 1U;
             } else {

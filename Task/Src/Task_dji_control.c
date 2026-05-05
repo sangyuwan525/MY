@@ -37,23 +37,22 @@ void StartTask_dji(void *argument)
 //     0.0f
 // );
 
-//     g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
-//     &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
-//     1.0f,
-//     0.0f,
-//     0.03f,
-//     0.01f,
-//     0.0f
-// );
-
-    Motor_StartSmoothGotoMIT(
-    UNITREE_GO_M8010_6_MOTOR1_G,
+    g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
+    &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
     1.0f,
-    1.0f,
+    0.0f,
     0.03f,
     0.01f,
     0.0f
 );
+//     Motor_StartSmoothGotoMIT(
+//     UNITREE_GO_M8010_6_MOTOR1_G,
+//     1.0f,
+//     10.0f,
+//     0.03f,
+//     0.01f,
+//     0.0f
+// );
 
 
     //g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
