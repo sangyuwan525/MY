@@ -28,7 +28,7 @@ void dm_motor_enable(Damiao_Motor_t *motor)
 		case psi_mode:
 			enable_motor_mode(motor->hcan, motor->id, PSI_MODE);
 			break;
-	}	
+	}
 }
 /**
 ************************************************************************
@@ -56,7 +56,7 @@ void dm_motor_disable(Damiao_Motor_t *motor)
 		case psi_mode:
 			disable_motor_mode(motor->hcan, motor->id, PSI_MODE);
 			break;
-	}	
+	}
 	dm_motor_clear_para(motor);
 }
 /**
@@ -143,7 +143,7 @@ void dm_motor_clear_err(Damiao_Motor_t *motor)
 *               状态、位置、速度、扭矩以及相关温度参数
 ************************************************************************
 **/
-/* Write RID_CMODE. save != 0 stores the mode in ESC flash. */
+/* Write RID_CMODE only. Do not store the mode in ESC flash. */
 void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save)
 {
 	uint32_t mode_value;
@@ -157,6 +157,10 @@ void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save)
 	}
 
 	mode_value = (uint32_t)mode;
+	motor->param_ack_valid = 0U;
+	motor->param_ack_rid = RID_CMODE;
+	motor->param_ack_value = 0U;
+
 	write_motor_data(motor->id,
 	                 RID_CMODE,
 	                 (uint8_t)(mode_value & 0xFFU),
@@ -164,17 +168,41 @@ void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save)
 	                 (uint8_t)((mode_value >> 16) & 0xFFU),
 	                 (uint8_t)((mode_value >> 24) & 0xFFU));
 
-	if (save != 0U) {
-		save_motor_data(motor->id, RID_CMODE);
-	}
+	(void)save;
 
 	motor->ctrl.mode = mode;
 	motor->tmp.cmode = mode_value;
 }
 
+uint8_t dm_motor_control_mode_confirmed(Damiao_Motor_t *motor, mode_e mode)
+{
+	if (motor == NULL) {
+		return 0U;
+	}
+
+	return (motor->param_ack_valid != 0U &&
+	        motor->param_ack_rid == RID_CMODE &&
+	        motor->param_ack_value == (uint32_t)mode) ? 1U : 0U;
+}
+
 /* Parse DM motor feedback into the cached state. */
 void dm_motor_fbdata(Damiao_Motor_t *motor, uint8_t *rx_data)
 {
+	uint8_t can_id_l;
+	uint8_t can_id_h;
+
+	if (motor == NULL || rx_data == NULL) {
+		return;
+	}
+
+	can_id_l = (uint8_t)(motor->id & 0xFFU);
+	can_id_h = (uint8_t)((motor->id >> 8U) & 0x07U);
+	if (rx_data[0] == can_id_l &&
+	    rx_data[1] == can_id_h &&
+	    (rx_data[2] == 0x33U || rx_data[2] == 0x55U)) {
+		return;
+	}
+
 	motor->para.id = (rx_data[0])&0x0F;
 	motor->para.state = (rx_data[0])>>4;
 	motor->para.p_int=(rx_data[1]<<8)|rx_data[2];
@@ -185,6 +213,9 @@ void dm_motor_fbdata(Damiao_Motor_t *motor, uint8_t *rx_data)
 	motor->para.tor = uint_to_float(motor->para.t_int, -motor->tmp.TMAX, motor->tmp.TMAX, 12); // (-18.0,18.0)
 	motor->para.Tmos = (float)(rx_data[6]);
 	motor->para.Tcoil = (float)(rx_data[7]);
+	if (motor->para.id == (uint8_t)(motor->id & 0x0FU)) {
+		motor->feedback_online = 1U;
+	}
 }
 
 /**
@@ -527,7 +558,8 @@ void save_motor_data(uint16_t id, uint8_t rid)
 {
 	uint8_t can_id_l = id & 0xFF;       // 低 8 位
     uint8_t can_id_h = (id >> 8) & 0x07; // 高 3 位
+	(void)rid;
 	
-	uint8_t data[4] = {can_id_l, can_id_h, 0xAA, 0x01};
-	fdcanx_send_data(&hfdcan1, 0x7FF, data, 4);
+	uint8_t data[8] = {can_id_l, can_id_h, 0xAA, 0x00, 0, 0, 0, 0};
+	fdcanx_send_data(&hfdcan1, 0x7FF, data, 8);
 }

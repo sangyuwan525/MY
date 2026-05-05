@@ -77,15 +77,38 @@ void read_all_motor_data(Damiao_Motor_t *motor)
 
 void receive_motor_data(Damiao_Motor_t *motor, uint8_t *data)
 {
+	float_type_u y;
+	uint16_t rid_value;
+
+	if (motor == NULL || data == NULL) {
+		return;
+	}
+
+	if (data[2] == 0x55)
+	{
+		rid_value = data[3];
+		y.b_val[0] = data[4];
+		y.b_val[1] = data[5];
+		y.b_val[2] = data[6];
+		y.b_val[3] = data[7];
+
+		motor->param_ack_valid = 1U;
+		motor->param_ack_rid = (uint8_t)rid_value;
+		motor->param_ack_value = y.u_val;
+
+		if (rid_value == RID_CMODE) {
+			motor->tmp.cmode = y.u_val;
+		}
+		return;
+	}
+
 	if (motor->tmp.read_flag == 0) {
 		return;
 	}
 
-	float_type_u y;
-
 	if (data[2] == 0x33)
 	{
-		uint16_t rid_value = data[3];
+		rid_value = data[3];
 		y.b_val[0] = data[4];
 		y.b_val[1] = data[5];
 		y.b_val[2] = data[6];

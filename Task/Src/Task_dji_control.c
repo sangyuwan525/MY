@@ -16,30 +16,28 @@ void StartTask_dji(void *argument)
     TickType_t xLastWakeTime;
     Motor_Rx_Queue_t rx_msg_tmp;
     const TickType_t xFrequency = pdMS_TO_TICKS(1);
-    //osDelay(100);
-     Motor_Registry_Init();
+    osDelay(2000);
+    Motor_Registry_Init();
 
-    // dm_motor_set_control_mode(&g_dm_motor_registry[DM_Motor1], mit_mode, 1);
-    // osDelay(100);
-    // g_motor_list[DM_JOINT_G].enable(&g_motor_list[DM_JOINT_G]);
+    // g_motor_list[DM_JOINT_G].set_mit(
+    //     &g_motor_list[DM_JOINT_G],
+    //     1.0f,
+    //     0.0f,
+    //     0.5f,
+    //     0.2f,
+    //     0.0f
+    // );
 
-    g_motor_list[DM_JOINT_G].set_mit(
-    &g_motor_list[DM_JOINT_G],
-    1.0f,   // position rad
-    0.0f,   // speed rad/s
-    2.0f,   // kp
-    0.1f,   // kd
-    0.0f    // torque
-);
+
     //g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
     //Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
-    // Motor_StartSmoothGotoMIT(DM_JOINT_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
+     // Motor_StartSmoothGotoMIT(DM_JOINT_G, 1.0f, 1.0f, 0.5f, 0.2f, 0.0f);
     // g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G],1.0f,0.0f,1.0f,0.01f,0.0f);
     //dm_motor_set_control_mode(&g_dm_motor_registry[DM_Motor1], spd_mode, 1);
     // g_motor_list[XIAOMI_MOTOR1_G].set_speed(&g_motor_list[XIAOMI_MOTOR1_G],2.0f);
     // g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G],2.0f);
     // g_motor_list[DM_JOINT_G].enable(&g_motor_list[DM_JOINT_G]);
-    // g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G],2.0f);
+     g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G],20.0f);
     // g_motor_list[BLAZER_FOC_MOTOR1_G].set_speed(&g_motor_list[BLAZER_FOC_MOTOR1_G],60.f);
     xLastWakeTime = xTaskGetTickCount();
     /* Infinite loop */

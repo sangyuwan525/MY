@@ -170,6 +170,10 @@ typedef struct
     motor_fbpara_t para;
     motor_ctrl_t ctrl;
 	esc_inf_t tmp;
+	uint8_t feedback_online;
+	uint8_t param_ack_valid;
+	uint8_t param_ack_rid;
+	uint32_t param_ack_value;
 } Damiao_Motor_t;
 
 
@@ -188,6 +192,7 @@ void dm_motor_clear_para(Damiao_Motor_t *motor);
 void dm_motor_clear_err(Damiao_Motor_t *motor);
 void dm_motor_fbdata(Damiao_Motor_t *motor, uint8_t *rx_data);
 void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save);
+uint8_t dm_motor_control_mode_confirmed(Damiao_Motor_t *motor, mode_e mode);
 
 void enable_motor_mode(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);
 void disable_motor_mode(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);

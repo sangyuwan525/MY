@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cmsis_os.h"
+#include "dm_motor_ctrl.h"
 #include "locator_driver.h"
 
 #define BLAZER_FOC_NODE_ID_MAX 0x07U
@@ -68,7 +69,8 @@ static bool Is_Motor_Rx_Message(const FDCAN_RxHeaderTypeDef *rx_header) {
 
     if (rx_header->IdType == FDCAN_STANDARD_ID) {
         return ((rx_header->Identifier >= 0x201U && rx_header->Identifier <= 0x208U) ||
-                (rx_header->Identifier == 0x000U));
+                (rx_header->Identifier == 0x000U) ||
+                (rx_header->Identifier == DM_Motor1_MST_ID));
     }
 
     comm_type = (uint8_t)((rx_header->Identifier >> 24) & 0x1FU);

@@ -131,8 +131,16 @@ static void DM_Adapter_SetRuntimeControlMode(Damiao_Motor_t *dm, mode_e mode) {
         return;
     }
 
+    if (mode != mit_mode && mode != pos_mode && mode != spd_mode && mode != psi_mode) {
+        return;
+    }
+
+    if ((mode_e)dm->ctrl.mode == mode && dm->tmp.cmode == (uint32_t)mode) {
+        return;
+    }
+
+    dm_motor_clear_para(dm);
     dm_motor_set_control_mode(dm, mode, DM_CMODE_SAVE_DISABLE);
-    osDelay(100);
 }
 
 static void DM_Adapter_Init(Motor_Class_t *self) {
@@ -142,11 +150,10 @@ static void DM_Adapter_Init(Motor_Class_t *self) {
         return;
     }
 
+    dm->feedback_online = 0U;
     dm_motor_clear_para(dm);
 
     if (dm->hcan != NULL) {
-        DM_Adapter_SetRuntimeControlMode(dm, (mode_e)dm->ctrl.mode);
-
         for (int i = 0; i < 3; ++i) {
             dm_motor_clear_err(dm);
             osDelay(10);
@@ -215,7 +222,7 @@ static void DM_Adapter_SetSpeed(Motor_Class_t *self, float speed) {
         return;
     }
 
-    dm->ctrl.mode = spd_mode;
+    DM_Adapter_SetRuntimeControlMode(dm, spd_mode);
     dm->ctrl.vel_set = speed;
     dm->ctrl.pos_set = 0.0f;
 }
@@ -227,7 +234,7 @@ static void DM_Adapter_SetPosition(Motor_Class_t *self, float position, float ve
         return;
     }
 
-    dm->ctrl.mode = pos_mode;
+    DM_Adapter_SetRuntimeControlMode(dm, pos_mode);
     dm->ctrl.pos_set = position;
     dm->ctrl.vel_set = vel_limit;
 }
@@ -239,7 +246,7 @@ static void DM_Adapter_SetMIT(Motor_Class_t *self, float position, float speed, 
         return;
     }
 
-    dm->ctrl.mode = mit_mode;
+    DM_Adapter_SetRuntimeControlMode(dm, mit_mode);
     dm->ctrl.pos_set = position;
     dm->ctrl.vel_set = speed;
     dm->ctrl.kp_set = kp;
@@ -254,7 +261,7 @@ static void DM_Adapter_SetPSI(Motor_Class_t *self, float position, float speed, 
         return;
     }
 
-    dm->ctrl.mode = psi_mode;
+    DM_Adapter_SetRuntimeControlMode(dm, psi_mode);
     dm->ctrl.pos_set = position;
     dm->ctrl.vel_set = speed;
     dm->ctrl.cur_set = current;
@@ -652,11 +659,16 @@ static uint8_t Motor_IsFeedbackOnline(const Motor_Class_t *motor) {
         return 0U;
     }
 
-    if (motor->type == MOTOR_TYPE_XIAOMI) {
+    switch (motor->type) {
+    case MOTOR_TYPE_DAMIAO:
+        return ((Damiao_Motor_t *)motor->instance)->feedback_online ? 1U : 0U;
+    case MOTOR_TYPE_XIAOMI:
         return ((Xiaomi_Motor_t *)motor->instance)->feedback.online ? 1U : 0U;
+    case MOTOR_TYPE_UNITREE_GO_M8010_6:
+        return ((Unitree_GO_M8010_6_Motor_t *)motor->instance)->feedback.online ? 1U : 0U;
+    default:
+        return 1U;
     }
-
-    return 1U;
 }
 
 static void Motor_UpdateSmoothGotoMIT(int motor_index, Motor_Class_t *motor) {

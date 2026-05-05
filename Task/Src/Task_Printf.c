@@ -189,6 +189,7 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         // RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
         //RTT_Printf("face %d\n",get_face(1,0));
+        RTT_Printf("online %d\n",g_dm_motor_registry[DM_Motor1].feedback_online);
         osDelay(10);
     }
     /* USER CODE END StartTask_Printf */

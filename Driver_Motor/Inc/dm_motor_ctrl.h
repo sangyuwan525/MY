@@ -19,13 +19,13 @@ typedef enum
 
 typedef enum
 {
-	DM_Motor1_CAN_ID = 0x01,
+	DM_Motor1_CAN_ID = 0x02,
  //	DM_Motor2_CAN_ID = 0x02,
 } dm_motor_can_id_e;
 
 typedef enum
 {
-	DM_Motor1_MST_ID = 0x000,
+	DM_Motor1_MST_ID = 0x12,
  //	DM_Motor2_MST_ID = 0x001,
 } dm_motor_mst_id_e;
 
