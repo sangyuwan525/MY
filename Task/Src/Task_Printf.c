@@ -198,7 +198,8 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         // RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
         //RTT_Printf("face %d\n",get_face(1,0));
-        //RTT_Printf("online %d\n",g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.online);
+        RTT_Printf("unitree_online=%d  unitree_angle=%f\n",g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.online,g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.angle);
+        //RTT_Printf("xiaomi_online=$d  xiaomi_angle=%f\n",g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.online,g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.angle);
         osDelay(10);
     }
     /* USER CODE END StartTask_Printf */

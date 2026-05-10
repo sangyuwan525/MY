@@ -18,11 +18,13 @@
  *    这样前后轮都围绕同一个车体速度目标滚动，前轮只额外补偿小臂扫动。
  */
 
+// 取浮点数绝对值。
 static float lw_absf(float value) {
     return (value >= 0.0f) ? value : -value;
 }
 
 /* 通用限幅，所有位置/速度/姿态修正都走这里，避免输出突然越界。 */
+//通用限幅函数。如果值超过最大值，就返回最大值；如果小于最小值，就返回最小值。
 static float lw_clampf(float value, float min_value, float max_value) {
     if (value > max_value) {
         return max_value;
@@ -35,6 +37,7 @@ static float lw_clampf(float value, float min_value, float max_value) {
 
 /* 一阶斜坡限速。
  * 用于高度和高度速度，避免 target_height_mm 一变就直接阶跃到目标。
+ * 当前值不能一下子跳到目标值，每个周期最多变化 max_step。
  */
 static float lw_rate_limit(float current, float target, float max_step) {
     float delta = target - current;
@@ -57,6 +60,9 @@ static uint8_t lw_motor_valid(int motor_index) {
 
 /* 统一位置接口：当前主要用于小米滑轨。
  * vel_limit 会继续传给电机适配层，由对应电机驱动解释单位。
+* 检查电机编号是否合法；
+* 检查这个电机有没有 set_position 函数；
+* 如果有，就调用：
  */
 static void lw_apply_position(int motor_index, float position, float vel_limit) {
     if (lw_motor_valid(motor_index) == 0U) {
@@ -324,6 +330,9 @@ void LiftWalk_Reset(LiftWalk_Controller_t *ctrl, float current_height_mm) {
     ctrl->out.height_ref_mm = lw_clampf(current_height_mm, ctrl->cfg.min_height_mm, ctrl->cfg.max_height_mm);
     ctrl->out.height_dot_ref_mm_s = 0.0f;
     ctrl->last_height_target_mm = ctrl->out.height_ref_mm;
+    ctrl->lift_action_active = 0U;
+    ctrl->lift_action_done = 0U;
+    ctrl->lift_action_target_mm = ctrl->out.height_ref_mm;
     ctrl->out.status = LIFT_WALK_OK;
 }
 
@@ -522,6 +531,64 @@ LiftWalk_Status_e LiftWalk_Update(LiftWalk_Controller_t *ctrl, const LiftWalk_In
 /* 停止函数目前只清零前轮速度，并冻结高度轨迹速度。
  * 小臂和滑轨不在这里强制回零，是为了避免保护触发时机构突然下坠或猛动。
  */
+/* 底盘抬升动作：执行中返回 0，到达目标高度且速度降下来后返回 1。 */
+uint8_t LiftWalk_RunLiftAction(LiftWalk_Controller_t *ctrl,
+                               const LiftWalk_Input_t *in,
+                               float vx_mm_s,
+                               float start_height_mm,
+                               float done_tolerance_mm) {
+    LiftWalk_Input_t action_in;
+    float target;
+    float tolerance;
+    LiftWalk_Status_e status;
+
+    if (ctrl == NULL || in == NULL) {
+        return 0U;
+    }
+    if (ctrl->initialized == 0U) {
+        LiftWalk_Init(ctrl, NULL);
+    }
+
+    action_in = *in;
+    action_in.vx_mm_s = vx_mm_s;
+
+    target = lw_clampf(action_in.target_height_mm, ctrl->cfg.min_height_mm, ctrl->cfg.max_height_mm);
+    tolerance = (done_tolerance_mm > LIFT_WALK_EPS) ? done_tolerance_mm : 2.0f;
+
+    if (lw_absf(target - ctrl->lift_action_target_mm) > tolerance) {
+        ctrl->lift_action_active = 0U;
+        ctrl->lift_action_done = 0U;
+    }
+
+    if (ctrl->lift_action_done != 0U) {
+        return 1U;
+    }
+
+    if (ctrl->lift_action_active == 0U) {
+        LiftWalk_Reset(ctrl, start_height_mm);
+        ctrl->lift_action_active = 1U;
+        ctrl->lift_action_done = 0U;
+        ctrl->lift_action_target_mm = target;
+    }
+
+    status = LiftWalk_Update(ctrl, &action_in);
+    if (status != LIFT_WALK_OK) {
+        ctrl->lift_action_active = 0U;
+        ctrl->lift_action_done = 0U;
+        return 0U;
+    }
+
+    if (lw_absf(ctrl->out.height_ref_mm - target) <= tolerance &&
+        lw_absf(ctrl->out.height_dot_ref_mm_s) <= (ctrl->cfg.lift_amax_mm_s2 * action_in.dt_s + LIFT_WALK_EPS)) {
+        ctrl->lift_action_active = 0U;
+        ctrl->lift_action_done = 1U;
+        return 1U;
+    }
+
+    return 0U;
+}
+
+/* 停止行走轮并冻结抬升动作状态；滑轨和小臂保持最后一次位置命令。 */
 void LiftWalk_Stop(LiftWalk_Controller_t *ctrl) {
     if (ctrl == NULL) {
         return;
@@ -532,6 +599,7 @@ void LiftWalk_Stop(LiftWalk_Controller_t *ctrl) {
     ctrl->out.front_wheel_rad_s[LIFT_WALK_RIGHT] = 0.0f;
     ctrl->out.rear_wheel_rpm[LIFT_WALK_LEFT] = 0.0f;
     ctrl->out.rear_wheel_rpm[LIFT_WALK_RIGHT] = 0.0f;
+    ctrl->lift_action_active = 0U;
 
     lw_apply_speed(ctrl->cfg.front_wheel_motor[LIFT_WALK_LEFT], 0.0f);
     lw_apply_speed(ctrl->cfg.front_wheel_motor[LIFT_WALK_RIGHT], 0.0f);

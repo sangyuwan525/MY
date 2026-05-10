@@ -7,7 +7,7 @@
 
 #define LIFT_WALK_SUPPORT_COUNT 4U  //表示四个支撑点：前左、前右、后左、后右
 #define LIFT_WALK_SIDE_COUNT 2U     //表示左右两侧：左侧、右侧。
-#define LIFT_WALK_INVALID_MOTOR (-1)     // 表示无效电机编号。
+#define LIFT_WALK_INVALID_MOTOR (-1)     // 表示无效电机编号。cfg.rear_wheel_motor[LIFT_WALK_LEFT] = LIFT_WALK_INVALID_MOTOR;表示不控制这个轮子
 
 /* 控制器状态/保护原因。
  * LIFT_WALK_OK 表示本周期解算成功；ABORT_* 表示姿态或机构几何已经超出安全范围。
@@ -16,9 +16,9 @@ typedef enum {
     LIFT_WALK_OK = 0,   //正常
     LIFT_WALK_ABORT_ROLL_LIMIT,     //roll 角过大，触发保护
     LIFT_WALK_ABORT_PITCH_LIMIT,    //pitch 角过大，触发保护
-    LIFT_WALK_ABORT_HEIGHT_LIMIT,
-    LIFT_WALK_ABORT_ARM_RANGE,
-    LIFT_WALK_ABORT_ARM_DEAD_ZONE,
+    LIFT_WALK_ABORT_HEIGHT_LIMIT,   //高度或输入异常
+    LIFT_WALK_ABORT_ARM_RANGE,      //小臂目标高度超出几何可达范围
+    LIFT_WALK_ABORT_ARM_DEAD_ZONE,  //小臂接近死点，不适合继续控制
 } LiftWalk_Status_e;
 
 /* 四个支撑点的逻辑编号。
@@ -42,8 +42,8 @@ typedef enum {
  * y_mm: 左右方向，向左为正。
  */
 typedef struct {
-    float x_mm;
-    float y_mm;
+    float x_mm;     //前后方向，向前为正
+    float y_mm;     //左右方向，向左为正
 } LiftWalk_Point_t;
 
 typedef struct {
@@ -68,12 +68,12 @@ typedef struct {
      * slider_min/max_rad: 软限位，防止目标位置超过滑轨行程。
      * slider_vel_limit_rad_s: 位置模式速度限制。
      */
-    float slider_pitch_mm_per_rev;
+    float slider_pitch_mm_per_rev;      //丝杆转一圈，滑块移动多少毫米
     float slider_reduction_ratio;
     float slider_zero_rad[LIFT_WALK_SIDE_COUNT];
     float slider_min_rad[LIFT_WALK_SIDE_COUNT];
     float slider_max_rad[LIFT_WALK_SIDE_COUNT];
-    float slider_vel_limit_rad_s;
+    float slider_vel_limit_rad_s;       //小米电机位置模式的速度限制。
 
     /* 宇树小臂几何和 MIT 参数。
      * arm_length_mm: 小臂关节中心到轮/支撑点的长度。
@@ -83,10 +83,10 @@ typedef struct {
      * arm_dead_cos_min: cos(phi) 过小时接近机构死点，高度对角度不敏感，直接中止。
      * arm_kp/kd/torque_ff: 下发给宇树 MIT 控制的参数。
      */
-    float arm_length_mm[LIFT_WALK_SIDE_COUNT];
-    float arm_pivot_z_mm[LIFT_WALK_SIDE_COUNT];
-    float arm_zero_offset_rad[LIFT_WALK_SIDE_COUNT];
-    float arm_min_rad[LIFT_WALK_SIDE_COUNT];
+    float arm_length_mm[LIFT_WALK_SIDE_COUNT];      //小臂关节中心 到 轮子/支撑点 的距离
+    float arm_pivot_z_mm[LIFT_WALK_SIDE_COUNT];     //小臂关节中心相对支撑高度零点的竖直偏移
+    float arm_zero_offset_rad[LIFT_WALK_SIDE_COUNT];    //机械零位和数学模型角度 phi 的偏置，如果你的电机 0 rad 不等于小臂水平位置，就要靠这个参数修正
+    float arm_min_rad[LIFT_WALK_SIDE_COUNT];        //反解出来的角度超过范围，会被限幅
     float arm_max_rad[LIFT_WALK_SIDE_COUNT];
     float arm_dead_cos_min;
     float arm_kp;
@@ -109,10 +109,10 @@ typedef struct {
      * 0 表示轮子的有效驱动方向沿 x 正方向，+pi/4 表示朝左前 45 度，
      * -pi/4 表示朝右前 45 度。45 度安装的 Blazer 后轮必须用这个角度做速度投影。
      */
-    float rear_wheel_drive_angle_rad[LIFT_WALK_SIDE_COUNT];
-    float front_wheel_speed_limit_rad_s;
-    float rear_wheel_speed_limit_rpm;
-    float wheel_arm_comp_gain;
+    float rear_wheel_drive_angle_rad[LIFT_WALK_SIDE_COUNT];     //后轮全向轮的驱动方向角。
+    float front_wheel_speed_limit_rad_s;    //前轮角速度限幅，单位 rad/s。
+    float rear_wheel_speed_limit_rpm;       //后轮转速限幅，单位 rpm。
+    float wheel_arm_comp_gain;              //小臂水平扫动速度补偿系数
     float front_wheel_sign[LIFT_WALK_SIDE_COUNT];
     float rear_wheel_sign[LIFT_WALK_SIDE_COUNT];
 
@@ -141,8 +141,8 @@ typedef struct {
     /* 抬升轨迹限制。
      * 控制器会把 target_height_mm 变成带速度/加速度约束的 height_ref_mm。
      */
-    float min_height_mm;
-    float max_height_mm;
+    float min_height_mm;    //最低允许高度。
+    float max_height_mm;    //最高允许高度。
     float lift_vmax_mm_s;
     float lift_amax_mm_s2;
 } LiftWalk_Config_t;
@@ -183,6 +183,7 @@ typedef struct {
     float slider_motor_rad[LIFT_WALK_SIDE_COUNT];
     /* 两个宇树小臂 MIT 位置/速度目标。 */
     float arm_theta_rad[LIFT_WALK_SIDE_COUNT];
+    /* 两个宇树小臂角速度目标，单位 rad/s。 */
     float arm_theta_dot_rad_s[LIFT_WALK_SIDE_COUNT];
     /* 小臂转动导致轮心相对底盘的水平速度，用于前轮速度补偿。 */
     float arm_x_dot_mm_s[LIFT_WALK_SIDE_COUNT];
@@ -201,10 +202,13 @@ typedef struct {
     /* 控制器持有配置、上一次输出和积分项。 */
     LiftWalk_Config_t cfg;
     LiftWalk_Output_t out;
-    float roll_i;
-    float pitch_i;
-    float last_height_target_mm;
-    uint8_t initialized;
+    float roll_i;   //roll PID 的积分项
+    float pitch_i;  //pitch PID 的积分项。用于长期消除 pitch 静态误差。
+    float last_height_target_mm;        //上一次目标高度。
+    uint8_t lift_action_active;         //表示抬升动作是否正在执行。
+    uint8_t lift_action_done;           //表示抬升动作是否完成。
+    float lift_action_target_mm;        //当前抬升动作的目标高度。
+    uint8_t initialized;                //是否已经初始化。
 } LiftWalk_Controller_t;
 
 /* 填充一套可编译运行的默认参数。
@@ -217,6 +221,12 @@ void LiftWalk_Init(LiftWalk_Controller_t *ctrl, const LiftWalk_Config_t *cfg);
 void LiftWalk_Reset(LiftWalk_Controller_t *ctrl, float current_height_mm);
 /* 单周期更新：计算四支撑点、小臂、滑轨和前轮命令，必要时直接下发电机。 */
 LiftWalk_Status_e LiftWalk_Update(LiftWalk_Controller_t *ctrl, const LiftWalk_Input_t *in);
+/* 底盘抬升动作：执行中返回 0，到达目标高度且速度降下来后返回 1。 */
+uint8_t LiftWalk_RunLiftAction(LiftWalk_Controller_t *ctrl,
+                               const LiftWalk_Input_t *in,
+                               float vx_mm_s,
+                               float start_height_mm,
+                               float done_tolerance_mm);
 /* 停止前轮并冻结抬升速度；用于保护触发或外部急停。 */
 void LiftWalk_Stop(LiftWalk_Controller_t *ctrl);
 /* 获取最近一次输出，便于 RTT/调试打印。 */

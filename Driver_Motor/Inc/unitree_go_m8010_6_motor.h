@@ -59,6 +59,7 @@ typedef struct {
     float speed_set;         /* 输出端目标速度，单位 rad/s，对应注册表 speed。 */
     float kp_set;            /* 位置刚度，官方 GO 包范围 0.0-1.0。 */
     float kd_set;            /* 速度阻尼，官方 GO 包范围 0.0-1.0。 */
+    uint8_t zero_calibrate_cycles;
 } Unitree_GO_M8010_6_Control_t;
 
 /* 单台 GO-M8010-6 电机的完整注册信息和运行时状态。 */
@@ -75,6 +76,7 @@ extern Unitree_GO_M8010_6_Motor_t g_unitree_go_m8010_6_motor_registry[UNITREE_GO
 void unitree_go_m8010_6_motor_init(void);
 void unitree_go_m8010_6_motor_ctrl_send(Unitree_GO_M8010_6_Motor_t *motor);
 void unitree_go_m8010_6_motor_stop(Unitree_GO_M8010_6_Motor_t *motor);
+void unitree_go_m8010_6_motor_set_zero(Unitree_GO_M8010_6_Motor_t *motor);
 void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const uint8_t data[UNITREE_GO_M8010_6_FB_PACKET_LEN]);
 uint8_t unitree_go_m8010_6_process_rx_bytes(const uint8_t *data, uint16_t len);
 uint8_t unitree_go_m8010_6_transport_send(UART_HandleTypeDef *huart, const uint8_t *data, uint16_t len);

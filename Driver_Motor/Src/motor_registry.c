@@ -446,7 +446,13 @@ static void UNITREE_GO_Adapter_Stop(Motor_Class_t *self, uint8_t clear_error) {
 }
 
 static void UNITREE_GO_Adapter_SetZero(Motor_Class_t *self) {
-    (void)self;
+    Unitree_GO_M8010_6_Motor_t *unitree = (Unitree_GO_M8010_6_Motor_t *)self->instance;
+
+    if (unitree == NULL) {
+        return;
+    }
+
+    unitree_go_m8010_6_motor_set_zero(unitree);
 }
 
 static void UNITREE_GO_Adapter_SetSpeed(Motor_Class_t *self, float speed) {

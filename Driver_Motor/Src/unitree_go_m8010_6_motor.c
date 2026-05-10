@@ -11,6 +11,7 @@
 #define UNITREE_GO_DEFAULT_KD 0.01f
 #define UNITREE_GO_DEFAULT_KP 0.05f
 #define UNITREE_GO_TWO_PI 6.28318530717958647692f
+#define UNITREE_GO_ZERO_CALIBRATE_CYCLES 50U
 
 /*
  * 默认注册 1 台 GO-M8010-6：
@@ -123,6 +124,8 @@ static uint16_t unitree_crc_ccitt(uint16_t crc, const uint8_t *buffer, uint32_t 
  */
 static void unitree_go_build_packet(Unitree_GO_M8010_6_Motor_t *motor, uint8_t packet[UNITREE_GO_M8010_6_PACKET_LEN]) {
     float gear_ratio;
+    float motor_speed_rev_s;
+    float motor_position_rev;
     int16_t torque_q8;
     int16_t speed_q7;
     int32_t position_q15;
@@ -133,9 +136,11 @@ static void unitree_go_build_packet(Unitree_GO_M8010_6_Motor_t *motor, uint8_t p
     memset(packet, 0, UNITREE_GO_M8010_6_PACKET_LEN);
 
     gear_ratio = (motor->gear_ratio > 0.0f) ? motor->gear_ratio : 1.0f;
+    motor_speed_rev_s = motor->ctrl.speed_set * gear_ratio / UNITREE_GO_TWO_PI;
+    motor_position_rev = motor->ctrl.pos_set * gear_ratio / UNITREE_GO_TWO_PI;
     torque_q8 = unitree_float_to_q8(motor->ctrl.torque_set);
-    speed_q7 = unitree_float_to_q7(motor->ctrl.speed_set * gear_ratio);
-    position_q15 = unitree_float_to_q15(motor->ctrl.pos_set * gear_ratio);
+    speed_q7 = unitree_float_to_q7(motor_speed_rev_s);
+    position_q15 = unitree_float_to_q15(motor_position_rev);
     kp_q15 = unitree_gain_to_q15(motor->ctrl.kp_set);
     kd_q15 = unitree_gain_to_q15(motor->ctrl.kd_set);
 
@@ -202,6 +207,18 @@ void unitree_go_m8010_6_motor_ctrl_send(Unitree_GO_M8010_6_Motor_t *motor) {
 
     unitree_go_build_packet(motor, packet);
     (void)unitree_go_m8010_6_transport_send(motor->huart, packet, UNITREE_GO_M8010_6_PACKET_LEN);
+
+    if (motor->ctrl.zero_calibrate_cycles > 0U) {
+        motor->ctrl.zero_calibrate_cycles--;
+        if (motor->ctrl.zero_calibrate_cycles == 0U) {
+            motor->ctrl.mode = UNITREE_GO_M8010_6_MODE_BRAKE;
+            motor->ctrl.torque_set = 0.0f;
+            motor->ctrl.speed_set = 0.0f;
+            motor->ctrl.pos_set = 0.0f;
+            motor->ctrl.kp_set = 0.0f;
+            motor->ctrl.kd_set = 0.0f;
+        }
+    }
 }
 
 /*
@@ -222,6 +239,22 @@ void unitree_go_m8010_6_motor_stop(Unitree_GO_M8010_6_Motor_t *motor) {
     motor->ctrl.pos_set = 0.0f;
     motor->ctrl.kp_set = 0.0f;
     motor->ctrl.kd_set = 0.0f;
+    motor->ctrl.zero_calibrate_cycles = 0U;
+}
+
+void unitree_go_m8010_6_motor_set_zero(Unitree_GO_M8010_6_Motor_t *motor) {
+    if (motor == NULL) {
+        return;
+    }
+
+    motor->ctrl.mode = UNITREE_GO_M8010_6_MODE_CALIBRATE;
+    motor->ctrl.mode_configured = 1U;
+    motor->ctrl.torque_set = 0.0f;
+    motor->ctrl.speed_set = 0.0f;
+    motor->ctrl.pos_set = 0.0f;
+    motor->ctrl.kp_set = 0.0f;
+    motor->ctrl.kd_set = 0.0f;
+    motor->ctrl.zero_calibrate_cycles = UNITREE_GO_ZERO_CALIBRATE_CYCLES;
 }
 
 /*
