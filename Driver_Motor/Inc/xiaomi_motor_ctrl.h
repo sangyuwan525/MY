@@ -2,6 +2,7 @@
 #define R1_SUPERSTRUCTURE_XIAOMI_MOTOR_CTRL_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "bsp_can.h"
 
 typedef enum {
@@ -37,6 +38,9 @@ typedef struct {
     float torque;
     float temp;
     uint8_t error_code;
+    uint8_t mode_state;
+    uint32_t fault_code;
+    uint32_t warning_code;
     bool online;
 } Xiaomi_Motor_Feedback_t;
 
@@ -72,6 +76,7 @@ void xiaomi_motor_set_zero(Xiaomi_Motor_t *motor);
 void xiaomi_motor_ctrl_send(Xiaomi_Motor_t *motor);
 void xiaomi_motor_update_feedback(Xiaomi_Motor_t *motor, const uint8_t data[8], uint32_t identifier);
 uint8_t xiaomi_motor_extract_feedback_id(uint32_t identifier);
+uint8_t xiaomi_motor_extract_target_id(uint32_t identifier);
 uint8_t xiaomi_motor_extract_comm_type(uint32_t identifier);
 
 #endif /* R1_SUPERSTRUCTURE_XIAOMI_MOTOR_CTRL_H */

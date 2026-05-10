@@ -9,10 +9,11 @@
  * To add more self-made ESCs, increase this count and add entries in
  * g_blazer_foc_motor_registry[] in blazer_foc_motor.c.
  */
-#define BLAZER_FOC_MOTOR_COUNT 1U
+#define BLAZER_FOC_MOTOR_COUNT 2U
 
 typedef enum {
     BLAZER_FOC_MOTOR1 = 0,
+    BLAZER_FOC_MOTOR2,
 } Blazer_FOC_MotorID_e;
 
 /*

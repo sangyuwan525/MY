@@ -23,6 +23,10 @@ Blazer_FOC_Motor_t g_blazer_foc_motor_registry[BLAZER_FOC_MOTOR_COUNT] = {
         .hcan = &hfdcan1,
         .node_id = 0x00U,
     },
+    [BLAZER_FOC_MOTOR2] = {
+        .hcan = &hfdcan1,
+        .node_id = 0x01U,
+    },
 };
 
 /*

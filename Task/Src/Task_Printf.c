@@ -60,11 +60,20 @@ static int RTT_CmdParseMotor(const char *token)
     if (strcmp(token, "dm") == 0 || strcmp(token, "dm1") == 0) {
         return DM_JOINT_G;
     }
+    if (strcmp(token, "dm2") == 0) {
+        return DM_FRONT_RIGHT_G;
+    }
     if (strcmp(token, "unitree") == 0 || strcmp(token, "unitree1") == 0 || strcmp(token, "u1") == 0) {
         return UNITREE_GO_M8010_6_MOTOR1_G;
     }
+    if (strcmp(token, "unitree2") == 0 || strcmp(token, "u2") == 0) {
+        return UNITREE_GO_M8010_6_MOTOR2_G;
+    }
     if (strcmp(token, "blazer") == 0 || strcmp(token, "blazer1") == 0 || strcmp(token, "bfoc1") == 0) {
         return BLAZER_FOC_MOTOR1_G;
+    }
+    if (strcmp(token, "blazer2") == 0 || strcmp(token, "bfoc2") == 0) {
+        return BLAZER_FOC_MOTOR2_G;
     }
 
     if (token[0] >= '0' && token[0] <= '9') {
@@ -82,7 +91,7 @@ static void RTT_CmdPrintHelp(void)
     RTT_Printf("cmd: stop <motor> [clear]\r\n");
     RTT_Printf("cmd: zero <motor>\r\n");
     RTT_Printf("cmd: enable <motor>\r\n");
-    RTT_Printf("motor: xiaomi1/xiaomi2/dm1/unitree1/blazer1 or global index\r\n");
+    RTT_Printf("motor: xiaomi1/xiaomi2/dm1/dm2/unitree1/unitree2/blazer1/blazer2 or global index\r\n");
 }
 
 static void RTT_CmdExecute(char *line)
@@ -189,7 +198,7 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         // RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
         //RTT_Printf("face %d\n",get_face(1,0));
-        RTT_Printf("online %d\n",g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.online);
+        //RTT_Printf("online %d\n",g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.online);
         osDelay(10);
     }
     /* USER CODE END StartTask_Printf */

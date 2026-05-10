@@ -17,6 +17,7 @@
 /* 本工程中注册了几台 GO-M8010-6 电机。继续扩展时在这里加 Motor2/Motor3。 */
 typedef enum {
     UNITREE_GO_M8010_6_Motor1 = 0,
+    UNITREE_GO_M8010_6_Motor2,
     UNITREE_GO_M8010_6_MOTOR_COUNT
 } unitree_go_m8010_6_motor_num_e;
 
@@ -26,6 +27,7 @@ typedef enum {
  */
 typedef enum {
     UNITREE_GO_M8010_6_Motor1_ID = 0x00,
+    UNITREE_GO_M8010_6_Motor2_ID = 0x01,
 } unitree_go_m8010_6_motor_id_e;
 
 /*

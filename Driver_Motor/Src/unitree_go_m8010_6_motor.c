@@ -10,6 +10,7 @@
 #define UNITREE_GO_DEFAULT_GEAR_RATIO 6.33f
 #define UNITREE_GO_DEFAULT_KD 0.01f
 #define UNITREE_GO_DEFAULT_KP 0.05f
+#define UNITREE_GO_TWO_PI 6.28318530717958647692f
 
 /*
  * 默认注册 1 台 GO-M8010-6：
@@ -20,6 +21,11 @@ Unitree_GO_M8010_6_Motor_t g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_
     [UNITREE_GO_M8010_6_Motor1] = {
         .huart = &huart4,
         .id = UNITREE_GO_M8010_6_Motor1_ID,
+        .gear_ratio = UNITREE_GO_DEFAULT_GEAR_RATIO,
+    },
+    [UNITREE_GO_M8010_6_Motor2] = {
+        .huart = &huart4,
+        .id = UNITREE_GO_M8010_6_Motor2_ID,
         .gear_ratio = UNITREE_GO_DEFAULT_GEAR_RATIO,
     },
 };
@@ -250,8 +256,8 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
 
     gear_ratio = (motor->gear_ratio > 0.0f) ? motor->gear_ratio : 1.0f;
     motor->feedback.torque = (float)((int16_t)unitree_get_u16_le(&data[3])) / 256.0f;
-    motor->feedback.speed = ((float)((int16_t)unitree_get_u16_le(&data[5])) / 128.0f) / gear_ratio;
-    motor->feedback.angle = ((float)((int32_t)unitree_get_u32_le(&data[7])) / 32768.0f) / gear_ratio;
+    motor->feedback.speed = ((float)((int16_t)unitree_get_u16_le(&data[5])) / 256.0f) * UNITREE_GO_TWO_PI / gear_ratio;
+    motor->feedback.angle = ((float)((int32_t)unitree_get_u32_le(&data[7])) / 32768.0f) * UNITREE_GO_TWO_PI / gear_ratio;
     motor->feedback.temp = (float)((int8_t)data[11]);
     motor->feedback.error_code = data[12] & 0x07U;
     motor->feedback.online = true;

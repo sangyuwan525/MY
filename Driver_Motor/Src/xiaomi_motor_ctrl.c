@@ -39,6 +39,10 @@ enum {
 #define XIAOMI_MAX_KD 5.0f
 #define XIAOMI_MIN_KD 0.0f
 #define XIAOMI_TEMP_GAIN 0.1f
+#define XIAOMI_FEEDBACK_ERROR_MASK 0x3FU
+#define XIAOMI_FEEDBACK_ERROR_SHIFT 16U
+#define XIAOMI_FEEDBACK_MODE_MASK 0x03U
+#define XIAOMI_FEEDBACK_MODE_SHIFT 22U
 
 static uint16_t xiaomi_float_to_uint(float x, float x_min, float x_max, int bits) {
     float span = x_max - x_min;
@@ -274,8 +278,28 @@ void xiaomi_motor_update_feedback(Xiaomi_Motor_t *motor, const uint8_t data[8], 
     uint16_t angle_raw;
     uint16_t speed_raw;
     uint16_t torque_raw;
+    uint8_t comm_type;
 
     if (motor == NULL || data == NULL) {
+        return;
+    }
+
+    comm_type = xiaomi_motor_extract_comm_type(identifier);
+    if (comm_type == XIAOMI_COMM_ERROR_FEEDBACK) {
+        motor->feedback.fault_code = (uint32_t)data[0] |
+                                     ((uint32_t)data[1] << 8) |
+                                     ((uint32_t)data[2] << 16) |
+                                     ((uint32_t)data[3] << 24);
+        motor->feedback.warning_code = (uint32_t)data[4] |
+                                       ((uint32_t)data[5] << 8) |
+                                       ((uint32_t)data[6] << 16) |
+                                       ((uint32_t)data[7] << 24);
+        motor->feedback.error_code = (uint8_t)(motor->feedback.fault_code & 0xFFU);
+        motor->feedback.online = true;
+        return;
+    }
+
+    if (comm_type != XIAOMI_COMM_MOTOR_REQUEST) {
         return;
     }
 
@@ -287,12 +311,17 @@ void xiaomi_motor_update_feedback(Xiaomi_Motor_t *motor, const uint8_t data[8], 
     motor->feedback.speed = xiaomi_uint_to_float(speed_raw, XIAOMI_MIN_SPEED_RAD, XIAOMI_MAX_SPEED_RAD, 16);
     motor->feedback.torque = xiaomi_uint_to_float(torque_raw, XIAOMI_MIN_TORQUE, XIAOMI_MAX_TORQUE, 16);
     motor->feedback.temp = (float)((data[6] << 8) | data[7]) * XIAOMI_TEMP_GAIN;
-    motor->feedback.error_code = (uint8_t)((identifier & 0x1F0000UL) >> 16);
+    motor->feedback.error_code = (uint8_t)((identifier >> XIAOMI_FEEDBACK_ERROR_SHIFT) & XIAOMI_FEEDBACK_ERROR_MASK);
+    motor->feedback.mode_state = (uint8_t)((identifier >> XIAOMI_FEEDBACK_MODE_SHIFT) & XIAOMI_FEEDBACK_MODE_MASK);
     motor->feedback.online = true;
 }
 
 uint8_t xiaomi_motor_extract_feedback_id(uint32_t identifier) {
     return (uint8_t)((identifier & 0xFFFFUL) >> 8);
+}
+
+uint8_t xiaomi_motor_extract_target_id(uint32_t identifier) {
+    return (uint8_t)(identifier & 0xFFUL);
 }
 
 uint8_t xiaomi_motor_extract_comm_type(uint32_t identifier) {

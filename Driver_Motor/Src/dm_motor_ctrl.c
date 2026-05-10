@@ -13,7 +13,17 @@ Damiao_Motor_t g_dm_motor_registry[DM_MOTOR_COUNT] = {
 		.tmp.PMAX = 12.5f,
 		.tmp.VMAX = 30.0f,
 		.tmp.TMAX = 10.0f,
-	}
+	},
+	[DM_Motor2] = {
+		.hcan = &hfdcan1,
+		.id = DM_Motor2_CAN_ID,
+		.mst_id = DM_Motor2_MST_ID,
+		.tmp.read_flag = 1,
+		.ctrl.mode = mit_mode,
+		.tmp.PMAX = 12.5f,
+		.tmp.VMAX = 30.0f,
+		.tmp.TMAX = 10.0f,
+	},
 };
 
 void dm_motor_init(void)
@@ -177,6 +187,10 @@ void fdcan1_rx_callback(void)
 		case DM_Motor1_MST_ID:
 			dm_motor_fbdata(&g_dm_motor_registry[DM_Motor1], rx_data);
 			receive_motor_data(&g_dm_motor_registry[DM_Motor1], rx_data);
+			break;
+		case DM_Motor2_MST_ID:
+			dm_motor_fbdata(&g_dm_motor_registry[DM_Motor2], rx_data);
+			receive_motor_data(&g_dm_motor_registry[DM_Motor2], rx_data);
 			break;
 	}
 }

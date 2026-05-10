@@ -866,10 +866,11 @@ void Motor_Feedback_Dispatch(FDCAN_HandleTypeDef *hfdcan, uint32_t identifier, u
             Xiaomi_Motor_t *xiaomi = (Xiaomi_Motor_t *)motor_obj->instance;
             uint8_t comm_type = xiaomi_motor_extract_comm_type(identifier);
             uint8_t feedback_id = xiaomi_motor_extract_feedback_id(identifier);
+            uint8_t target_id = xiaomi_motor_extract_target_id(identifier);
 
             if (xiaomi->hcan == hfdcan &&
-                feedback_id == xiaomi->feedback_id &&
-                (comm_type == 0x02U || comm_type == 0x15U)) {
+                ((comm_type == 0x02U && feedback_id == xiaomi->feedback_id) ||
+                 (comm_type == 0x15U && target_id == xiaomi->can_id))) {
                 is_match = true;
             }
         } else if (motor_obj->type == MOTOR_TYPE_BLAZER_FOC) {
