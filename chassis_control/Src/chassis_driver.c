@@ -227,7 +227,6 @@ static void speed_decompose_mecanum_omni(int motor_id, float vx, float vy, float
             break;
     }
 
-
     wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(wheel_linear));
 }
 
