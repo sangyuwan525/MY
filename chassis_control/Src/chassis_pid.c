@@ -25,8 +25,8 @@ void PID_Angle_Init(PID_Angle_t *pid)
     pid->kd = 0.0f;
 
     // 限制与阈值
-    pid->output_limit = 400.0f;        // abs_limit_pid_angle
-    pid->integral_limit = 250.0f;      // abs_limit_pid_angle_ill
+    pid->output_limit = 5.0f;          // yaw speed limit (rpm)
+    pid->integral_limit = 2.0f;        // yaw integral limit (rpm)
     pid->integral_separate_thr = 0.15f; // 积分分离阈值
 
     // 状态变量初始化

@@ -12,6 +12,23 @@
 // --- 1. 全局数据实例 ---
 // 用于存储轮子最终指令，由 speed_decompose 填充
 static Wheel_Command_t wheel_data[WHEEL_NUM];
+
+static float chassis_yaw_rpm_to_rad_s(float rpm)
+{
+    return rpm * (2.0f * PI / 60.0f);
+}
+
+static float wheel_linear_mm_s_to_rpm(float vel_mm_s)
+{
+    return vel_mm_s * 60.0f / WHEEL_CIRCUMFERENCE;
+}
+
+static float limit_motor_rpm(float rpm)
+{
+    if (rpm > MOTOR_VEL_LIMIT) return MOTOR_VEL_LIMIT;
+    if (rpm < -MOTOR_VEL_LIMIT) return -MOTOR_VEL_LIMIT;
+    return rpm;
+}
 // --- 2. 运动学解算函数 (speed_decompose) ---
 // 将函数名称规范化，并基于宏切换实现
 
@@ -154,7 +171,7 @@ void Chassis_Control_Loop(void) {
  */
 static void speed_decompose_quanxianglun(int motor_id, float vx, float vy, float vr)
 {
-    float vel_r = vr * CHASSIS_RADIUS;
+    float vel_r = chassis_yaw_rpm_to_rad_s(vr) * CHASSIS_RADIUS;
 
     // 简化公式：wi = Vr*R +/- 0.707*Vx +/- 0.707*Vy
     //电机转向正反说明：默认使整车逆时针旋转的电机转向为正，使整车顺时针旋转的电机转向为负
@@ -163,20 +180,54 @@ static void speed_decompose_quanxianglun(int motor_id, float vx, float vy, float
     switch(motor_id)
     {
         case 0: // 前左 (FL)
-            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy));
             break;
         case 1: // 后左 (RL)
-            wheel_data[motor_id].vel = vel_r - SQRT_2_INV * vx + SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r - SQRT_2_INV * vx + SQRT_2_INV * vy));
             break;
         case 2: // 前右 (FR)
-            wheel_data[motor_id].vel = vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy));
             break;
         case 3: // 后右 (RR)
-            wheel_data[motor_id].vel = vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy));
             break;
         default:
             break;
     }
+}
+
+#elif defined(CHASSIS_TYPE_MECANUM_OMNI)
+// Front wheels are mecanum wheels, rear wheels are 45-degree omni wheels.
+// Coordinate frame: +vx = right, +vy = forward, +vr = counter-clockwise.
+// Wheel order: 0 = front-left, 1 = rear-left, 2 = front-right, 3 = rear-right.
+// vx/vy are mm/s, vr is chassis yaw rpm, wheel_data[].vel is motor rpm.
+static void speed_decompose_mecanum_omni(int motor_id, float vx, float vy, float vr)
+{
+    const float yaw_rate = chassis_yaw_rpm_to_rad_s(vr);
+    const float mecanum_yaw = yaw_rate * CHASSIS_YAW_MECANUM_COEFF;
+    const float omni_yaw = yaw_rate * CHASSIS_YAW_OMNI_COEFF;
+    float wheel_linear = 0.0f;
+
+    switch (motor_id)
+    {
+        case 0: // Front left mecanum
+            wheel_linear = vy + vx - mecanum_yaw;
+            break;
+        case 1: // Rear left omni
+            wheel_linear = SQRT_2_INV * (-vx + vy) - omni_yaw;
+            break;
+        case 2: // Front right mecanum
+            wheel_linear = vy - vx + mecanum_yaw;
+            break;
+        case 3: // Rear right omni
+            wheel_linear = SQRT_2_INV * (-vx - vy) - omni_yaw;
+            break;
+        default:
+            wheel_linear = 0.0f;
+            break;
+    }
+
+    wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(wheel_linear));
 }
 
 #elif defined(CHASSIS_TYPE_DUOLUN)
@@ -227,22 +278,23 @@ static void speed_decompose_duolun(int motor_id, float vx, float vy, float vr)
     float vx_i, vy_i; // 轮子i的期望速度分量 (线速度)
     // 假设所有轮子位于半径 CHASSIS_RADIUS 的正方形上
     float R = CHASSIS_RADIUS * SQRT_2_INV; // 简化 R
+    float yaw_rate = chassis_yaw_rpm_to_rad_s(vr);
     switch (motor_id) {
         case 0://左前
-            vx_i = vx - vr * R;
-            vy_i = vy - vr * R;
+            vx_i = vx - yaw_rate * R;
+            vy_i = vy - yaw_rate * R;
             break;
         case 1://左后
-            vx_i = vx + vr * R;
-            vy_i = vy - vr * R;
+            vx_i = vx + yaw_rate * R;
+            vy_i = vy - yaw_rate * R;
             break;
         case 2://右前
-            vx_i = vx - vr * R;
-            vy_i = vy + vr * R;
+            vx_i = vx - yaw_rate * R;
+            vy_i = vy + yaw_rate * R;
             break;
         case 3://右后
-            vx_i = vx + vr * R;
-            vy_i = vy + vr * R;
+            vx_i = vx + yaw_rate * R;
+            vy_i = vy + yaw_rate * R;
             break;
         default:
             vx_i = 0.0f;
@@ -294,6 +346,8 @@ void cha_remote(float vx, float vy, float vr)
     {
 #ifdef CHASSIS_TYPE_QUANXIANGLUN
         speed_decompose_quanxianglun(i, -velx, -vely, vela);
+#elif defined(CHASSIS_TYPE_MECANUM_OMNI)
+        speed_decompose_mecanum_omni(i, velx, vely, vela);
 #elif defined(CHASSIS_TYPE_DUOLUN)
         speed_decompose_duolun(i, velx, vely, vela);
 #else
@@ -304,7 +358,7 @@ void cha_remote(float vx, float vy, float vr)
     // 假设有一个通用的发送函数：Change_Motor_Command(motor_id, speed, angle)
     for (int i = 0; i < WHEEL_NUM; i++)
     {
-#ifdef CHASSIS_TYPE_QUANXIANGLUN
+#if defined(CHASSIS_TYPE_QUANXIANGLUN) || defined(CHASSIS_TYPE_MECANUM_OMNI)
         // 全向轮只需发送转速指令
         // 假设 Change_dji_speed 是发送电机转速的函数
         Change_dji_speed(i, wheel_data[i].vel);
