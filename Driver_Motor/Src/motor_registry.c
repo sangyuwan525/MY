@@ -893,6 +893,7 @@ void Motor_Feedback_Dispatch(FDCAN_HandleTypeDef *hfdcan, uint32_t identifier, u
 }
 
 void Motor_All_Control_Loop(void) {
+    static uint8_t unitree_send_slot = 0U;
     Dji_3508_all_motor_control();
 
     for (int i = DJI_MOTOR_COUNT; i < MOTOR_TOTAL_NUM; ++i) {
@@ -909,9 +910,21 @@ void Motor_All_Control_Loop(void) {
         } else if (cls->type == MOTOR_TYPE_XIAOMI) {
             xiaomi_motor_ctrl_send((Xiaomi_Motor_t *)cls->instance);
         } else if (cls->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
-            unitree_go_m8010_6_motor_ctrl_send((Unitree_GO_M8010_6_Motor_t *)cls->instance);
+            continue;
         } else if (cls->type == MOTOR_TYPE_BLAZER_FOC) {
             Blazer_FOC_Control_Send((Blazer_FOC_Motor_t *)cls->instance);
+        }
+    }
+
+    for (uint8_t n = 0U; n < UNITREE_GO_M8010_6_MOTOR_COUNT; ++n) {
+        uint8_t motor_idx = (uint8_t)((unitree_send_slot + n) % UNITREE_GO_M8010_6_MOTOR_COUNT);
+        int global_idx = DJI_MOTOR_COUNT + DM_MOTOR_COUNT + XIAOMI_MOTOR_COUNT + motor_idx;
+        Motor_Class_t *cls = &g_motor_list[global_idx];
+
+        if (cls->instance != NULL && cls->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
+            unitree_send_slot = (uint8_t)((motor_idx + 1U) % UNITREE_GO_M8010_6_MOTOR_COUNT);
+            unitree_go_m8010_6_motor_ctrl_send((Unitree_GO_M8010_6_Motor_t *)cls->instance);
+            break;
         }
     }
 }

@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "Task_command.h"
+#include "bsp_can.h"
 #include "dji_3508_2006_motor.h"
 #include "locator_driver.h"
 /* USER CODE END Includes */
@@ -171,6 +172,7 @@ void MX_FREERTOS_Init(void) {
   locatorQueue_z_rHandle = osMessageQueueNew (16, sizeof(Locator_Rx_Queue_t), &locatorQueue_z_r_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
+  bsp_can_init(motorRxQueueHandle, NULL);
 
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */

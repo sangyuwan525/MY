@@ -48,6 +48,7 @@ typedef struct {
     float temp;        /* 电机温度，单位摄氏度。 */
     uint8_t error_code;/* 电机错误码，来自反馈包 MError 字段。 */
     bool online;       /* 收到并成功校验反馈包后置 true。 */
+    float raw_angle;   /* Raw output angle before software zero offset, rad. */
 } Unitree_GO_M8010_6_Feedback_t;
 
 /* 大注册表写入的控制目标，最终会被打包成宇树 17 字节控制包。 */
@@ -67,6 +68,8 @@ typedef struct {
     UART_HandleTypeDef *huart; /* 连接 RS485 收发器的串口句柄。 */
     uint8_t id;              /* 宇树协议包内部的电机 ID。 */
     float gear_ratio;        /* 减速比：注册表使用输出端单位，打包时转成电机端单位。 */
+    float zero_offset_rad;   /* Software zero offset at the output shaft, rad. */
+    bool zero_valid;         /* True after a valid feedback latches the zero point. */
     Unitree_GO_M8010_6_Control_t ctrl;
     Unitree_GO_M8010_6_Feedback_t feedback;
 } Unitree_GO_M8010_6_Motor_t;

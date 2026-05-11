@@ -38,16 +38,16 @@ void StartTask_dji(void *argument)
 //     0.01f,
 //     0.0f
 // );
-    float now = g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.angle;
-
-    g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
-        &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
-        3.1515926f,
-        0.0f,
-        0.1f,
-        0.01f,
-        0.0f
-    );
+    // float now = g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.angle;
+    //
+    // g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
+    //     &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
+    //     3.1415926f,
+    //     0.0f,
+    //     0.1f,
+    //     0.01f,
+    //     0.0f
+    // );
 
 
    //g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_position(&g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],3.1415926f,1.0f);
@@ -64,7 +64,8 @@ void StartTask_dji(void *argument)
     //g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
     //Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 1.0f, 10.0f, 50.0f, 1.0f, 0.0f);
      // Motor_StartSmoothGotoMIT(DM_JOINT_G, 1.0f, 1.0f, 0.5f, 0.2f, 0.0f);
-    // g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G],1.0f,0.0f,1.0f,0.01f,0.0f);
+    g_motor_list[XIAOMI_MOTOR1_G].set_zero(&g_motor_list[XIAOMI_MOTOR1_G]);
+     g_motor_list[XIAOMI_MOTOR1_G].set_mit(&g_motor_list[XIAOMI_MOTOR1_G],6.28f,0.0f,0.1f,0.01f,0.0f);
     //dm_motor_set_control_mode(&g_dm_motor_registry[DM_Motor1], spd_mode, 1);
     // g_motor_list[XIAOMI_MOTOR1_G].set_speed(&g_motor_list[XIAOMI_MOTOR1_G],2.0f);
     // g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G],2.0f);

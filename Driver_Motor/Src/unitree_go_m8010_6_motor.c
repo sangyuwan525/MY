@@ -126,6 +126,7 @@ static void unitree_go_build_packet(Unitree_GO_M8010_6_Motor_t *motor, uint8_t p
     float gear_ratio;
     float motor_speed_rev_s;
     float motor_position_rev;
+    float target_position_rad;
     int16_t torque_q8;
     int16_t speed_q7;
     int32_t position_q15;
@@ -137,7 +138,8 @@ static void unitree_go_build_packet(Unitree_GO_M8010_6_Motor_t *motor, uint8_t p
 
     gear_ratio = (motor->gear_ratio > 0.0f) ? motor->gear_ratio : 1.0f;
     motor_speed_rev_s = motor->ctrl.speed_set * gear_ratio / UNITREE_GO_TWO_PI;
-    motor_position_rev = motor->ctrl.pos_set * gear_ratio / UNITREE_GO_TWO_PI;
+    target_position_rad = motor->ctrl.pos_set + ((motor->zero_valid != false) ? motor->zero_offset_rad : 0.0f);
+    motor_position_rev = target_position_rad * gear_ratio / UNITREE_GO_TWO_PI;
     torque_q8 = unitree_float_to_q8(motor->ctrl.torque_set);
     speed_q7 = unitree_float_to_q7(motor_speed_rev_s);
     position_q15 = unitree_float_to_q15(motor_position_rev);
@@ -185,9 +187,11 @@ void unitree_go_m8010_6_motor_init(void) {
 
         memset(&motor->ctrl, 0, sizeof(motor->ctrl));
         memset(&motor->feedback, 0, sizeof(motor->feedback));
+        motor->zero_offset_rad = 0.0f;
+        motor->zero_valid = false;
         motor->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
-        motor->ctrl.kp_set = UNITREE_GO_DEFAULT_KP;
-        motor->ctrl.kd_set = UNITREE_GO_DEFAULT_KD;
+        motor->ctrl.kp_set = 0.0f;
+        motor->ctrl.kd_set = 0.0f;
     }
 }
 
@@ -200,8 +204,30 @@ void unitree_go_m8010_6_motor_init(void) {
  */
 void unitree_go_m8010_6_motor_ctrl_send(Unitree_GO_M8010_6_Motor_t *motor) {
     uint8_t packet[UNITREE_GO_M8010_6_PACKET_LEN];
+    Unitree_GO_M8010_6_Motor_t poll_motor;
 
-    if (motor == NULL || motor->ctrl.mode_configured == 0U) {
+    if (motor == NULL) {
+        return;
+    }
+
+    if (motor->zero_valid == false &&
+        motor->ctrl.mode != UNITREE_GO_M8010_6_MODE_BRAKE &&
+        motor->ctrl.mode != UNITREE_GO_M8010_6_MODE_CALIBRATE) {
+        poll_motor = *motor;
+        poll_motor.ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+        poll_motor.ctrl.mode_configured = 1U;
+        poll_motor.ctrl.torque_set = 0.0f;
+        poll_motor.ctrl.speed_set = 0.0f;
+        poll_motor.ctrl.pos_set = 0.0f;
+        poll_motor.ctrl.kp_set = 0.0f;
+        poll_motor.ctrl.kd_set = UNITREE_GO_DEFAULT_KD;
+        poll_motor.ctrl.zero_calibrate_cycles = 0U;
+        unitree_go_build_packet(&poll_motor, packet);
+        (void)unitree_go_m8010_6_transport_send(motor->huart, packet, UNITREE_GO_M8010_6_PACKET_LEN);
+        return;
+    }
+
+    if (motor->ctrl.mode_configured == 0U) {
         return;
     }
 
@@ -247,14 +273,23 @@ void unitree_go_m8010_6_motor_set_zero(Unitree_GO_M8010_6_Motor_t *motor) {
         return;
     }
 
-    motor->ctrl.mode = UNITREE_GO_M8010_6_MODE_CALIBRATE;
-    motor->ctrl.mode_configured = 1U;
+    if (motor->feedback.online != false) {
+        motor->zero_offset_rad = motor->feedback.raw_angle;
+        motor->zero_valid = true;
+        motor->feedback.angle = 0.0f;
+    } else {
+        motor->zero_offset_rad = 0.0f;
+        motor->zero_valid = false;
+    }
+
+    motor->ctrl.mode = UNITREE_GO_M8010_6_MODE_FOC;
+    motor->ctrl.mode_configured = 0U;
     motor->ctrl.torque_set = 0.0f;
     motor->ctrl.speed_set = 0.0f;
     motor->ctrl.pos_set = 0.0f;
     motor->ctrl.kp_set = 0.0f;
     motor->ctrl.kd_set = 0.0f;
-    motor->ctrl.zero_calibrate_cycles = UNITREE_GO_ZERO_CALIBRATE_CYCLES;
+    motor->ctrl.zero_calibrate_cycles = 0U;
 }
 
 /*
@@ -270,6 +305,7 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
     uint16_t crc;
     uint16_t packet_crc;
     float gear_ratio;
+    float raw_angle;
 
     if (motor == NULL || data == NULL) {
         return;
@@ -288,9 +324,16 @@ void unitree_go_m8010_6_update_feedback(Unitree_GO_M8010_6_Motor_t *motor, const
     }
 
     gear_ratio = (motor->gear_ratio > 0.0f) ? motor->gear_ratio : 1.0f;
+    raw_angle = ((float)((int32_t)unitree_get_u32_le(&data[7])) / 32768.0f) * UNITREE_GO_TWO_PI / gear_ratio;
+    if (motor->zero_valid == false) {
+        motor->zero_offset_rad = raw_angle;
+        motor->zero_valid = true;
+    }
+
     motor->feedback.torque = (float)((int16_t)unitree_get_u16_le(&data[3])) / 256.0f;
     motor->feedback.speed = ((float)((int16_t)unitree_get_u16_le(&data[5])) / 256.0f) * UNITREE_GO_TWO_PI / gear_ratio;
-    motor->feedback.angle = ((float)((int32_t)unitree_get_u32_le(&data[7])) / 32768.0f) * UNITREE_GO_TWO_PI / gear_ratio;
+    motor->feedback.raw_angle = raw_angle;
+    motor->feedback.angle = raw_angle - motor->zero_offset_rad;
     motor->feedback.temp = (float)((int8_t)data[11]);
     motor->feedback.error_code = data[12] & 0x07U;
     motor->feedback.online = true;
