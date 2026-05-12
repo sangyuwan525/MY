@@ -20,8 +20,15 @@
 #define SPEED_LIMIT_R   5.0f      // yaw speed limit (rpm)
 #define MOTOR_VEL_LIMIT 10000.0f  // single wheel motor speed limit (rpm)
 #define CHASSIS_RADIUS  289.91f   // effective chassis radius (mm)
-#define WHEEL_DIAMETER  200.0f    // wheel diameter (mm)
-#define WHEEL_CIRCUMFERENCE 628.3185f // wheel circumference for 200 mm wheel (mm)
+#define MECANUM_WHEEL_DIAMETER 200.0f // front mecanum wheel diameter (mm)
+#define OMNI_WHEEL_DIAMETER    200.0f // rear omni wheel diameter (mm)
+#define MECANUM_WHEEL_CIRCUMFERENCE (3.1415926f * MECANUM_WHEEL_DIAMETER)
+#define OMNI_WHEEL_CIRCUMFERENCE    (3.1415926f * OMNI_WHEEL_DIAMETER)
+// 电机输出轴每转一圈时，车轮转过的圈数。
+// 例如：从电机输出轴到车轮是 5:1 的减速比，表示电机输出轴转 5 圈，车轮转 1 圈，
+// 那么这个值就是 1/5 = 0.2f。
+#define MECANUM_WHEEL_REV_PER_MOTOR_REV 1.0f
+#define OMNI_WHEEL_REV_PER_MOTOR_REV    1.0f
 #define SQRT_2_INV      0.70710678f // 1/sqrt(2)
 #define CHASSIS_YAW_MECANUM_COEFF (CHASSIS_RADIUS / SQRT_2_INV)
 #define CHASSIS_YAW_OMNI_COEFF    CHASSIS_RADIUS

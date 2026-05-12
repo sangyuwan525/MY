@@ -18,9 +18,15 @@ static float chassis_yaw_rpm_to_rad_s(float rpm)
     return rpm * (2.0f * PI / 60.0f);
 }
 
-static float wheel_linear_mm_s_to_rpm(float vel_mm_s)
+static float wheel_linear_mm_s_to_motor_rpm(float vel_mm_s,
+                                            float wheel_circumference_mm,
+                                            float wheel_rev_per_motor_rev)
 {
-    return vel_mm_s * 60.0f / WHEEL_CIRCUMFERENCE;
+    const float wheel_rpm = vel_mm_s * 60.0f / wheel_circumference_mm;
+    if (wheel_rev_per_motor_rev <= 0.0f) {
+        return 0.0f;
+    }
+    return wheel_rpm / wheel_rev_per_motor_rev;
 }
 
 static float limit_motor_rpm(float rpm)
@@ -180,16 +186,16 @@ static void speed_decompose_quanxianglun(int motor_id, float vx, float vy, float
     switch(motor_id)
     {
         case 0: // 前左 (FL)
-            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy));
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(vel_r + SQRT_2_INV * vx + SQRT_2_INV * vy, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 1: // 后左 (RL)
-            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r - SQRT_2_INV * vx + SQRT_2_INV * vy));
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(vel_r - SQRT_2_INV * vx + SQRT_2_INV * vy, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 2: // 前右 (FR)
-            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy));
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(vel_r + SQRT_2_INV * vx - SQRT_2_INV * vy, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 3: // 后右 (RR)
-            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy));
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(vel_r - SQRT_2_INV * vx - SQRT_2_INV * vy, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         default:
             break;
@@ -212,22 +218,25 @@ static void speed_decompose_mecanum_omni(int motor_id, float vx, float vy, float
     {
         case 0: // Front left mecanum
             wheel_linear = vy + vx - mecanum_yaw;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, MECANUM_WHEEL_CIRCUMFERENCE, MECANUM_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 1: // Rear left omni
             wheel_linear = SQRT_2_INV * (-vx + vy) - omni_yaw;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 2: // Front right mecanum
             wheel_linear = vy - vx + mecanum_yaw;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, MECANUM_WHEEL_CIRCUMFERENCE, MECANUM_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 3: // Rear right omni
             wheel_linear = SQRT_2_INV * (-vx - vy) - omni_yaw;
+            wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         default:
             wheel_linear = 0.0f;
+            wheel_data[motor_id].vel = 0.0f;
             break;
     }
-
-    wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_rpm(wheel_linear));
 }
 
 #elif defined(CHASSIS_TYPE_DUOLUN)
