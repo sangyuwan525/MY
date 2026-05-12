@@ -458,6 +458,7 @@ LiftWalk_Status_e LiftWalk_Update(LiftWalk_Controller_t *ctrl, const LiftWalk_In
      * 这样后轮按底盘目标速度滚动，前轮由于安装在小臂末端，需要额外补偿轮心相对底盘的水平速度。
      * 从地面视角看，前后轮接地点的滚动速度会尽量接近同一个 vx_mm_s。
      */
+
     for (uint8_t side = 0U; side < LIFT_WALK_SIDE_COUNT; ++side) {
         /*
          * Blazer 后轮是 45 度全向轮：先计算后轮安装点的刚体速度，
