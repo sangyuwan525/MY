@@ -18,9 +18,14 @@
 #include "SEGGER_RTT.h"
 #include "global_motor_conf.h"
 #include "motor_registry.h"
+#include "lift_walk_controller.h"
 #include "stm32g4xx_hal.h"  // 根据你的MCU型号选择对应的头文件
 
 #define RTT_CMD_BUFFER_SIZE 64U
+#define LIFT_WALK_PRINTF_DEBUG 1U
+#define LIFT_WALK_PRINTF_PERIOD 20U
+#define LIFT_WALK_DEBUG_TARGET_HEIGHT_MM 198.0f
+#define LIFT_WALK_DEBUG_FORWARD_MM_S 200.0f
 
 static const char *RTT_CmdSkipSpace(const char *s)
 {
@@ -168,6 +173,99 @@ static void RTT_CmdPoll(void)
     }
 }
 
+static void LiftWalk_PrintfDebugInit(LiftWalk_Controller_t *ctrl)
+{
+    LiftWalk_Config_t cfg;
+
+    LiftWalk_DefaultConfig(&cfg);
+
+    cfg.slider_zero_rad[LIFT_WALK_LEFT] = 0.0f;
+    cfg.slider_zero_rad[LIFT_WALK_RIGHT] = 0.0f;
+    cfg.arm_motor_zero_rad[LIFT_WALK_LEFT] = 0.0f;
+    cfg.arm_motor_zero_rad[LIFT_WALK_RIGHT] = 0.0f;
+
+    cfg.roll_kp = 0.0f;
+    cfg.roll_ki = 0.0f;
+    cfg.roll_kd = 0.0f;
+    cfg.pitch_kp = 0.0f;
+    cfg.pitch_ki = 0.0f;
+    cfg.pitch_kd = 0.0f;
+    cfg.yaw_kp = 0.0f;
+    cfg.yaw_kd = 0.0f;
+
+    cfg.wheel_arm_comp_gain = 0.0f;
+
+    LiftWalk_Init(ctrl, &cfg);
+}
+
+static void LiftWalk_PrintfDebugStep(void)
+{
+#if LIFT_WALK_PRINTF_DEBUG
+    static LiftWalk_Controller_t ctrl;
+    static LiftWalk_Input_t in;
+    static uint8_t inited = 0U;
+    static uint16_t print_cnt = 0U;
+    const LiftWalk_Output_t *out;
+    uint8_t done;
+
+    if (inited == 0U) {
+        LiftWalk_PrintfDebugInit(&ctrl);
+        inited = 1U;
+    }
+
+    in.vx_mm_s = 0.0f;
+    in.vy_mm_s = LIFT_WALK_DEBUG_FORWARD_MM_S;
+    in.target_height_mm = LIFT_WALK_DEBUG_TARGET_HEIGHT_MM;
+
+    in.roll_rad = 0.0f;
+    in.pitch_rad = 0.0f;
+    in.yaw_rad = 0.0f;
+    in.yaw_ref_rad = 0.0f;
+    in.roll_rate_rad_s = 0.0f;
+    in.pitch_rate_rad_s = 0.0f;
+    in.yaw_rate_rad_s = 0.0f;
+
+    in.dt_s = CHASSIS_TASK_PERIOD / 1000.0f;
+    in.enable_motor_output = 0U;
+
+    done = LiftWalk_RunLiftAction(&ctrl,
+                                  &in,
+                                  LIFT_WALK_DEBUG_FORWARD_MM_S,
+                                  0.0f,
+                                  2.0f);
+    out = LiftWalk_GetOutput(&ctrl);
+    if (out == NULL) {
+        return;
+    }
+
+    if (++print_cnt < LIFT_WALK_PRINTF_PERIOD) {
+        return;
+    }
+    print_cnt = 0U;
+
+    RTT_Printf("lw st=%d done=%d h=%.1f hd=%.1f\r\n",
+               out->status,
+               done,
+               out->height_ref_mm,
+               out->height_dot_ref_mm_s);
+    RTT_Printf("lw z %.1f %.1f %.1f %.1f\r\n",
+               out->support_z_mm[LIFT_WALK_FRONT_LEFT],
+               out->support_z_mm[LIFT_WALK_FRONT_RIGHT],
+               out->support_z_mm[LIFT_WALK_REAR_LEFT],
+               out->support_z_mm[LIFT_WALK_REAR_RIGHT]);
+    RTT_Printf("lw sl %.2f %.2f arm %.2f %.2f\r\n",
+               out->slider_motor_rad[LIFT_WALK_LEFT],
+               out->slider_motor_rad[LIFT_WALK_RIGHT],
+               out->arm_theta_rad[LIFT_WALK_LEFT],
+               out->arm_theta_rad[LIFT_WALK_RIGHT]);
+    RTT_Printf("lw wh %.2f %.2f %.1f %.1f\r\n",
+               out->front_wheel_rad_s[LIFT_WALK_LEFT],
+               out->front_wheel_rad_s[LIFT_WALK_RIGHT],
+               out->rear_wheel_rpm[LIFT_WALK_LEFT],
+               out->rear_wheel_rpm[LIFT_WALK_RIGHT]);
+#endif
+}
+
 void StartTask_Printf(void *argument)
 {
     /* USER CODE BEGIN StartTask_Printf */
@@ -201,7 +299,7 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("unitree_online=%d  unitree_angle=%f\n",
         //            g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.online,
         //            g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.angle);
-        RTT_Printf("xiaomi_online=%d  xiaomi_angle=%f\n",g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.online,g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.angle);
+        LiftWalk_PrintfDebugStep();
         osDelay(10);
     }
     /* USER CODE END StartTask_Printf */
