@@ -23,11 +23,19 @@
 #define MAX_PATH_LEN 64
 #define MAX_R1_LIMIT 3
 #define MAX_R2_REMOVE 2
+#define R2_TAKEN_COUNT 3
+#define R2_MASK_STATES (1 << R2_TAKEN_COUNT)
+#define R2_TARGET_MASK ((uint8_t)(R2_MASK_STATES - 1U))
+
+#if R2_TAKEN_COUNT <= 0 || R2_TAKEN_COUNT > 8
+#error "R2_TAKEN_COUNT must be between 1 and 8 because State.r2_mask is uint8_t"
+#endif
 // INF 用作不可达或初始大值
 #define INF 32767
 
 #define MOVE_COST 10
 #define SIDE_GRAB_PENALTY 15
+#define ENTRY_SIDE_GRAB_PENALTY 25
 #define REMOVE_PENALTY 5
 
 // KFS 类型说明：
@@ -43,7 +51,7 @@ typedef struct {
     int8_t node;        // 当前所在节点索引（0..GRID_NODES-1 或入口/出口虚拟节点）
     int8_t r1_used;     // 到当前状态为止，已通过 / 使用的 R1 节点数量（用于约束）
     int8_t r2_removed;  // 到当前状态为止，被额外（非目标）移除的 R2 数量
-    uint8_t r2_mask;    // R2 采集遮罩（位掩码）：bit0 表示已取走 t1，bit1 表示已取走 t2
+    uint8_t r2_mask;    // R2 采集遮罩（位掩码）：bitN 表示已取走 r2_taken[N]
     int16_t cost;       // 到达该状态的累计代价（用于 Dijkstra 优先级比较）
 } State;
 
@@ -59,7 +67,7 @@ typedef struct {
     int8_t r2_removed[MAX_R2_REMOVE]; // 记录被非目标移除的 R2 节点
     int8_t r2r_cnt;                   // 被移除的 R2 数量
 
-    int8_t r2_taken[2]; // 实际被作为任务目标取走的两个 R2 节点索引
+    int8_t r2_taken[R2_TAKEN_COUNT]; // 实际被作为任务目标取走的 R2 节点索引
     int16_t cost;       // 最终代价
 
     int8_t entry_grab;  // 入口处是否需要抓取,初始为-1，要抓取 0 或 2 置为 1 ，抓完变为 0
