@@ -9,6 +9,8 @@ R2_Context_t g_robot_ctx = {
     .sub_state.mc = MC_INIT,
     .stick_count = 0,
     .already_taken = -1,
+    .current_r2_taken_idx = 0,
+    .r2_taken_mask = 0,
     .kfs_count = 0
 };
 int MF_flag = 0;
@@ -16,7 +18,7 @@ int MC_flag = 0;
 int CF_flag = 0;
 
 //向上层发送信息
-void send_flag_to_up(int flag){}
+void send_flag_to_up(int flag){(void)flag;}
 
 // 接收信号
 int receive_flag(){
@@ -32,6 +34,36 @@ bool is_target_kfs(int8_t current_id, int8_t r2_taken_id) {
 // 判断是否是障碍KFS
 bool is_obstacle_kfs(int target_id, PlanResult res) {
     return (target_id == res.r2_removed[0] || target_id == res.r2_removed[1]);
+}
+
+static bool is_r2_taken_done(R2_Context_t *r2, int idx) {
+    return (r2->r2_taken_mask & (1U << idx)) != 0;
+}
+
+static void mark_r2_taken_done(R2_Context_t *r2, int idx) {
+    r2->r2_taken_mask |= (uint8_t)(1U << idx);
+    r2->already_taken = idx;
+}
+
+static int find_next_r2_taken_idx(R2_Context_t *r2) {
+    for (int i = 0; i < R2_TAKEN_COUNT; i++) {
+        if (!is_r2_taken_done(r2, i)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int find_reachable_r2_taken_idx(R2_Context_t *r2, int8_t current_id) {
+    int idx = find_next_r2_taken_idx(r2);
+    if (idx >= 0 && is_target_kfs(current_id, r2->plan.r2_taken[idx])) {
+        return idx;
+    }
+    return -1;
+}
+
+static bool is_entry_side_r2(int8_t target_id) {
+    return target_id == 0 || target_id == 2;
 }
 
 
@@ -88,6 +120,9 @@ void Handle_MC_Logic(R2_Context_t *r2) {
             if (MC_flag==4 || r2->r1_left_mc) {
                 // 切换到顶层状态：进入梅林
                 r2->plan = plan_route(initial_map); // 规划路径
+                r2->already_taken = -1;
+                r2->current_r2_taken_idx = 0;
+                r2->r2_taken_mask = 0;
                 r2->current_top_state = STATE_MF_AREA;
                 r2->sub_state.mf = MF_ENTRY_CHECK;
             }
@@ -102,19 +137,19 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             r2->current_step = 1;
             r2->target_stair_id = r2->plan.path[r2->current_step];
             r2->current_stair_id = r2->plan.path[r2->current_step-1];
-            if (r2->plan.r2_taken[0]==1 || r2->plan.r2_taken[1]==1) {
-                r2->sub_state.mf = MF_ENTRY;
-            }else if (r2->plan.r2_taken[0]==0 || r2->plan.r2_taken[0]==2) {
-                Point_struct cur_point = {lcResult.x,lcResult.y};
-                init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[0]],lcResult.r,0);
-                if (go_path_control(&path_test, spd_test) == 1) {
-                    r2->sub_state.mf = MF_PICK_ADJACENT_0;
-                }
-            }else if (r2->plan.r2_taken[1]==0 || r2->plan.r2_taken[1]==2) {
-                Point_struct cur_point = {lcResult.x,lcResult.y};
-                init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[1]],lcResult.r,0);
-                if (go_path_control(&path_test, spd_test) == 1) {
-                    r2->sub_state.mf = MF_PICK_ADJACENT_1;
+            {
+                int idx = find_next_r2_taken_idx(r2);
+                if (idx < 0 || r2->plan.r2_taken[idx]==1) {
+                    r2->sub_state.mf = MF_ENTRY;
+                }else if (is_entry_side_r2(r2->plan.r2_taken[idx])) {
+                    r2->current_r2_taken_idx = idx;
+                    Point_struct cur_point = {lcResult.x,lcResult.y};
+                    init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[idx]],lcResult.r,0);
+                    if (go_path_control(&path_test, spd_test) == 1) {
+                        r2->sub_state.mf = MF_PICK_ADJACENT;
+                    }
+                }else {
+                    r2->sub_state.mf = MF_ENTRY;
                 }
             }
             break;
@@ -141,13 +176,11 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     // 如果当前走到了倒数第二步，即目标格子是出口，路径走完，准备退出
                     r2->sub_state.mf = MF_EXIT_NAV;
                 } else {
+                    int idx = find_reachable_r2_taken_idx(r2, r2->current_stair_id);
                     // 根据 path_plan.h 中的规划结果判断
-                    if (is_target_kfs(r2->current_stair_id,r2->plan.r2_taken[0])&&r2->already_taken!=0&&r2->already_taken!=2) {     // r2_taken[0]没被拿
-                        // 如果当前节点是要执行拿取的 R2 KFS 0 的动作
-                        r2->sub_state.mf = MF_PICK_ADJACENT_0;
-                    } else if (is_target_kfs(r2->current_stair_id,r2->plan.r2_taken[1])&&r2->already_taken!=1&&r2->already_taken!=2) {  //r2_taken[1]没被拿
-                        // 如果当前节点是要执行拿取的 R2 KFS 1 的动作
-                        r2->sub_state.mf = MF_PICK_ADJACENT_1;
+                    if (idx >= 0) {
+                        r2->current_r2_taken_idx = idx;
+                        r2->sub_state.mf = MF_PICK_ADJACENT;
                     } else if (is_obstacle_kfs(r2->target_stair_id,r2->plan)) {
                         // 如果目标节点是要移出的 R2 KFS
                         r2->sub_state.mf = MF_REMOVE_KFS;
@@ -193,46 +226,28 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             }
             break;
 
-        case MF_PICK_ADJACENT_0: // 抓取相邻 KFS r2_taken[0]
-            // 执行机械臂抓取动作
-            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[0])) {
-                send_flag_to_up(FLAG_GRAB_KFS);
-                if (MF_flag==3) {  // 抓取成功
-                    r2->kfs_count++;
-                    if (r2->already_taken==1) {
-                        r2->already_taken = 2;  // 两个都已抓取
-                    }else {
-                        r2->already_taken = 0;  // 已抓取r2_taken[0]
-                    }
-                    if (r2->plan.r2_taken[0]==0 || r2->plan.r2_taken[0]==2) {
-                        r2->plan.entry_grab = 0;
-                        r2->sub_state.mf = MF_ENTRY;
-                    }else if (r2->plan.r2_taken[0]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
-                        r2->sub_state.mf = MF_MOVE_TO_BLOCK;
-                    }else{
-                        r2->sub_state.mf = MF_BACK_TO_CENTER;
-                    }
+        case MF_PICK_ADJACENT: // 抓取相邻 KFS r2_taken[current_r2_taken_idx]
+            // Pick current planned R2 KFS.
+            {
+                int idx = r2->current_r2_taken_idx;
+                if (idx < 0 || idx >= R2_TAKEN_COUNT) {
+                    r2->sub_state.mf = MF_ACTION_JUDGE;
+                    break;
                 }
-            }
-            break;
-        case MF_PICK_ADJACENT_1: // 抓取相邻 KFS r2_taken[1]
-            // 执行机械臂抓取动作
-            if (Move_to_Edge(r2->current_stair_id,r2->plan.r2_taken[1])) {
-                send_flag_to_up(FLAG_GRAB_KFS);
-                if (MF_flag==3) {  // 抓取成功
-                    r2->kfs_count++;
-                    if (r2->already_taken==0) {
-                        r2->already_taken = 2;  // 两个都已抓取
-                    }else {
-                        r2->already_taken = 1;  // 已抓取r2_taken[1]
-                    }
-                    if (r2->plan.r2_taken[1]==0 || r2->plan.r2_taken[1]==2) {
-                        r2->plan.entry_grab = 0;
-                        r2->sub_state.mf = MF_ENTRY;
-                    }else if (r2->plan.r2_taken[1]==r2->target_stair_id) {    // 如果kfs所在方块是要移动的目标方块，直接移动
-                        r2->sub_state.mf = MF_MOVE_TO_BLOCK;
-                    }else{
-                        r2->sub_state.mf = MF_BACK_TO_CENTER;
+                int8_t target = r2->plan.r2_taken[idx];
+                if (Move_to_Edge(r2->current_stair_id,target)) {
+                    send_flag_to_up(FLAG_GRAB_KFS);
+                    if (MF_flag==3) {  // 抓取成功
+                        r2->kfs_count++;
+                        mark_r2_taken_done(r2, idx);
+                        if (is_entry_side_r2(target) && r2->current_stair_id==ENTRY_NODE) {
+                            r2->plan.entry_grab = 0;
+                            r2->sub_state.mf = MF_ENTRY;
+                        }else if (target==r2->target_stair_id) {
+                            r2->sub_state.mf = MF_MOVE_TO_BLOCK;
+                        }else{
+                            r2->sub_state.mf = MF_BACK_TO_CENTER;
+                        }
                     }
                 }
             }

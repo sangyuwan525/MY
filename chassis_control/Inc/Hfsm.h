@@ -42,8 +42,7 @@ typedef enum {
     MF_ENTRY,           // 进入树林入口
     MF_ACTION_JUDGE,    // 下一步动作判断，移动还是拿取还是移出
     MF_MOVE_TO_BLOCK,   // 移动到目标方块
-    MF_PICK_ADJACENT_0,   // 抓取相邻方块的KFS r2_taken[0]
-    MF_PICK_ADJACENT_1,   // 抓取相邻方块的KFS r2_taken[1]
+    MF_PICK_ADJACENT,   // 抓取相邻方块的KFS r2_taken[current_r2_taken_idx]
     MF_REMOVE_KFS,      // 移除相邻方块上的KFS
    // MF_RECOVER_STUCK,   // 【新增】跌落或堵塞恢复
     MF_BACK_TO_CENTER,//判断抓取是否完成，防止重复移动到台阶边缘去抓取
@@ -77,7 +76,9 @@ typedef struct {
     int current_step;      // 当前执行到规划路径的第几步
     int target_stair_id;   // 当前目标方块ID
     int current_stair_id;     // 当前方块ID
-    int already_taken;    // 已经取得kfs方块id，-1表示未取，0表示取r2_taken[0],1表示取r2_taken[1],2表示都已取得，初始为-1
+    int already_taken;    // 已经取得kfs方块id，保留旧字段，当前使用 r2_taken_mask 判断
+    int current_r2_taken_idx; // 当前要抓取的 r2_taken 下标
+    uint8_t r2_taken_mask; // bitN 表示 r2_taken[N] 已抓取
     int kfs_count;        // 持有的kfs数量，初始为0
 } R2_Context_t;
 
