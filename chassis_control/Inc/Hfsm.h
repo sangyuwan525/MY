@@ -7,6 +7,7 @@
 #include "chassis_path.h"
 #include "path.h"
 #include "path_plan.h"
+#include "bsp_can.h"
 
 // --- 向上层发送的动作指令 ---
 typedef enum {
@@ -80,6 +81,7 @@ typedef struct {
     int current_r2_taken_idx; // 当前要抓取的 r2_taken 下标
     uint8_t r2_taken_mask; // bitN 表示 r2_taken[N] 已抓取
     int kfs_count;        // 持有的kfs数量，初始为0
+    bool path_inited;     // 当前状态下是否以完成路径生成
 } R2_Context_t;
 
 extern int MF_flag;
