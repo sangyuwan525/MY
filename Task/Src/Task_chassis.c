@@ -125,8 +125,6 @@ void StartTask_chassis(void *argument)
                 {
                     // 停止底盘，发送 (0, 0, 0) 指令
                     cha_remote(0.0f, 0.0f, 0.0f);
-                    Change_dji_speed(DJI_2006_L, 0);
-                    Change_dji_speed(DJI_2006_R, 0);
                     if (climb_test_cnt==0){
                         Change_dji_loc(DJI_M_CLIMB_LF,0);
                         Change_dji_loc(DJI_M_CLIMB_RF,0);

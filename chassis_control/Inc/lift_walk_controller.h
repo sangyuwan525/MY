@@ -109,6 +109,8 @@ typedef struct {
     float rear_wheel_drive_angle_rad[LIFT_WALK_SIDE_COUNT];
     float front_wheel_speed_limit_rad_s;
     float rear_wheel_speed_limit_rpm;
+    float front_wheel_accel_limit_rad_s2;
+    float rear_wheel_accel_limit_rpm_s;
     float wheel_arm_comp_gain;
     float front_wheel_sign[LIFT_WALK_SIDE_COUNT];
     float rear_wheel_sign[LIFT_WALK_SIDE_COUNT];

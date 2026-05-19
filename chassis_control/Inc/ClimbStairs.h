@@ -60,9 +60,6 @@ typedef enum
 //上楼梯所用距离
 #define climb_front_up 300000
 #define  climb_behind_up 20000
-#define  CLIMB_2006_SPEED 8000
-#define  DOWN_2006_SPEED 6000
-
 #define back_up -305000//305000  325000
 #define front_up2 (-20000)//-20000  -40000
 

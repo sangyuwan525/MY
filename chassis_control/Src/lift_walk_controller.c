@@ -338,6 +338,9 @@ static LiftWalk_Status_e lw_update_arm_targets(LiftWalk_Controller_t *ctrl) {
 // 2. 后轮是 45 度全向轮，需要把底盘 vx/vy/yaw 投影到后轮驱动方向上。
 static void lw_update_wheel_targets(LiftWalk_Controller_t *ctrl, const LiftWalk_Input_t *in) {
     LiftWalk_Config_t *cfg = &ctrl->cfg;
+    float dt = (in->dt_s > LIFT_WALK_EPS) ? in->dt_s : 0.001f;
+    float front_max_step = cfg->front_wheel_accel_limit_rad_s2 * dt;
+    float rear_max_step = cfg->rear_wheel_accel_limit_rpm_s * dt;
 
     for (uint8_t side = 0U; side < LIFT_WALK_SIDE_COUNT; ++side) {
         float forward_y_mm_s = in->vy_mm_s;
@@ -359,12 +362,28 @@ static void lw_update_wheel_targets(LiftWalk_Controller_t *ctrl, const LiftWalk_
         front_rad_s *= cfg->front_wheel_sign[side];
         rear_rpm *= cfg->rear_wheel_sign[side];
 
-        ctrl->out.front_wheel_rad_s[side] = lw_clampf(front_rad_s,
-                                                      -cfg->front_wheel_speed_limit_rad_s,
-                                                      cfg->front_wheel_speed_limit_rad_s);
-        ctrl->out.rear_wheel_rpm[side] = lw_clampf(rear_rpm,
-                                                   -cfg->rear_wheel_speed_limit_rpm,
-                                                   cfg->rear_wheel_speed_limit_rpm);
+        front_rad_s = lw_clampf(front_rad_s,
+                                -cfg->front_wheel_speed_limit_rad_s,
+                                cfg->front_wheel_speed_limit_rad_s);
+        rear_rpm = lw_clampf(rear_rpm,
+                             -cfg->rear_wheel_speed_limit_rpm,
+                             cfg->rear_wheel_speed_limit_rpm);
+
+        if (front_max_step > LIFT_WALK_EPS) {
+            ctrl->out.front_wheel_rad_s[side] = lw_rate_limit(ctrl->out.front_wheel_rad_s[side],
+                                                              front_rad_s,
+                                                              front_max_step);
+        } else {
+            ctrl->out.front_wheel_rad_s[side] = front_rad_s;
+        }
+
+        if (rear_max_step > LIFT_WALK_EPS) {
+            ctrl->out.rear_wheel_rpm[side] = lw_rate_limit(ctrl->out.rear_wheel_rpm[side],
+                                                           rear_rpm,
+                                                           rear_max_step);
+        } else {
+            ctrl->out.rear_wheel_rpm[side] = rear_rpm;
+        }
     }
 }
 
@@ -471,6 +490,8 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->rear_wheel_drive_angle_rad[LIFT_WALK_RIGHT] = -LIFT_WALK_PI / 4.0f;
     cfg->front_wheel_speed_limit_rad_s = 25.0f;
     cfg->rear_wheel_speed_limit_rpm = 3000.0f;
+    cfg->front_wheel_accel_limit_rad_s2 = 15.0f;
+    cfg->rear_wheel_accel_limit_rpm_s = 600.0f;
     cfg->wheel_arm_comp_gain = 1.0f;
     cfg->front_wheel_sign[LIFT_WALK_LEFT] = 1.0f;
     cfg->front_wheel_sign[LIFT_WALK_RIGHT] = 1.0f;
