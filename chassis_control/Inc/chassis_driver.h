@@ -5,6 +5,7 @@
 #include "stm32g4xx.h"
 #include <stdio.h>
 #include <string.h>
+#include "global_motor_conf.h"
 
 // --- 1. Chassis type ---
 //#define CHASSIS_TYPE_DUOLUN

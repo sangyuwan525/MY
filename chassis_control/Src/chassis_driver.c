@@ -7,6 +7,7 @@
 #include <math.h>
 #include "dji_3508_2006_motor.h"
 #include "bsp_can.h"
+#include "motor_registry.h"
 #include "SEGGER_RTT.h"
 #define PI  3.1415926f
 // --- 1. 全局数据实例 ---
@@ -370,7 +371,7 @@ void cha_remote(float vx, float vy, float vr)
 #if defined(CHASSIS_TYPE_QUANXIANGLUN) || defined(CHASSIS_TYPE_MECANUM_OMNI)
         // 全向轮只需发送转速指令
         // 假设 Change_dji_speed 是发送电机转速的函数
-        Change_dji_speed(i, wheel_data[i].vel);
+        g_motor_list[BLAZER_FOC_MOTOR1_G+i].set_speed(&g_motor_list[BLAZER_FOC_MOTOR1_G+i],wheel_data[i].vel);
 #elif defined(CHASSIS_TYPE_DUOLUN)
         // 舵轮需要发送转速和转向角
     #ifdef BUFFERS_SEND
