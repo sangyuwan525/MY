@@ -26,11 +26,11 @@
 typedef enum
 {
     CLIMB_IDLE = 0,             // 初始/空闲状态
-    CLIMB_STEP1_FRONT_UP,       // 第一步：前侧3508抬升 (对应原按钮1)
-    CLIMB_STEP2_BASE_FORWARD,   // 第二步：底盘向前移动 (对应原图步骤3)
-    CLIMB_STEP3_LIFT_UP,        // 第三步：3508抬升车身 (对应原按钮5的变体)
-    CLIMB_STEP4_REAR_FORWARD,   // 第四步：后侧2006推动 (对应原按钮3)
-    CLIMB_STEP5_RESET_ALL,      // 第五步：所有电机归位 (对应原按钮2)
+    CLIMB_STEP1_FRONT_ARM_DEPLOY,     // 第一步：宇树小臂向前转，让达妙前轮落地
+    CLIMB_STEP2_LIFT_AND_FORWARD,     // 第二步：以当前姿态为零点，抬升车身并向前走
+    CLIMB_STEP3_FRONT_ARM_RETRACT,    // 第三步：宇树小臂向后收，同时继续向前走
+    CLIMB_STEP4_REAR_SLIDER_RETRACT,  // 第四步：后侧小米滑轨收回
+    CLIMB_STEP5_CENTER_FORWARD,       // 第五步：继续走到台阶中心
     CLIMB_COMPLETE              // 攀爬完成
 } Climb_State_e;
 
