@@ -160,13 +160,13 @@ static void xiaomi_send_motion_control(Xiaomi_Motor_t *motor) {
 
 Xiaomi_Motor_t g_xiaomi_motor_registry[XIAOMI_MOTOR_COUNT] = {
     [XIAOMI_Motor1] = {
-        .hcan = &hfdcan1,
+        .hcan = &hfdcan2,
         .can_id = XIAOMI_Motor1_CAN_ID,
         .feedback_id = XIAOMI_Motor1_FEEDBACK_ID,
         .master_id = XIAOMI_MASTER_CAN_ID,
     },
     [XIAOMI_Motor2] = {
-        .hcan = &hfdcan1,
+        .hcan = &hfdcan2,
         .can_id = XIAOMI_Motor2_CAN_ID,
         .feedback_id = XIAOMI_Motor2_FEEDBACK_ID,
         .master_id = XIAOMI_MASTER_CAN_ID,

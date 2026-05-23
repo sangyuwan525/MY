@@ -157,7 +157,7 @@ static void ClimbFrontWheel_SetLinearSpeed(float vy_mm_s)
     float front_motor_rad_s = (vy_mm_s / CLIMB_FRONT_WHEEL_RADIUS_MM) *
                               CLIMB_FRONT_WHEEL_MOTOR_RAD_PER_WHEEL_RAD;
 
-    ClimbMotor_SetSpeed(DM_JOINT_G, front_motor_rad_s);
+    ClimbMotor_SetSpeed(DM_FRONT_LEFT_G, front_motor_rad_s);
     ClimbMotor_SetSpeed(DM_FRONT_RIGHT_G, front_motor_rad_s);
 }
 

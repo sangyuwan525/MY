@@ -433,7 +433,7 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->xiaomi_slider_motor[LIFT_WALK_RIGHT] = XIAOMI_MOTOR2_G;
     cfg->unitree_arm_motor[LIFT_WALK_LEFT] = UNITREE_GO_M8010_6_MOTOR1_G;
     cfg->unitree_arm_motor[LIFT_WALK_RIGHT] = UNITREE_GO_M8010_6_MOTOR2_G;
-    cfg->front_wheel_motor[LIFT_WALK_LEFT] = DM_JOINT_G;
+    cfg->front_wheel_motor[LIFT_WALK_LEFT] = DM_FRONT_LEFT_G;
     cfg->front_wheel_motor[LIFT_WALK_RIGHT] = DM_FRONT_RIGHT_G;
     cfg->rear_wheel_motor[LIFT_WALK_LEFT] = BLAZER_FOC_MOTOR1_G;
     cfg->rear_wheel_motor[LIFT_WALK_RIGHT] = BLAZER_FOC_MOTOR2_G;

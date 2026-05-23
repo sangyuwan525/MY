@@ -161,7 +161,7 @@ void dm_motor_set_control_mode(Damiao_Motor_t *motor, mode_e mode, uint8_t save)
 	motor->param_ack_rid = RID_CMODE;
 	motor->param_ack_value = 0U;
 
-	write_motor_data(motor->id,
+	write_motor_data(motor,
 	                 RID_CMODE,
 	                 (uint8_t)(mode_value & 0xFFU),
 	                 (uint8_t)((mode_value >> 8) & 0xFFU),
@@ -503,13 +503,26 @@ void psi_ctrl(hcan_t* hcan, uint16_t motor_id, float pos, float vel, float cur)
 * @details:    	读取电机参数
 ************************************************************************
 **/
-void read_motor_data(uint16_t id, uint8_t rid) 
+void read_motor_data(Damiao_Motor_t *motor, uint8_t rid)
 {
-	uint8_t can_id_l = id & 0x0F;
-	uint8_t can_id_h = (id >> 4) & 0x0F;
-	
-	uint8_t data[4] = {can_id_l, can_id_h, 0x33, rid};
-	fdcanx_send_data(&hfdcan1, 0x7FF, data, 4);
+	uint16_t id;
+	uint8_t can_id_l;
+	uint8_t can_id_h;
+	uint8_t data[4];
+
+	if (motor == NULL || motor->hcan == NULL) {
+		return;
+	}
+
+	id = motor->id;
+	can_id_l = id & 0x0F;
+	can_id_h = (id >> 4) & 0x0F;
+	data[0] = can_id_l;
+	data[1] = can_id_h;
+	data[2] = 0x33;
+	data[3] = rid;
+
+	fdcanx_send_data(motor->hcan, 0x7FF, data, 4);
 }
 /**
 ************************************************************************
@@ -519,13 +532,26 @@ void read_motor_data(uint16_t id, uint8_t rid)
 * @details:    	读取电机控制反馈的数据
 ************************************************************************
 **/
-void read_motor_ctrl_fbdata(uint16_t id) 
+void read_motor_ctrl_fbdata(Damiao_Motor_t *motor)
 {
-	uint8_t can_id_l = id & 0xFF;       // 低 8 位
-    uint8_t can_id_h = (id >> 8) & 0x07; // 高 3 位
+	uint16_t id;
+	uint8_t can_id_l;
+	uint8_t can_id_h;
+	uint8_t data[4];
 
-	uint8_t data[4] = {can_id_l, can_id_h, 0xCC, 0x00};
-	fdcanx_send_data(&hfdcan1, 0x7FF, data, 4);
+	if (motor == NULL || motor->hcan == NULL) {
+		return;
+	}
+
+	id = motor->id;
+	can_id_l = id & 0xFF;
+	can_id_h = (id >> 8) & 0x07;
+	data[0] = can_id_l;
+	data[1] = can_id_h;
+	data[2] = 0xCC;
+	data[3] = 0x00;
+
+	fdcanx_send_data(motor->hcan, 0x7FF, data, 4);
 }
 /**
 ************************************************************************
@@ -537,13 +563,30 @@ void read_motor_ctrl_fbdata(uint16_t id)
 * @details:    	向寄存器写入数据
 ************************************************************************
 **/
-void write_motor_data(uint16_t id, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3)
+void write_motor_data(Damiao_Motor_t *motor, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3)
 {
-	uint8_t can_id_l = id & 0xFF;       // 低 8 位
-    uint8_t can_id_h = (id >> 8) & 0x07; // 高 3 位
-	
-	uint8_t data[8] = {can_id_l, can_id_h, 0x55, rid, d0, d1, d2, d3};
-	fdcanx_send_data(&hfdcan1, 0x7FF, data, 8);
+	uint16_t id;
+	uint8_t can_id_l;
+	uint8_t can_id_h;
+	uint8_t data[8];
+
+	if (motor == NULL || motor->hcan == NULL) {
+		return;
+	}
+
+	id = motor->id;
+	can_id_l = id & 0xFF;
+	can_id_h = (id >> 8) & 0x07;
+	data[0] = can_id_l;
+	data[1] = can_id_h;
+	data[2] = 0x55;
+	data[3] = rid;
+	data[4] = d0;
+	data[5] = d1;
+	data[6] = d2;
+	data[7] = d3;
+
+	fdcanx_send_data(motor->hcan, 0x7FF, data, 8);
 }
 /**
 ************************************************************************
@@ -554,12 +597,29 @@ void write_motor_data(uint16_t id, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t 
 * @details:    	保存写入的电机参数
 ************************************************************************
 **/
-void save_motor_data(uint16_t id, uint8_t rid) 
+void save_motor_data(Damiao_Motor_t *motor, uint8_t rid)
 {
-	uint8_t can_id_l = id & 0xFF;       // 低 8 位
-    uint8_t can_id_h = (id >> 8) & 0x07; // 高 3 位
+	uint16_t id;
+	uint8_t can_id_l;
+	uint8_t can_id_h;
+	uint8_t data[8];
 	(void)rid;
-	
-	uint8_t data[8] = {can_id_l, can_id_h, 0xAA, 0x00, 0, 0, 0, 0};
-	fdcanx_send_data(&hfdcan1, 0x7FF, data, 8);
+
+	if (motor == NULL || motor->hcan == NULL) {
+		return;
+	}
+
+	id = motor->id;
+	can_id_l = id & 0xFF;
+	can_id_h = (id >> 8) & 0x07;
+	data[0] = can_id_l;
+	data[1] = can_id_h;
+	data[2] = 0xAA;
+	data[3] = 0x00;
+	data[4] = 0;
+	data[5] = 0;
+	data[6] = 0;
+	data[7] = 0;
+
+	fdcanx_send_data(motor->hcan, 0x7FF, data, 8);
 }

@@ -205,9 +205,9 @@ void psi_ctrl(hcan_t* hcan, uint16_t motor_id, float pos, float vel, float cur);
 void save_pos_zero(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);
 void clear_err(hcan_t* hcan, uint16_t motor_id, uint16_t mode_id);
 
-void read_motor_data(uint16_t id, uint8_t rid);
-void read_motor_ctrl_fbdata(uint16_t id);
-void write_motor_data(uint16_t id, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3);
-void save_motor_data(uint16_t id, uint8_t rid);
+void read_motor_data(Damiao_Motor_t *motor, uint8_t rid);
+void read_motor_ctrl_fbdata(Damiao_Motor_t *motor);
+void write_motor_data(Damiao_Motor_t *motor, uint8_t rid, uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3);
+void save_motor_data(Damiao_Motor_t *motor, uint8_t rid);
 
 #endif /* __DM_MOTOR_DRV_H__ */

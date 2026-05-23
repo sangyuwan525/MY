@@ -5,7 +5,7 @@
 
 Damiao_Motor_t g_dm_motor_registry[DM_MOTOR_COUNT] = {
 	[DM_Motor1] = {
-		.hcan = &hfdcan1,
+		.hcan = &hfdcan2,
 		.id = DM_Motor1_CAN_ID,
 		.mst_id = DM_Motor1_MST_ID,
 		.tmp.read_flag = 1,
@@ -15,7 +15,7 @@ Damiao_Motor_t g_dm_motor_registry[DM_MOTOR_COUNT] = {
 		.tmp.TMAX = 10.0f,
 	},
 	[DM_Motor2] = {
-		.hcan = &hfdcan1,
+		.hcan = &hfdcan2,
 		.id = DM_Motor2_CAN_ID,
 		.mst_id = DM_Motor2_MST_ID,
 		.tmp.read_flag = 1,
@@ -37,51 +37,51 @@ void read_all_motor_data(Damiao_Motor_t *motor)
 {
 	switch (motor->tmp.read_flag)
 	{
-		case 1:  read_motor_data(motor->id, RID_UV_VALUE);  break;
-		case 2:  read_motor_data(motor->id, RID_KT_VALUE);  break;
-		case 3:  read_motor_data(motor->id, RID_OT_VALUE);  break;
-		case 4:  read_motor_data(motor->id, RID_OC_VALUE);  break;
-		case 5:  read_motor_data(motor->id, RID_ACC);       break;
-		case 6:  read_motor_data(motor->id, RID_DEC);       break;
-		case 7:  read_motor_data(motor->id, RID_MAX_SPD);   break;
-		case 8:  read_motor_data(motor->id, RID_MST_ID);    break;
-		case 9:  read_motor_data(motor->id, RID_ESC_ID);    break;
-		case 10: read_motor_data(motor->id, RID_TIMEOUT);   break;
-		case 11: read_motor_data(motor->id, RID_CMODE);     break;
-		case 12: read_motor_data(motor->id, RID_DAMP);      break;
-		case 13: read_motor_data(motor->id, RID_INERTIA);   break;
-		case 14: read_motor_data(motor->id, RID_HW_VER);    break;
-		case 15: read_motor_data(motor->id, RID_SW_VER);    break;
-		case 16: read_motor_data(motor->id, RID_SN);        break;
-		case 17: read_motor_data(motor->id, RID_NPP);       break;
-		case 18: read_motor_data(motor->id, RID_RS);        break;
-		case 19: read_motor_data(motor->id, RID_LS);        break;
-		case 20: read_motor_data(motor->id, RID_FLUX);      break;
-		case 21: read_motor_data(motor->id, RID_GR);        break;
-		case 22: read_motor_data(motor->id, RID_PMAX);      break;
-		case 23: read_motor_data(motor->id, RID_VMAX);      break;
-		case 24: read_motor_data(motor->id, RID_TMAX);      break;
-		case 25: read_motor_data(motor->id, RID_I_BW);      break;
-		case 26: read_motor_data(motor->id, RID_KP_ASR);    break;
-		case 27: read_motor_data(motor->id, RID_KI_ASR);    break;
-		case 28: read_motor_data(motor->id, RID_KP_APR);    break;
-		case 29: read_motor_data(motor->id, RID_KI_APR);    break;
-		case 30: read_motor_data(motor->id, RID_OV_VALUE);  break;
-		case 31: read_motor_data(motor->id, RID_GREF);      break;
-		case 32: read_motor_data(motor->id, RID_DETA);      break;
-		case 33: read_motor_data(motor->id, RID_V_BW);      break;
-		case 34: read_motor_data(motor->id, RID_IQ_CL);     break;
-		case 35: read_motor_data(motor->id, RID_VL_CL);     break;
-		case 36: read_motor_data(motor->id, RID_CAN_BR);    break;
-		case 37: read_motor_data(motor->id, RID_SUB_VER);   break;
-		case 38: read_motor_data(motor->id, RID_U_OFF);     break;
-		case 39: read_motor_data(motor->id, RID_V_OFF);     break;
-		case 40: read_motor_data(motor->id, RID_K1);        break;
-		case 41: read_motor_data(motor->id, RID_K2);        break;
-		case 42: read_motor_data(motor->id, RID_M_OFF);     break;
-		case 43: read_motor_data(motor->id, RID_DIR);       break;
-		case 44: read_motor_data(motor->id, RID_P_M);       break;
-		case 45: read_motor_data(motor->id, RID_X_OUT);     break;
+		case 1:  read_motor_data(motor, RID_UV_VALUE);  break;
+		case 2:  read_motor_data(motor, RID_KT_VALUE);  break;
+		case 3:  read_motor_data(motor, RID_OT_VALUE);  break;
+		case 4:  read_motor_data(motor, RID_OC_VALUE);  break;
+		case 5:  read_motor_data(motor, RID_ACC);       break;
+		case 6:  read_motor_data(motor, RID_DEC);       break;
+		case 7:  read_motor_data(motor, RID_MAX_SPD);   break;
+		case 8:  read_motor_data(motor, RID_MST_ID);    break;
+		case 9:  read_motor_data(motor, RID_ESC_ID);    break;
+		case 10: read_motor_data(motor, RID_TIMEOUT);   break;
+		case 11: read_motor_data(motor, RID_CMODE);     break;
+		case 12: read_motor_data(motor, RID_DAMP);      break;
+		case 13: read_motor_data(motor, RID_INERTIA);   break;
+		case 14: read_motor_data(motor, RID_HW_VER);    break;
+		case 15: read_motor_data(motor, RID_SW_VER);    break;
+		case 16: read_motor_data(motor, RID_SN);        break;
+		case 17: read_motor_data(motor, RID_NPP);       break;
+		case 18: read_motor_data(motor, RID_RS);        break;
+		case 19: read_motor_data(motor, RID_LS);        break;
+		case 20: read_motor_data(motor, RID_FLUX);      break;
+		case 21: read_motor_data(motor, RID_GR);        break;
+		case 22: read_motor_data(motor, RID_PMAX);      break;
+		case 23: read_motor_data(motor, RID_VMAX);      break;
+		case 24: read_motor_data(motor, RID_TMAX);      break;
+		case 25: read_motor_data(motor, RID_I_BW);      break;
+		case 26: read_motor_data(motor, RID_KP_ASR);    break;
+		case 27: read_motor_data(motor, RID_KI_ASR);    break;
+		case 28: read_motor_data(motor, RID_KP_APR);    break;
+		case 29: read_motor_data(motor, RID_KI_APR);    break;
+		case 30: read_motor_data(motor, RID_OV_VALUE);  break;
+		case 31: read_motor_data(motor, RID_GREF);      break;
+		case 32: read_motor_data(motor, RID_DETA);      break;
+		case 33: read_motor_data(motor, RID_V_BW);      break;
+		case 34: read_motor_data(motor, RID_IQ_CL);     break;
+		case 35: read_motor_data(motor, RID_VL_CL);     break;
+		case 36: read_motor_data(motor, RID_CAN_BR);    break;
+		case 37: read_motor_data(motor, RID_SUB_VER);   break;
+		case 38: read_motor_data(motor, RID_U_OFF);     break;
+		case 39: read_motor_data(motor, RID_V_OFF);     break;
+		case 40: read_motor_data(motor, RID_K1);        break;
+		case 41: read_motor_data(motor, RID_K2);        break;
+		case 42: read_motor_data(motor, RID_M_OFF);     break;
+		case 43: read_motor_data(motor, RID_DIR);       break;
+		case 44: read_motor_data(motor, RID_P_M);       break;
+		case 45: read_motor_data(motor, RID_X_OUT);     break;
 	}
 }
 

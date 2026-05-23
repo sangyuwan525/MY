@@ -222,11 +222,11 @@ static void speed_decompose_mecanum_omni(int motor_id, float vx, float vy, float
             wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, MECANUM_WHEEL_CIRCUMFERENCE, MECANUM_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 1: // Rear left omni
-            wheel_linear = SQRT_2_INV * (-vx + vy) - omni_yaw;
+            wheel_linear = -(SQRT_2_INV * (-vx + vy) - omni_yaw);
             wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, OMNI_WHEEL_CIRCUMFERENCE, OMNI_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 2: // Front right mecanum
-            wheel_linear = vy - vx + mecanum_yaw;
+            wheel_linear = -(vy - vx + mecanum_yaw);
             wheel_data[motor_id].vel = limit_motor_rpm(wheel_linear_mm_s_to_motor_rpm(wheel_linear, MECANUM_WHEEL_CIRCUMFERENCE, MECANUM_WHEEL_REV_PER_MOTOR_REV));
             break;
         case 3: // Rear right omni

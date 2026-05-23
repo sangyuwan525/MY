@@ -4,7 +4,6 @@
 #include "remote_driver.h"
 #include "chassis_driver.h"
 #include "Task_chassis.h"
-
 #include "chassis_path.h"
 #include "dji_3508_2006_motor.h"
 #include "ClimbStairs.h"
@@ -161,12 +160,26 @@ void StartTask_chassis(void *argument)
                 //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
-                    Change_dji_loc(DJI_M_CLIMB_LF,-back_up);
-                    Change_dji_loc(DJI_M_CLIMB_RF,back_up);
-                    Change_dji_loc(DJI_M_CLIMB_RB,-25000);
-                    Change_dji_loc(DJI_M_CLIMB_LB,25000);
+                    // Change_dji_loc(DJI_M_CLIMB_LF,-back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RF,back_up);
+                    // Change_dji_loc(DJI_M_CLIMB_RB,-25000);
+                    // Change_dji_loc(DJI_M_CLIMB_LB,25000);
+                    //
+                    //
+
+                    if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
+                    {
+                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20.0f);
+                        g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
+                    }
+
                 }else {
                     //MF_flag = 0;
+                    if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
+                    {
+                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);
+                        g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],0.0f);
+                    }
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
@@ -249,9 +262,7 @@ void StartTask_chassis(void *argument)
                     // Change_dji_loc(DJI_M_CLIMB_RF, 0);
                     // Change_dji_loc(DJI_M_CLIMB_LB, climb_front_up);
                     // Change_dji_loc(DJI_M_CLIMB_RB, -climb_front_up);
-                    if (g_motor_list[DM_JOINT_G].set_speed != NULL) {
-                        g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G], 0.8f);
-                    }
+
                     // 按钮5被按下，四个3508一起抬升底盘
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);
@@ -264,9 +275,7 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button6 == 1)
                 {
-                    if (g_motor_list[DM_JOINT_G].set_speed != NULL) {
-                        g_motor_list[DM_JOINT_G].set_speed(&g_motor_list[DM_JOINT_G], 0);
-                    }
+
                     // 按钮3被按下，一起抬升
                     //Change_dji_loc(6,back_up);
                     //Change_dji_loc(4,-front_up2);

@@ -111,6 +111,7 @@ typedef struct {
     Blazer_FOC_Control_t ctrl;
     Blazer_FOC_Feedback_t feedback;
     uint8_t read_cursor;             /* Round-robin state feedback polling index. */
+    uint32_t last_read_tx_tick_ms;
 } Blazer_FOC_Motor_t;
 
 extern Blazer_FOC_Motor_t g_blazer_foc_motor_registry[BLAZER_FOC_MOTOR_COUNT];
@@ -122,6 +123,7 @@ void Blazer_FOC_SetCurrent(Blazer_FOC_Motor_t *motor, float current_a);
 void Blazer_FOC_SetPosition(Blazer_FOC_Motor_t *motor, float position_rev);
 void Blazer_FOC_Stop(Blazer_FOC_Motor_t *motor);
 void Blazer_FOC_Control_Send(Blazer_FOC_Motor_t *motor);
+void Blazer_FOC_Control_Dispatch(void);
 void Blazer_FOC_Update_Feedback(Blazer_FOC_Motor_t *motor, uint32_t identifier, const uint8_t data[4]);
 uint8_t Blazer_FOC_Match_Feedback(const Blazer_FOC_Motor_t *motor, FDCAN_HandleTypeDef *hfdcan, uint32_t identifier);
 uint32_t Blazer_FOC_MakeID(uint8_t node_id, Blazer_FOC_ParamID_e param_id);

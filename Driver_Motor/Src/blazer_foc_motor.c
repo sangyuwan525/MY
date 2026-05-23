@@ -7,6 +7,14 @@
 #define BLAZER_FOC_DEFAULT_CAN (&hfdcan3)
 #define BLAZER_FOC_READ_PARAM_COUNT 5U
 #define BLAZER_FOC_RPM_PER_RPS 60.0f
+#define BLAZER_FOC_TX_BUDGET_PER_LOOP 3U
+#define BLAZER_FOC_READ_PERIOD_MS 10U
+
+typedef enum {
+    BLAZER_FOC_TX_NONE = 0,
+    BLAZER_FOC_TX_SENT,
+    BLAZER_FOC_TX_BUSY,
+} Blazer_FOC_TxResult_e;
 
 /*
  * Blazer FOC device registry.
@@ -98,11 +106,17 @@ static float Blazer_FOC_UnpackFloat(const uint8_t data[4]) {
     return Blazer_FOC_BitsToFloat(bits);
 }
 
+static uint8_t Blazer_FOC_TxReady(const Blazer_FOC_Motor_t *motor) {
+    return (motor != NULL &&
+            motor->hcan != NULL &&
+            HAL_FDCAN_GetTxFifoFreeLevel(motor->hcan) > 0U) ? 1U : 0U;
+}
+
 /* Write a Blazer FOC parameter. Only even parameter IDs are writable. */
 static uint8_t Blazer_FOC_WriteParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_ParamID_e param_id, float value) {
     uint8_t data[4];
 
-    if (motor == NULL || motor->hcan == NULL) {
+    if (Blazer_FOC_TxReady(motor) == 0U) {
         return 1U;
     }
 
@@ -111,18 +125,18 @@ static uint8_t Blazer_FOC_WriteParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_Param
 }
 
 /* Request a Blazer FOC parameter. Read requests use param_id + 1. */
-static void Blazer_FOC_ReadParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_ParamID_e param_id) {
+static uint8_t Blazer_FOC_ReadParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_ParamID_e param_id) {
     uint8_t data[4] = {0};
 
-    if (motor == NULL || motor->hcan == NULL) {
-        return;
+    if (Blazer_FOC_TxReady(motor) == 0U) {
+        return 1U;
     }
 
-    (void)fdcanx_send_ex_data(motor->hcan,
-                              Blazer_FOC_MakeID(motor->node_id, (Blazer_FOC_ParamID_e)((uint8_t)param_id + 1U)),
-                              data,
-                              4U,
-                              CAN_ID_EXT);
+    return fdcanx_send_ex_data(motor->hcan,
+                               Blazer_FOC_MakeID(motor->node_id, (Blazer_FOC_ParamID_e)((uint8_t)param_id + 1U)),
+                               data,
+                               4U,
+                               CAN_ID_EXT);
 }
 
 void Blazer_FOC_Motor_Init(void) {
@@ -135,6 +149,7 @@ void Blazer_FOC_Motor_Init(void) {
         motor->ctrl.mode_pending = 1U;
         motor->ctrl.enabled = 1U;
         motor->read_cursor = 0U;
+        motor->last_read_tx_tick_ms = 0U;
     }
 }
 
@@ -160,6 +175,7 @@ void Blazer_FOC_SetSpeed(Blazer_FOC_Motor_t *motor, float speed_rpm) {
         return;
     }
 
+    /* Latest-value buffer: overwrite old speed commands instead of queuing them. */
     motor->ctrl.speed_set = speed_rpm;
     motor->ctrl.setpoint_pending = 1U;
     Blazer_FOC_SetMode(motor, BLAZER_FOC_MODE_SPEED);
@@ -199,49 +215,169 @@ void Blazer_FOC_Stop(Blazer_FOC_Motor_t *motor) {
     Blazer_FOC_SetMode(motor, BLAZER_FOC_MODE_DISABLE);
 }
 
-/*
- * Called by Motor_All_Control_Loop().
- *
- * For speed mode we resend spd_set every cycle. The manual states can_hb is a
- * heartbeat timeout in modes 1 and 2, so periodic setpoint refresh doubles as
- * the heartbeat that keeps the ESC enabled.
- */
-void Blazer_FOC_Control_Send(Blazer_FOC_Motor_t *motor) {
-    Blazer_FOC_ParamID_e read_param;
-
+static Blazer_FOC_TxResult_e Blazer_FOC_SendPending(Blazer_FOC_Motor_t *motor) {
     if (motor == NULL || motor->ctrl.enabled == 0U) {
-        return;
+        return BLAZER_FOC_TX_NONE;
     }
 
     if (motor->ctrl.mode_pending != 0U) {
         if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_MODE, (float)motor->ctrl.mode) != 0U) {
-            return;
+            return BLAZER_FOC_TX_BUSY;
         }
         motor->ctrl.mode_pending = 0U;
+        return BLAZER_FOC_TX_SENT;
     }
 
-    if (motor->ctrl.mode == BLAZER_FOC_MODE_SPEED) {
-        if (Blazer_FOC_WriteParam(motor,
-                                  BLAZER_FOC_PARAM_SPD_SET,
-                                  motor->ctrl.speed_set / BLAZER_FOC_RPM_PER_RPS) != 0U) {
-            return;
-        }
-        motor->ctrl.setpoint_pending = 0U;
-    } else if (motor->ctrl.setpoint_pending != 0U && motor->ctrl.mode == BLAZER_FOC_MODE_CURRENT) {
+    if (motor->ctrl.setpoint_pending == 0U || motor->ctrl.mode == BLAZER_FOC_MODE_SPEED) {
+        return BLAZER_FOC_TX_NONE;
+    }
+
+    if (motor->ctrl.mode == BLAZER_FOC_MODE_CURRENT) {
         if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_I_SET, motor->ctrl.current_set) != 0U) {
-            return;
+            return BLAZER_FOC_TX_BUSY;
         }
         motor->ctrl.setpoint_pending = 0U;
-    } else if (motor->ctrl.setpoint_pending != 0U && motor->ctrl.mode == BLAZER_FOC_MODE_POSITION) {
+        return BLAZER_FOC_TX_SENT;
+    }
+
+    if (motor->ctrl.mode == BLAZER_FOC_MODE_POSITION) {
         if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_POS_SET, motor->ctrl.position_set) != 0U) {
-            return;
+            return BLAZER_FOC_TX_BUSY;
         }
         motor->ctrl.setpoint_pending = 0U;
+        return BLAZER_FOC_TX_SENT;
+    }
+
+    return BLAZER_FOC_TX_NONE;
+}
+
+static Blazer_FOC_TxResult_e Blazer_FOC_SendSpeedHeartbeat(Blazer_FOC_Motor_t *motor) {
+    if (motor == NULL ||
+        motor->ctrl.enabled == 0U ||
+        motor->ctrl.mode_pending != 0U ||
+        motor->ctrl.mode != BLAZER_FOC_MODE_SPEED) {
+        return BLAZER_FOC_TX_NONE;
+    }
+
+    if (Blazer_FOC_WriteParam(motor,
+                              BLAZER_FOC_PARAM_SPD_SET,
+                              motor->ctrl.speed_set / BLAZER_FOC_RPM_PER_RPS) != 0U) {
+        return BLAZER_FOC_TX_BUSY;
+    }
+    motor->ctrl.setpoint_pending = 0U;
+    return BLAZER_FOC_TX_SENT;
+}
+
+static Blazer_FOC_TxResult_e Blazer_FOC_SendRead(Blazer_FOC_Motor_t *motor, uint32_t now_ms) {
+    Blazer_FOC_ParamID_e read_param;
+
+    if (motor == NULL || motor->ctrl.enabled == 0U) {
+        return BLAZER_FOC_TX_NONE;
+    }
+
+    if ((now_ms - motor->last_read_tx_tick_ms) < BLAZER_FOC_READ_PERIOD_MS) {
+        return BLAZER_FOC_TX_NONE;
     }
 
     read_param = k_blazer_foc_read_params[motor->read_cursor];
-    Blazer_FOC_ReadParam(motor, read_param);
+    if (Blazer_FOC_ReadParam(motor, read_param) != 0U) {
+        return BLAZER_FOC_TX_BUSY;
+    }
+
     motor->read_cursor = (uint8_t)((motor->read_cursor + 1U) % BLAZER_FOC_READ_PARAM_COUNT);
+    motor->last_read_tx_tick_ms = now_ms;
+    return BLAZER_FOC_TX_SENT;
+}
+
+static Blazer_FOC_TxResult_e Blazer_FOC_TryStage(uint8_t *slot,
+                                                 Blazer_FOC_TxResult_e (*send_fn)(Blazer_FOC_Motor_t *motor),
+                                                 uint8_t *budget) {
+    for (uint8_t n = 0U; n < BLAZER_FOC_MOTOR_COUNT; ++n) {
+        uint8_t motor_idx = (uint8_t)((*slot + n) % BLAZER_FOC_MOTOR_COUNT);
+        Blazer_FOC_TxResult_e result = send_fn(&g_blazer_foc_motor_registry[motor_idx]);
+
+        if (result == BLAZER_FOC_TX_SENT) {
+            *slot = (uint8_t)((motor_idx + 1U) % BLAZER_FOC_MOTOR_COUNT);
+            (*budget)--;
+            return result;
+        }
+        if (result == BLAZER_FOC_TX_BUSY) {
+            *slot = motor_idx;
+            return result;
+        }
+    }
+
+    return BLAZER_FOC_TX_NONE;
+}
+
+static Blazer_FOC_TxResult_e Blazer_FOC_TryReadStage(uint8_t *slot, uint8_t *budget, uint32_t now_ms) {
+    for (uint8_t n = 0U; n < BLAZER_FOC_MOTOR_COUNT; ++n) {
+        uint8_t motor_idx = (uint8_t)((*slot + n) % BLAZER_FOC_MOTOR_COUNT);
+        Blazer_FOC_TxResult_e result = Blazer_FOC_SendRead(&g_blazer_foc_motor_registry[motor_idx], now_ms);
+
+        if (result == BLAZER_FOC_TX_SENT) {
+            *slot = (uint8_t)((motor_idx + 1U) % BLAZER_FOC_MOTOR_COUNT);
+            (*budget)--;
+            return result;
+        }
+        if (result == BLAZER_FOC_TX_BUSY) {
+            *slot = motor_idx;
+            return result;
+        }
+    }
+
+    return BLAZER_FOC_TX_NONE;
+}
+
+/*
+ * Compatibility entry for a single motor. The full chassis path should use
+ * Blazer_FOC_Control_Dispatch(), which sends across all motors fairly.
+ */
+void Blazer_FOC_Control_Send(Blazer_FOC_Motor_t *motor) {
+    uint32_t now_ms = HAL_GetTick();
+
+    if (Blazer_FOC_SendPending(motor) != BLAZER_FOC_TX_NONE) {
+        return;
+    }
+    if (Blazer_FOC_SendRead(motor, now_ms) != BLAZER_FOC_TX_NONE) {
+        return;
+    }
+    (void)Blazer_FOC_SendSpeedHeartbeat(motor);
+}
+
+void Blazer_FOC_Control_Dispatch(void) {
+    static uint8_t pending_slot = 0U;
+    static uint8_t read_slot = 0U;
+    static uint8_t speed_slot = 0U;
+    uint8_t budget = BLAZER_FOC_TX_BUDGET_PER_LOOP;
+    uint32_t now_ms = HAL_GetTick();
+
+    while (budget > 0U) {
+        Blazer_FOC_TxResult_e result = Blazer_FOC_TryStage(&pending_slot, Blazer_FOC_SendPending, &budget);
+        if (result == BLAZER_FOC_TX_BUSY) {
+            return;
+        }
+        if (result == BLAZER_FOC_TX_NONE) {
+            break;
+        }
+    }
+
+    while (budget > 0U) {
+        Blazer_FOC_TxResult_e result = Blazer_FOC_TryReadStage(&read_slot, &budget, now_ms);
+        if (result == BLAZER_FOC_TX_BUSY) {
+            return;
+        }
+        if (result == BLAZER_FOC_TX_NONE) {
+            break;
+        }
+    }
+
+    while (budget > 0U) {
+        Blazer_FOC_TxResult_e result = Blazer_FOC_TryStage(&speed_slot, Blazer_FOC_SendSpeedHeartbeat, &budget);
+        if (result != BLAZER_FOC_TX_SENT) {
+            return;
+        }
+    }
 }
 
 /*

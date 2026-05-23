@@ -8,7 +8,7 @@ typedef enum {
     DJI_XR_G,
     DJI_JOINT1_3508_G,
     DJI_JOINT2_2006_G,
-    DM_JOINT_G,
+    DM_FRONT_LEFT_G,
     DM_FRONT_RIGHT_G,
     XIAOMI_MOTOR1_G,
     XIAOMI_MOTOR2_G,
