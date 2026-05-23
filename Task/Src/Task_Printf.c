@@ -80,6 +80,12 @@ static int RTT_CmdParseMotor(const char *token)
     if (strcmp(token, "blazer2") == 0 || strcmp(token, "bfoc2") == 0) {
         return BLAZER_FOC_MOTOR2_G;
     }
+    if (strcmp(token, "blazer3") == 0 || strcmp(token, "bfoc3") == 0) {
+        return BLAZER_FOC_MOTOR3_G;
+    }
+    if (strcmp(token, "blazer4") == 0 || strcmp(token, "bfoc4") == 0) {
+        return BLAZER_FOC_MOTOR4_G;
+    }
 
     if (token[0] >= '0' && token[0] <= '9') {
         int index = atoi(token);
@@ -96,7 +102,7 @@ static void RTT_CmdPrintHelp(void)
     RTT_Printf("cmd: stop <motor> [clear]\r\n");
     RTT_Printf("cmd: zero <motor>\r\n");
     RTT_Printf("cmd: enable <motor>\r\n");
-    RTT_Printf("motor: xiaomi1/xiaomi2/dm1/dm2/unitree1/unitree2/blazer1/blazer2 or global index\r\n");
+    RTT_Printf("motor: xiaomi1/xiaomi2/dm1/dm2/unitree1/unitree2/blazer1..blazer4 or global index\r\n");
 }
 
 static void RTT_CmdExecute(char *line)

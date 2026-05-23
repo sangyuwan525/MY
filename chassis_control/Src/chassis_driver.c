@@ -371,7 +371,10 @@ void cha_remote(float vx, float vy, float vr)
 #if defined(CHASSIS_TYPE_QUANXIANGLUN) || defined(CHASSIS_TYPE_MECANUM_OMNI)
         // 全向轮只需发送转速指令
         // 假设 Change_dji_speed 是发送电机转速的函数
-        g_motor_list[BLAZER_FOC_MOTOR1_G+i].set_speed(&g_motor_list[BLAZER_FOC_MOTOR1_G+i],wheel_data[i].vel);
+        int motor_index = BLAZER_FOC_MOTOR1_G + i;
+        if (g_motor_list[motor_index].set_speed != NULL) {
+            g_motor_list[motor_index].set_speed(&g_motor_list[motor_index], wheel_data[i].vel);
+        }
 #elif defined(CHASSIS_TYPE_DUOLUN)
         // 舵轮需要发送转速和转向角
     #ifdef BUFFERS_SEND

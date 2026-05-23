@@ -11,9 +11,9 @@
 /*
  * Blazer FOC device registry.
  *
- * The default entry assumes:
- *   - ESC CAN node ID = 0
- *   - ESC is wired to FDCAN3
+ * The default entries assume:
+ *   - ESC CAN node IDs = 0..3
+ *   - ESCs are wired to FDCAN1
  *
  * If the OLED/USB menu changes the ESC CAN ID, update node_id here too.
  * If the ESC is moved to another CAN bus, update hcan here.
@@ -26,6 +26,14 @@ Blazer_FOC_Motor_t g_blazer_foc_motor_registry[BLAZER_FOC_MOTOR_COUNT] = {
     [BLAZER_FOC_MOTOR2] = {
         .hcan = &hfdcan1,
         .node_id = 0x01U,
+    },
+    [BLAZER_FOC_MOTOR3] = {
+        .hcan = &hfdcan1,
+        .node_id = 0x02U,
+    },
+    [BLAZER_FOC_MOTOR4] = {
+        .hcan = &hfdcan1,
+        .node_id = 0x03U,
     },
 };
 
@@ -91,15 +99,15 @@ static float Blazer_FOC_UnpackFloat(const uint8_t data[4]) {
 }
 
 /* Write a Blazer FOC parameter. Only even parameter IDs are writable. */
-static void Blazer_FOC_WriteParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_ParamID_e param_id, float value) {
+static uint8_t Blazer_FOC_WriteParam(Blazer_FOC_Motor_t *motor, Blazer_FOC_ParamID_e param_id, float value) {
     uint8_t data[4];
 
     if (motor == NULL || motor->hcan == NULL) {
-        return;
+        return 1U;
     }
 
     Blazer_FOC_PackFloat(value, data);
-    (void)fdcanx_send_ex_data(motor->hcan, Blazer_FOC_MakeID(motor->node_id, param_id), data, 4U, CAN_ID_EXT);
+    return fdcanx_send_ex_data(motor->hcan, Blazer_FOC_MakeID(motor->node_id, param_id), data, 4U, CAN_ID_EXT);
 }
 
 /* Request a Blazer FOC parameter. Read requests use param_id + 1. */
@@ -206,20 +214,28 @@ void Blazer_FOC_Control_Send(Blazer_FOC_Motor_t *motor) {
     }
 
     if (motor->ctrl.mode_pending != 0U) {
-        Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_MODE, (float)motor->ctrl.mode);
+        if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_MODE, (float)motor->ctrl.mode) != 0U) {
+            return;
+        }
         motor->ctrl.mode_pending = 0U;
     }
 
     if (motor->ctrl.mode == BLAZER_FOC_MODE_SPEED) {
-        Blazer_FOC_WriteParam(motor,
-                              BLAZER_FOC_PARAM_SPD_SET,
-                              motor->ctrl.speed_set / BLAZER_FOC_RPM_PER_RPS);
+        if (Blazer_FOC_WriteParam(motor,
+                                  BLAZER_FOC_PARAM_SPD_SET,
+                                  motor->ctrl.speed_set / BLAZER_FOC_RPM_PER_RPS) != 0U) {
+            return;
+        }
         motor->ctrl.setpoint_pending = 0U;
     } else if (motor->ctrl.setpoint_pending != 0U && motor->ctrl.mode == BLAZER_FOC_MODE_CURRENT) {
-        Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_I_SET, motor->ctrl.current_set);
+        if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_I_SET, motor->ctrl.current_set) != 0U) {
+            return;
+        }
         motor->ctrl.setpoint_pending = 0U;
     } else if (motor->ctrl.setpoint_pending != 0U && motor->ctrl.mode == BLAZER_FOC_MODE_POSITION) {
-        Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_POS_SET, motor->ctrl.position_set);
+        if (Blazer_FOC_WriteParam(motor, BLAZER_FOC_PARAM_POS_SET, motor->ctrl.position_set) != 0U) {
+            return;
+        }
         motor->ctrl.setpoint_pending = 0U;
     }
 

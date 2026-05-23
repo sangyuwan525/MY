@@ -51,6 +51,55 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+typedef struct {
+  uint32_t exc_return;
+  uint32_t r0;
+  uint32_t r1;
+  uint32_t r2;
+  uint32_t r3;
+  uint32_t r12;
+  uint32_t stacked_lr;
+  uint32_t stacked_pc;
+  uint32_t stacked_xpsr;
+  uint32_t cfsr;
+  uint32_t hfsr;
+  uint32_t dfsr;
+  uint32_t afsr;
+  uint32_t mmfar;
+  uint32_t bfar;
+} HardFault_Info_t;
+
+volatile HardFault_Info_t g_hardfault_info;
+
+void HardFault_C_Handler(uint32_t *stacked_sp, uint32_t exc_return)
+{
+  g_hardfault_info.exc_return = exc_return;
+
+  if (stacked_sp != NULL) {
+    g_hardfault_info.r0 = stacked_sp[0];
+    g_hardfault_info.r1 = stacked_sp[1];
+    g_hardfault_info.r2 = stacked_sp[2];
+    g_hardfault_info.r3 = stacked_sp[3];
+    g_hardfault_info.r12 = stacked_sp[4];
+    g_hardfault_info.stacked_lr = stacked_sp[5];
+    g_hardfault_info.stacked_pc = stacked_sp[6];
+    g_hardfault_info.stacked_xpsr = stacked_sp[7];
+  }
+
+  g_hardfault_info.cfsr = SCB->CFSR;
+  g_hardfault_info.hfsr = SCB->HFSR;
+  g_hardfault_info.dfsr = SCB->DFSR;
+  g_hardfault_info.afsr = SCB->AFSR;
+  g_hardfault_info.mmfar = SCB->MMFAR;
+  g_hardfault_info.bfar = SCB->BFAR;
+
+  if ((CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) != 0U) {
+    __BKPT(0);
+  }
+
+  while (1) {
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -98,6 +147,19 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+#if defined(__GNUC__)
+  __asm volatile
+  (
+    "tst lr, #4                                                \n"
+    "ite eq                                                    \n"
+    "mrseq r0, msp                                             \n"
+    "mrsne r0, psp                                             \n"
+    "mov r1, lr                                                \n"
+    "b HardFault_C_Handler                                     \n"
+  );
+#else
+  HardFault_C_Handler(NULL, 0U);
+#endif
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
