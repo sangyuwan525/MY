@@ -154,6 +154,9 @@ static void DM_Adapter_Init(Motor_Class_t *self) {
     dm_motor_clear_para(dm);
 
     if (dm->hcan != NULL) {
+        DM_Adapter_SetRuntimeControlMode(dm, spd_mode);
+        osDelay(20);
+
         for (int i = 0; i < 3; ++i) {
             dm_motor_clear_err(dm);
             osDelay(10);
