@@ -23,6 +23,8 @@ int turning_flag=1;//判断车子左右运动状态
 int chassis_control_cnt;
 int button3_flag=0;
 int button4_flag=0;
+int button2_flag=0;
+int button5_flag=0;
 bool valve_state=0;
 int climb_test_cnt=0;
 
@@ -183,7 +185,15 @@ void StartTask_chassis(void *argument)
                 }
                 if (rc_engineer_data.button2 == 1)
                 {
-                    g_robot_ctx.current_top_state=1;
+                    if (button2_flag==0)
+                    {
+                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
+                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
+                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        g_robot_ctx.current_top_state=1;
+                        button2_flag=1;
+                    }
                     // g_robot_ctx.sub_state.mf=
                     // // 按钮2,前侧和后侧将机身顶起
                     // Change_dji_loc(DJI_M_CLIMB_LF,10000);
@@ -195,6 +205,7 @@ void StartTask_chassis(void *argument)
 
                 }else
                 {
+                    button2_flag=0;
                     //Change_dji_speed(DJI_2006_L, 0);
                     //Change_dji_speed(DJI_2006_R, 0);
                 }
@@ -258,6 +269,14 @@ void StartTask_chassis(void *argument)
             //     }
                 if (rc_engineer_data.button5 == 1)
                 {
+                    if (button5_flag==0)
+                    {
+                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.0f, 10.0f, 50.0f, 1.0f, 0.0f);
+                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.0f, 10.0f, 50.0f, 1.0f, 0.0f);
+                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G, 0.0f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G, 0.0f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        button5_flag=1;
+                    }
                     // Change_dji_loc(DJI_M_CLIMB_LF, 0);
                     // Change_dji_loc(DJI_M_CLIMB_RF, 0);
                     // Change_dji_loc(DJI_M_CLIMB_LB, climb_front_up);
@@ -272,6 +291,9 @@ void StartTask_chassis(void *argument)
                     //
                     // Change_dji_loc(DJI_M_CLIMB_LB,back_up);
                     // Change_dji_loc(DJI_M_CLIMB_RB,-back_up);
+                }else
+                {
+                    button5_flag=0;
                 }
                 if (rc_engineer_data.button6 == 1)
                 {

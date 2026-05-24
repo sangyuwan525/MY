@@ -15,17 +15,17 @@
 
 /*
  * 默认注册 1 台 GO-M8010-6：
- * UART4 -> RS485 收发器 -> 485 总线 -> 电机 ID 0。
+ * USART1 -> RS485 收发器 -> 485 总线 -> 电机。
  * 如果硬件接到了其它串口，改 huart。
  */
 Unitree_GO_M8010_6_Motor_t g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_MOTOR_COUNT] = {
     [UNITREE_GO_M8010_6_Motor1] = {
-        .huart = &huart4,
+        .huart = &huart1,
         .id = UNITREE_GO_M8010_6_Motor1_ID,
         .gear_ratio = UNITREE_GO_DEFAULT_GEAR_RATIO,
     },
     [UNITREE_GO_M8010_6_Motor2] = {
-        .huart = &huart4,
+        .huart = &huart1,
         .id = UNITREE_GO_M8010_6_Motor2_ID,
         .gear_ratio = UNITREE_GO_DEFAULT_GEAR_RATIO,
     },

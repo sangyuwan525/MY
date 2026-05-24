@@ -175,22 +175,36 @@ void receive_motor_data(Damiao_Motor_t *motor, uint8_t *data)
 	}
 }
 
-void fdcan1_rx_callback(void)
+static void dm_motor_rx_callback(FDCAN_HandleTypeDef *hfdcan)
 {
 	uint16_t rec_id;
 	uint8_t rx_data[8] = {0};
 
-	fdcanx_receive(&hfdcan1, &rec_id, rx_data);
-
-	switch (rec_id)
-	{
-		case DM_Motor1_MST_ID:
-			dm_motor_fbdata(&g_dm_motor_registry[DM_Motor1], rx_data);
-			receive_motor_data(&g_dm_motor_registry[DM_Motor1], rx_data);
-			break;
-		case DM_Motor2_MST_ID:
-			dm_motor_fbdata(&g_dm_motor_registry[DM_Motor2], rx_data);
-			receive_motor_data(&g_dm_motor_registry[DM_Motor2], rx_data);
-			break;
+	if (hfdcan == NULL) {
+		return;
 	}
+
+	if (fdcanx_receive(hfdcan, &rec_id, rx_data) == 0U) {
+		return;
+	}
+
+	for (uint8_t i = 0U; i < DM_MOTOR_COUNT; ++i) {
+		Damiao_Motor_t *motor = &g_dm_motor_registry[i];
+
+		if (motor->hcan == hfdcan && motor->mst_id == rec_id) {
+			dm_motor_fbdata(motor, rx_data);
+			receive_motor_data(motor, rx_data);
+			break;
+		}
+	}
+}
+
+void fdcan1_rx_callback(void)
+{
+	dm_motor_rx_callback(&hfdcan1);
+}
+
+void fdcan2_rx_callback(void)
+{
+	dm_motor_rx_callback(&hfdcan2);
 }

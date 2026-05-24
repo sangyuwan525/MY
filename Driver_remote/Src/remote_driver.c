@@ -6,7 +6,7 @@
 #define RC_CHANNEL_MID      0.0f
 //目前底下这两个值还未经过标定，只是个模糊值
 #define MAX_CHASSIS_SPEED   3000.0f // max chassis translation speed (mm/s)
-#define MAX_CIRCLE_SPEED   5.0f // max chassis yaw speed (rpm)
+#define MAX_CIRCLE_SPEED   60.0f // max chassis yaw speed (rpm)
 
 rc_info_t rc;
 remote_engineer_t remote_engineer;

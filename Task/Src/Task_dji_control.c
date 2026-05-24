@@ -32,15 +32,17 @@ void StartTask_dji(void *argument)
     //     0.2f,
     //     0.0f
     // );
-
-//     g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(
-//     &g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G],
-//     0.0f,
-//     -1.0f,
-//     0.0f,
-//     0.01f,
-//     0.0f
-// );
+    //osDelay(1000);
+    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
+    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
+//     Motor_StartSmoothGotoMIT(
+//     UNITREE_GO_M8010_6_MOTOR2_G,
+//     4.71f,   // 目标位置，单位 rad
+//     5.0f,    // 最大速度，单位 rad/s，不能是 0
+//     0.05f,   // kp
+//     0.01f,   // kd
+//     0.0f     // 前馈力矩
+//     );
     // float now = g_unitree_go_m8010_6_motor_registry[UNITREE_GO_M8010_6_Motor1].feedback.angle;
     //
     // g_motor_list[UNITREE_GO_M8010_6_MOTOR1_G].set_mit(

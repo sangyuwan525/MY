@@ -229,8 +229,8 @@ void StartTaskcommand(void *argument)
     // __HAL_DMA_DISABLE_IT(huart5.hdmarx, DMA_IT_HT);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2,remote_Buffer,sizeof(remote_Buffer));
     __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart4, unitree_rx_buffer, sizeof(unitree_rx_buffer));
-    __HAL_DMA_DISABLE_IT(huart4.hdmarx, DMA_IT_HT);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, unitree_rx_buffer, sizeof(unitree_rx_buffer));
+    __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
     /* Infinite loop */
     for(;;)
     {
@@ -273,7 +273,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         // 重新开启串口空闲中断接收
         HAL_UARTEx_ReceiveToIdle_DMA(huart, remote_Buffer, sizeof(remote_Buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
-    } else if (huart->Instance == UART4) {
+    } else if (huart->Instance == USART1) {
         unitree_go_m8010_6_process_rx_bytes(unitree_rx_buffer, Size);
         HAL_UARTEx_ReceiveToIdle_DMA(huart, unitree_rx_buffer, sizeof(unitree_rx_buffer));
         __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
@@ -291,12 +291,12 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
         if(ret!=HAL_OK){
             printf("ErrorCB Uart5 IT Enable Failed:%d\r\n",ret);
         }
-    } else if (huart == &huart4) {
-        ret = HAL_UARTEx_ReceiveToIdle_DMA(&huart4, unitree_rx_buffer, sizeof(unitree_rx_buffer));
+    } else if (huart == &huart1) {
+        ret = HAL_UARTEx_ReceiveToIdle_DMA(&huart1, unitree_rx_buffer, sizeof(unitree_rx_buffer));
         if (ret == HAL_OK) {
-            __HAL_DMA_DISABLE_IT(huart4.hdmarx, DMA_IT_HT);
+            __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
         } else {
-            printf("ErrorCB Uart4 DMA Enable Failed:%d\r\n", ret);
+            printf("ErrorCB Uart1 DMA Enable Failed:%d\r\n", ret);
         }
     }
 }

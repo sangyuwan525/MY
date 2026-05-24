@@ -52,5 +52,7 @@ void dm_motor_init(void);
 
 void read_all_motor_data(Damiao_Motor_t *motor);
 void receive_motor_data(Damiao_Motor_t *motor, uint8_t *data);
+void fdcan1_rx_callback(void);
+void fdcan2_rx_callback(void);
 
 #endif /* __DM_MOTOR_CTRL_H__ */

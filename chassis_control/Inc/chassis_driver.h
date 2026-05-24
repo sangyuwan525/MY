@@ -18,7 +18,7 @@
 // cha_remote input units: vx/vy = mm/s, vr = chassis yaw rpm.
 #define WHEEL_NUM       4
 #define SPEED_LIMIT_XY  3000.0f   // XY resultant speed limit (mm/s)
-#define SPEED_LIMIT_R   5.0f      // yaw speed limit (rpm)
+#define SPEED_LIMIT_R   60.0f      // yaw speed limit (rpm)
 #define MOTOR_VEL_LIMIT 10000.0f  // single wheel motor speed limit (rpm)
 #define CHASSIS_RADIUS  289.91f   // legacy effective chassis radius (mm)
 #define CHASSIS_MECANUM_CENTER_DISTANCE 287.9f // rotation center to front mecanum wheels (mm)
