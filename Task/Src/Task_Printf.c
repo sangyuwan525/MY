@@ -204,12 +204,12 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("pb10 %d,pb11 %d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10),HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
         // RTT_Printf("pc0 %d,pc1 %d\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0),HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
         //RTT_Printf("face %d\n",get_face(1,0));
-        RTT_Printf("xiaomi1_online=%d  xiaomi1_angle=%f\n",
-                   g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.online,
-                   g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.angle);
-        RTT_Printf("xiaomi2_online=%d  xiaomi2_angle=%f\n",
-                   g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.online,
-                   g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.angle);
+        // RTT_Printf("xiaomi1_online=%d  xiaomi1_angle=%f\n",
+        //            g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.online,
+        //            g_xiaomi_motor_registry[XIAOMI_Motor1].feedback.angle);
+        // RTT_Printf("xiaomi2_online=%d  xiaomi2_angle=%f\n",
+        //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.online,
+        //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.angle);
         osDelay(10);
     }
     /* USER CODE END StartTask_Printf */

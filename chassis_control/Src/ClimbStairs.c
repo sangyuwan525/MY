@@ -217,7 +217,7 @@ static void ClimbLift_Reset(void)
     climb_lift_inited = 0U;
 }
 
-static uint8_t ClimbLift_RunStep(void)
+uint8_t ClimbLift_RunStep(void)
 {
     ClimbLift_InitOnce();
 

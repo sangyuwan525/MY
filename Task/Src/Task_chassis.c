@@ -113,7 +113,8 @@ void StartTask_chassis(void *argument)
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
                 {
-                    chassis_auto_control(&g_robot_ctx);
+                     ClimbLift_RunStep();
+                    //chassis_auto_control(&g_robot_ctx);
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_TEST)
                 {
@@ -169,19 +170,19 @@ void StartTask_chassis(void *argument)
                     //
                     //
 
-                    if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
-                    {
-                        g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
-                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20.0f);
-                    }
-
-                }else {
-                    //MF_flag = 0;
-                    if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
-                    {
-                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);
-                        g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],0.0f);
-                    }
+                //     if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
+                //     {
+                //         g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
+                //         g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20.0f);
+                //     }
+                //
+                // }else {
+                //     //MF_flag = 0;
+                //     if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
+                //     {
+                //         g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);
+                //         g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],0.0f);
+                //     }
                 }
                 if (rc_engineer_data.button2 == 1)
                 {

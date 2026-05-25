@@ -435,8 +435,8 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->unitree_arm_motor[LIFT_WALK_RIGHT] = UNITREE_GO_M8010_6_MOTOR2_G;
     cfg->front_wheel_motor[LIFT_WALK_LEFT] = DM_FRONT_LEFT_G;
     cfg->front_wheel_motor[LIFT_WALK_RIGHT] = DM_FRONT_RIGHT_G;
-    cfg->rear_wheel_motor[LIFT_WALK_LEFT] = BLAZER_FOC_MOTOR1_G;
-    cfg->rear_wheel_motor[LIFT_WALK_RIGHT] = BLAZER_FOC_MOTOR2_G;
+    cfg->rear_wheel_motor[LIFT_WALK_LEFT] = BLAZER_FOC_MOTOR2_G;
+    cfg->rear_wheel_motor[LIFT_WALK_RIGHT] = BLAZER_FOC_MOTOR4_G;
 
     // 四个支撑点相对底盘中心的坐标。
     // x：向前为正；y：向左为正。
@@ -451,7 +451,7 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->slider_pitch_mm_per_rev = LIFT_WALK_SLIDER_TRAVEL_MM_PER_MOTOR_REV;
     cfg->slider_reduction_ratio = 1.0f;
     cfg->slider_motor_sign[LIFT_WALK_LEFT] = 1.0f;
-    cfg->slider_motor_sign[LIFT_WALK_RIGHT] = 1.0f;
+    cfg->slider_motor_sign[LIFT_WALK_RIGHT] = -1.0f;
     cfg->slider_min_rad[LIFT_WALK_LEFT] = -1000.0f;
     cfg->slider_min_rad[LIFT_WALK_RIGHT] = -1000.0f;
     cfg->slider_max_rad[LIFT_WALK_LEFT] = 1000.0f;
@@ -473,7 +473,7 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->arm_motor_zero_rad[LIFT_WALK_LEFT] = 0.0f;
     cfg->arm_motor_zero_rad[LIFT_WALK_RIGHT] = 0.0f;
     cfg->arm_motor_sign[LIFT_WALK_LEFT] = 1.0f;
-    cfg->arm_motor_sign[LIFT_WALK_RIGHT] = 1.0f;
+    cfg->arm_motor_sign[LIFT_WALK_RIGHT] = -1.0f;
     cfg->arm_min_rad[LIFT_WALK_LEFT] = -1.5f;
     cfg->arm_min_rad[LIFT_WALK_RIGHT] = -1.5f;
     cfg->arm_max_rad[LIFT_WALK_LEFT] = 1.3f;
@@ -494,8 +494,8 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->rear_wheel_accel_limit_rpm_s = 600.0f;
     cfg->wheel_arm_comp_gain = 1.0f;
     cfg->front_wheel_sign[LIFT_WALK_LEFT] = 1.0f;
-    cfg->front_wheel_sign[LIFT_WALK_RIGHT] = 1.0f;
-    cfg->rear_wheel_sign[LIFT_WALK_LEFT] = 1.0f;
+    cfg->front_wheel_sign[LIFT_WALK_RIGHT] = -1.0f;
+    cfg->rear_wheel_sign[LIFT_WALK_LEFT] = -1.0f;
     cfg->rear_wheel_sign[LIFT_WALK_RIGHT] = 1.0f;
 
     // 姿态修正 PID。
@@ -524,8 +524,8 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
 
     cfg->min_height_mm = 0.0f;
     cfg->max_height_mm = 198.0f;
-    cfg->lift_vmax_mm_s = 10.0f;
-    cfg->lift_amax_mm_s2 = 20.0f;
+    cfg->lift_vmax_mm_s = 100.0f;
+    cfg->lift_amax_mm_s2 = 200.0f;
 }
 
 void LiftWalk_Init(LiftWalk_Controller_t *ctrl, const LiftWalk_Config_t *cfg) {

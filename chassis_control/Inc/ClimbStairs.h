@@ -73,6 +73,7 @@ extern Down_State_e current_down_state;
 extern Point_struct entry_point[3];
 
 //上下楼梯的函数
+uint8_t ClimbLift_RunStep(void);
 int ClimbStairs(int curr_id, int stair_id);
 int Move_to_Edge(int curr_id, int stair_id);
 int Move_back_to_Center(int stair_id);
