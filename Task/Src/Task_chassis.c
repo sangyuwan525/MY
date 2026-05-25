@@ -171,8 +171,8 @@ void StartTask_chassis(void *argument)
 
                     if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
                     {
-                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20.0f);
                         g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
+                        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20.0f);
                     }
 
                 }else {
@@ -191,6 +191,11 @@ void StartTask_chassis(void *argument)
                         Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
                         Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
                         Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        // if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
+                        // {
+                        //     g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);
+                        //     g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],0.0f);
+                        // }
                         g_robot_ctx.current_top_state=1;
                         button2_flag=1;
                     }

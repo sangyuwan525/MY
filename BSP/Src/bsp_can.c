@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "cmsis_os.h"
+#include "cmsis_os2.h"
 #include "dm_motor_ctrl.h"
 #include "locator_driver.h"
 
@@ -11,9 +12,14 @@
 #define LOCATOR_CAN_ID_X_Y 0x12U
 #define LOCATOR_CAN_ID_Z_R 0x13U
 #define LOCATOR_CAN_ID_LASER 0x100U
+#define FDCAN_TX_FIFO_WAIT_TIMEOUT_MS 5U
+#define FDCAN_TX_MUTEX_TIMEOUT_MS 10U
 
 static osMessageQueueId_t g_motor_queue = NULL;
 static osMessageQueueId_t g_chassis_queue = NULL;
+static osMutexId_t g_fdcan1_tx_mutex = NULL;
+static osMutexId_t g_fdcan2_tx_mutex = NULL;
+static osMutexId_t g_fdcan3_tx_mutex = NULL;
 
 static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHeaderTypeDef *rx_header) {
     if (hfdcan != &hfdcan3 || rx_header == NULL || rx_header->IdType != FDCAN_STANDARD_ID) {
@@ -58,6 +64,83 @@ static uint8_t FDCAN_DlcToBytes(uint32_t dlc) {
     }
 }
 
+static uint32_t FDCAN_BytesToDlc(uint32_t len) {
+    switch (len) {
+        case 0U: return FDCAN_DLC_BYTES_0;
+        case 1U: return FDCAN_DLC_BYTES_1;
+        case 2U: return FDCAN_DLC_BYTES_2;
+        case 3U: return FDCAN_DLC_BYTES_3;
+        case 4U: return FDCAN_DLC_BYTES_4;
+        case 5U: return FDCAN_DLC_BYTES_5;
+        case 6U: return FDCAN_DLC_BYTES_6;
+        case 7U: return FDCAN_DLC_BYTES_7;
+        case 8U: return FDCAN_DLC_BYTES_8;
+        case 12U: return FDCAN_DLC_BYTES_12;
+        case 16U: return FDCAN_DLC_BYTES_16;
+        case 20U: return FDCAN_DLC_BYTES_20;
+        case 24U: return FDCAN_DLC_BYTES_24;
+        case 32U: return FDCAN_DLC_BYTES_32;
+        case 48U: return FDCAN_DLC_BYTES_48;
+        case 64U: return FDCAN_DLC_BYTES_64;
+        default: return 0xFFFFFFFFU;
+    }
+}
+
+static uint8_t FDCAN_WaitTxFifoFree(FDCAN_HandleTypeDef *hfdcan) {
+    uint32_t start_tick;
+
+    if (hfdcan == NULL) {
+        return 1U;
+    }
+
+    start_tick = HAL_GetTick();
+    while (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) == 0U) {
+        if ((HAL_GetTick() - start_tick) >= FDCAN_TX_FIFO_WAIT_TIMEOUT_MS) {
+            return 1U;
+        }
+
+        if (osKernelGetState() == osKernelRunning) {
+            osDelay(1U);
+        }
+    }
+
+    return 0U;
+}
+
+static osMutexId_t FDCAN_GetTxMutex(FDCAN_HandleTypeDef *hfdcan) {
+    if (hfdcan == &hfdcan1) {
+        return g_fdcan1_tx_mutex;
+    }
+
+    if (hfdcan == &hfdcan2) {
+        return g_fdcan2_tx_mutex;
+    }
+
+    if (hfdcan == &hfdcan3) {
+        return g_fdcan3_tx_mutex;
+    }
+
+    return NULL;
+}
+
+static uint8_t FDCAN_LockTx(FDCAN_HandleTypeDef *hfdcan) {
+    osMutexId_t mutex = FDCAN_GetTxMutex(hfdcan);
+
+    if (mutex == NULL || osKernelGetState() != osKernelRunning) {
+        return 0U;
+    }
+
+    return (osMutexAcquire(mutex, pdMS_TO_TICKS(FDCAN_TX_MUTEX_TIMEOUT_MS)) == osOK) ? 0U : 1U;
+}
+
+static void FDCAN_UnlockTx(FDCAN_HandleTypeDef *hfdcan) {
+    osMutexId_t mutex = FDCAN_GetTxMutex(hfdcan);
+
+    if (mutex != NULL && osKernelGetState() == osKernelRunning) {
+        (void)osMutexRelease(mutex);
+    }
+}
+
 static bool Is_Motor_Rx_Message(const FDCAN_RxHeaderTypeDef *rx_header) {
     uint8_t comm_type;
     uint8_t blazer_node_id;
@@ -96,41 +179,38 @@ static bool Is_Motor_Rx_Message(const FDCAN_RxHeaderTypeDef *rx_header) {
 
 static uint8_t fdcanx_send_impl(hcan_t *hfdcan, uint32_t id, uint8_t *data, uint32_t len, CAN_Id_Type_e id_type) {
     FDCAN_TxHeaderTypeDef tx_header = {0};
+    uint32_t dlc = FDCAN_BytesToDlc(len);
+    uint8_t ret = 1U;
+
+    if (hfdcan == NULL || data == NULL || dlc == 0xFFFFFFFFU) {
+        return 1;
+    }
 
     tx_header.Identifier = id;
     tx_header.IdType = (id_type == CAN_ID_EXT) ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID;
     tx_header.TxFrameType = FDCAN_DATA_FRAME;
-
-    if (len <= 8U) {
-        tx_header.DataLength = len;
-    } else if (len == 12U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_12;
-    } else if (len == 16U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_16;
-    } else if (len == 20U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_20;
-    } else if (len == 24U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_24;
-    } else if (len == 32U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_32;
-    } else if (len == 48U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_48;
-    } else if (len == 64U) {
-        tx_header.DataLength = FDCAN_DLC_BYTES_64;
-    } else {
-        return 1;
-    }
-
+    tx_header.DataLength = dlc;
     tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
     tx_header.BitRateSwitch = FDCAN_BRS_OFF;
     tx_header.FDFormat = (len <= 8U) ? FDCAN_CLASSIC_CAN : FDCAN_FD_CAN;
     tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     tx_header.MessageMarker = 0;
 
-    if (HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx_header, data) != HAL_OK) {
+    if (FDCAN_LockTx(hfdcan) != 0U) {
         return 1;
     }
-    return 0;
+
+    if (FDCAN_WaitTxFifoFree(hfdcan) != 0U) {
+        FDCAN_UnlockTx(hfdcan);
+        return 1;
+    }
+
+    if (HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &tx_header, data) == HAL_OK) {
+        ret = 0U;
+    }
+
+    FDCAN_UnlockTx(hfdcan);
+    return ret;
 }
 
 static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
@@ -202,6 +282,9 @@ void bsp_can_start(FDCAN_HandleTypeDef *hfdcan) {
 void bsp_can_init(osMessageQueueId_t motor_q, osMessageQueueId_t chassis_q) {
     g_motor_queue = motor_q;
     g_chassis_queue = chassis_q;
+    g_fdcan1_tx_mutex = osMutexNew(NULL);
+    g_fdcan2_tx_mutex = osMutexNew(NULL);
+    g_fdcan3_tx_mutex = osMutexNew(NULL);
 
     bsp_can_start(&hfdcan1);
     bsp_can_start(&hfdcan2);
