@@ -6,9 +6,11 @@
 #include "Task_chassis.h"
 #include "Task_dji_control.h"
 
+#include "ClimbStairs.h"
 #include "debug.h"
 #include "dji_3508_2006_motor.h"
 #include "global_motor_conf.h"
+#include "lift_walk_controller.h"
 #include "motor_registry.h"
 #include "queue.h"
 
@@ -26,6 +28,20 @@ void StartTask_dji(void *argument)
     osDelay(20);
     Motor_SetZero(XIAOMI_MOTOR2_G);
     osDelay(20);
+    Set_OneArmAngle(LIFT_WALK_LEFT, 0.5f, 1);
+    Set_OneArmAngle(LIFT_WALK_RIGHT, 0.5f, 1);
+    // Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G,
+    //                          0.5f,
+    //                          1.0f,
+    //                          0.08f,
+    //                          0.01f,
+    //                          0.0f);
+    // Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G,
+    //                          -0.5f,
+    //                          1.0f,
+    //                          0.08f,
+    //                          0.01f,
+    //                          0.0f);
     // g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
     // g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20);
     // if (g_motor_list[DM_FRONT_LEFT_G].set_speed != NULL) {

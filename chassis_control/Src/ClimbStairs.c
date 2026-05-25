@@ -14,7 +14,9 @@
 #include "Hfsm.h"
 #include "lift_walk_controller.h"
 
-#define PI 3.1415926
+#define PI 3.1415926f
+#define CLIMB_TWO_PI (2.0f * PI)
+#define CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD 1.5f
 #define CLIMB_LIFT_TARGET_HEIGHT_MM 198.0f
 #define CLIMB_LIFT_APPROACH_HEIGHT_MM 0.0f
 #define CLIMB_LIFT_FORWARD_MM_S 200.0f
@@ -22,9 +24,9 @@
 #define CLIMB_LIFT_DONE_TOLERANCE_MM 2.0f
 #define CLIMB_LIFT_DT_S 0.01f
 #define CLIMB_FRONT_ARM_DEPLOY_FORWARD_MM_S CLIMB_LIFT_FORWARD_MM_S
-#define CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD 0.80f
-#define CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD 0.80f
-#define CLIMB_FRONT_ARM_MOVE_MAX_RAD_S 0.60f
+#define CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD 2.8117126f   //初始抬升了0.5
+#define CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD 2.8117126f
+#define CLIMB_FRONT_ARM_MOVE_MAX_RAD_S 1.0f
 #define CLIMB_FRONT_ARM_DONE_TOLERANCE_RAD 0.03f
 #define CLIMB_FRONT_ARM_DONE_SPEED_RAD_S 0.08f
 #define CLIMB_FRONT_ARM_KP 0.08f
@@ -100,6 +102,98 @@ static float ClimbLift_GetMotorAngle(int motor_index)
 
     state = g_motor_list[motor_index].get_state(&g_motor_list[motor_index]);
     return state.angle;
+}
+
+static float ClimbLift_GetArmAngle(int motor_index)
+{
+    float angle = ClimbLift_GetMotorAngle(motor_index) / CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD;
+    return angle;
+}
+
+void Set_ArmAngle(float target_angle_left,float target_angle_right)
+{
+    Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G,
+                                         target_angle_left * CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD,
+                                         CLIMB_FRONT_ARM_MOVE_MAX_RAD_S,
+                                         CLIMB_FRONT_ARM_KP,
+                                         CLIMB_FRONT_ARM_KD,
+                                         CLIMB_FRONT_ARM_TORQUE_FF);
+    Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G,
+                             target_angle_right * CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD,
+                             CLIMB_FRONT_ARM_MOVE_MAX_RAD_S,
+                             CLIMB_FRONT_ARM_KP,
+                             CLIMB_FRONT_ARM_KD,
+                             CLIMB_FRONT_ARM_TORQUE_FF);
+}
+
+void Set_OneArmAngle(uint8_t arm_id, float target_angle_rad, int rotate_dir)
+{
+    int motor_index;
+    Motor_State_t state;
+    float motor_sign;
+    float current_arm_rad;
+    float current_round_rad;
+    float target_round_rad;
+    float target_unwrapped_rad;
+
+    if (arm_id == LIFT_WALK_LEFT) {
+        motor_index = UNITREE_GO_M8010_6_MOTOR1_G;
+        motor_sign = -1.0f;
+    } else if (arm_id == LIFT_WALK_RIGHT) {
+        motor_index = UNITREE_GO_M8010_6_MOTOR2_G;
+        motor_sign = 1.0f;
+    } else {
+        return;
+    }
+
+    if (motor_index == LIFT_WALK_INVALID_MOTOR) {
+        return;
+    }
+    if (motor_index < 0 || motor_index >= MOTOR_TOTAL_NUM) {
+        return;
+    }
+    if (g_motor_list[motor_index].get_state == NULL) {
+        return;
+    }
+
+    if (target_angle_rad < 0.0f) {
+        target_angle_rad = 0.0f;
+    } else if (target_angle_rad > CLIMB_TWO_PI) {
+        target_angle_rad = CLIMB_TWO_PI;
+    }
+
+    state = g_motor_list[motor_index].get_state(&g_motor_list[motor_index]);
+    current_arm_rad = motor_sign * state.angle / CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD;
+
+    current_round_rad = current_arm_rad;
+    while (current_round_rad < 0.0f) {
+        current_round_rad += CLIMB_TWO_PI;
+    }
+    while (current_round_rad >= CLIMB_TWO_PI) {
+        current_round_rad -= CLIMB_TWO_PI;
+    }
+
+    target_round_rad = target_angle_rad;
+    target_unwrapped_rad = current_arm_rad + (target_round_rad - current_round_rad);
+
+    if (rotate_dir > 0) {
+        if (target_unwrapped_rad < current_arm_rad) {
+            target_unwrapped_rad += CLIMB_TWO_PI;
+        }
+    } else if (rotate_dir < 0) {
+        if (target_unwrapped_rad > current_arm_rad) {
+            target_unwrapped_rad -= CLIMB_TWO_PI;
+        }
+    } else {
+        return;
+    }
+
+    Motor_StartSmoothGotoMIT(motor_index,
+                             motor_sign * target_unwrapped_rad * CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD,
+                             CLIMB_FRONT_ARM_MOVE_MAX_RAD_S,
+                             CLIMB_FRONT_ARM_KP,
+                             CLIMB_FRONT_ARM_KD,
+                             CLIMB_FRONT_ARM_TORQUE_FF);
 }
 
 static float ClimbLift_GetMotorSpeed(int motor_index)
@@ -241,6 +335,11 @@ uint8_t ClimbLift_RunStep(void)
                                   CLIMB_LIFT_FORWARD_MM_S,
                                   CLIMB_LIFT_START_HEIGHT_MM,
                                   CLIMB_LIFT_DONE_TOLERANCE_MM);
+}
+
+void ClimbLift_Stop(void)
+{
+    LiftWalk_Stop(&climb_lift_ctrl);
 }
 
 static void ClimbLift_UpdateTarget(float target_height_mm, float vy_mm_s)
@@ -511,36 +610,25 @@ int ClimbStairs(int curr_id, int stair_id)
 
             if (climb_front_arm_pose_captured == 0U) {
                 climb_front_arm_retract_rad[LIFT_WALK_LEFT] =
-                    ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR1_G);
+                    ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR1_G);
                 climb_front_arm_retract_rad[LIFT_WALK_RIGHT] =
-                    ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR2_G);
+                    ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR2_G);
                 climb_front_arm_pose_captured = 1U;
             }
 
             if (climb_front_arm_move_started == 0U) {
                 climb_front_arm_target_rad[LIFT_WALK_LEFT] =
-                    climb_front_arm_retract_rad[LIFT_WALK_LEFT] + CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD;
+                    CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD;
                 climb_front_arm_target_rad[LIFT_WALK_RIGHT] =
-                    climb_front_arm_retract_rad[LIFT_WALK_RIGHT] + CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD;
+                    CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD;
 
-                Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G,
-                                         climb_front_arm_target_rad[LIFT_WALK_LEFT],
-                                         CLIMB_FRONT_ARM_MOVE_MAX_RAD_S,
-                                         CLIMB_FRONT_ARM_KP,
-                                         CLIMB_FRONT_ARM_KD,
-                                         CLIMB_FRONT_ARM_TORQUE_FF);
-                Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G,
-                                         climb_front_arm_target_rad[LIFT_WALK_RIGHT],
-                                         CLIMB_FRONT_ARM_MOVE_MAX_RAD_S,
-                                         CLIMB_FRONT_ARM_KP,
-                                         CLIMB_FRONT_ARM_KD,
-                                         CLIMB_FRONT_ARM_TORQUE_FF);
+                Set_ArmAngle(climb_front_arm_target_rad[LIFT_WALK_LEFT],climb_front_arm_target_rad[LIFT_WALK_RIGHT]);
                 climb_front_arm_move_started = 1U;
             }
 
-            left_err = fabsf(ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR1_G) -
+            left_err = fabsf(ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR1_G) -
                              climb_front_arm_target_rad[LIFT_WALK_LEFT]);
-            right_err = fabsf(ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR2_G) -
+            right_err = fabsf(ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR2_G) -
                               climb_front_arm_target_rad[LIFT_WALK_RIGHT]);
             left_speed = fabsf(ClimbLift_GetMotorSpeed(UNITREE_GO_M8010_6_MOTOR1_G));
             right_speed = fabsf(ClimbLift_GetMotorSpeed(UNITREE_GO_M8010_6_MOTOR2_G));
@@ -549,20 +637,10 @@ int ClimbStairs(int curr_id, int stair_id)
                 right_err <= CLIMB_FRONT_ARM_DONE_TOLERANCE_RAD &&
                 left_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S &&
                 right_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S) {
-                climb_front_arm_move_started = 0U;
-                ClimbMotor_SetMIT(UNITREE_GO_M8010_6_MOTOR1_G,
-                                  climb_front_arm_target_rad[LIFT_WALK_LEFT],
-                                  CLIMB_FRONT_ARM_KP,
-                                  CLIMB_FRONT_ARM_KD,
-                                  CLIMB_FRONT_ARM_TORQUE_FF);
-                ClimbMotor_SetMIT(UNITREE_GO_M8010_6_MOTOR2_G,
-                                  climb_front_arm_target_rad[LIFT_WALK_RIGHT],
-                                  CLIMB_FRONT_ARM_KP,
-                                  CLIMB_FRONT_ARM_KD,
-                                  CLIMB_FRONT_ARM_TORQUE_FF);
                 ClimbLift_Reset();
                 cha_remote(0.0f, 0.0f, 0.0f);
-                (void)ClimbLift_RunStep();
+                //(void)ClimbLift_RunStep();
+                // climb_front_arm_move_started = 0U;
                 current_climb_state = CLIMB_STEP2_LIFT_AND_FORWARD;
             }
             break;
@@ -592,9 +670,9 @@ int ClimbStairs(int curr_id, int stair_id)
 
             if (climb_front_arm_pose_captured == 0U) {
                 climb_front_arm_retract_rad[LIFT_WALK_LEFT] =
-                    ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR1_G);
+                    ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR1_G);
                 climb_front_arm_retract_rad[LIFT_WALK_RIGHT] =
-                    ClimbLift_GetMotorAngle(UNITREE_GO_M8010_6_MOTOR2_G);
+                    ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR2_G);
                 climb_front_arm_pose_captured = 1U;
             }
 
@@ -631,16 +709,6 @@ int ClimbStairs(int curr_id, int stair_id)
                 left_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S &&
                 right_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S) {
                 climb_front_arm_move_started = 0U;
-                ClimbMotor_SetMIT(UNITREE_GO_M8010_6_MOTOR1_G,
-                                  climb_front_arm_target_rad[LIFT_WALK_LEFT],
-                                  CLIMB_FRONT_ARM_KP,
-                                  CLIMB_FRONT_ARM_KD,
-                                  CLIMB_FRONT_ARM_TORQUE_FF);
-                ClimbMotor_SetMIT(UNITREE_GO_M8010_6_MOTOR2_G,
-                                  climb_front_arm_target_rad[LIFT_WALK_RIGHT],
-                                  CLIMB_FRONT_ARM_KP,
-                                  CLIMB_FRONT_ARM_KD,
-                                  CLIMB_FRONT_ARM_TORQUE_FF);
                 current_climb_state = CLIMB_STEP4_REAR_SLIDER_RETRACT;
             }
             break;

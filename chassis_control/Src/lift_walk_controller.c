@@ -23,6 +23,7 @@
 
 #define LIFT_WALK_SLIDER_TRAVEL_MM_PER_MOTOR_REV 180.0f
 #define LIFT_WALK_SLIDER_ANGLE_FROM_VERTICAL_RAD (7.5f * LIFT_WALK_PI / 180.0f)
+#define LIFT_WALK_SLIDER_SPEED_MARGIN 1.3f
 
 // =========================
 // 2. 基础数学工具
@@ -122,6 +123,20 @@ static float lw_slider_lift_to_motor_rad(const LiftWalk_Config_t *cfg, uint8_t s
                 lift_mm * LIFT_WALK_TWO_PI * cfg->slider_reduction_ratio / vertical_mm_per_rev;
 
     return lw_clampf(motor_rad, cfg->slider_min_rad[side], cfg->slider_max_rad[side]);
+}
+
+static float lw_slider_lift_speed_to_motor_rad_s(const LiftWalk_Config_t *cfg, float lift_speed_mm_s) {
+    float rail_mm_per_rev = (cfg->slider_pitch_mm_per_rev > LIFT_WALK_EPS) ?
+                            cfg->slider_pitch_mm_per_rev :
+                            1.0f;
+    float vertical_mm_per_rev = rail_mm_per_rev * cosf(LIFT_WALK_SLIDER_ANGLE_FROM_VERTICAL_RAD);
+
+    if (vertical_mm_per_rev <= LIFT_WALK_EPS) {
+        vertical_mm_per_rev = 1.0f;
+    }
+
+    return lw_absf(lift_speed_mm_s) * LIFT_WALK_TWO_PI *
+           cfg->slider_reduction_ratio / vertical_mm_per_rev;
 }
 
 // 前侧底盘角抬升量 -> 小臂角度逆解。
@@ -526,6 +541,9 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->max_height_mm = 198.0f;
     cfg->lift_vmax_mm_s = 100.0f;
     cfg->lift_amax_mm_s2 = 200.0f;
+    cfg->slider_vel_limit_rad_s =
+        lw_slider_lift_speed_to_motor_rad_s(cfg, cfg->lift_vmax_mm_s) *
+        LIFT_WALK_SLIDER_SPEED_MARGIN;
 }
 
 void LiftWalk_Init(LiftWalk_Controller_t *ctrl, const LiftWalk_Config_t *cfg) {

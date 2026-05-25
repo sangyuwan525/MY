@@ -74,6 +74,9 @@ extern Point_struct entry_point[3];
 
 //上下楼梯的函数
 uint8_t ClimbLift_RunStep(void);
+void ClimbLift_Stop(void);
+void Set_ArmAngle(float target_angle_left,float target_angle_right);
+void Set_OneArmAngle(uint8_t arm_id, float target_angle_rad, int rotate_dir);
 int ClimbStairs(int curr_id, int stair_id);
 int Move_to_Edge(int curr_id, int stair_id);
 int Move_back_to_Center(int stair_id);

@@ -113,7 +113,10 @@ void StartTask_chassis(void *argument)
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_AUTO)
                 {
-                     ClimbLift_RunStep();
+                     if (ClimbLift_RunStep())
+                     {
+                         //ClimbLift_Stop();
+                     };
                     //chassis_auto_control(&g_robot_ctx);
                 }
                 else if (rc_engineer_data.mode == CHASSIS_MODE_TEST)
