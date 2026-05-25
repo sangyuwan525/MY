@@ -20,6 +20,12 @@ void StartTask_dji(void *argument)
     const TickType_t xFrequency = pdMS_TO_TICKS(1);
     osDelay(2000);
     Motor_Registry_Init();
+
+    osDelay(500);
+    Motor_SetZero(XIAOMI_MOTOR1_G);
+    osDelay(20);
+    Motor_SetZero(XIAOMI_MOTOR2_G);
+    osDelay(20);
     // g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
     // g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],20);
     // if (g_motor_list[DM_FRONT_LEFT_G].set_speed != NULL) {

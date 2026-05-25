@@ -896,10 +896,25 @@ void Motor_Feedback_Dispatch(FDCAN_HandleTypeDef *hfdcan, uint32_t identifier, u
 }
 
 void Motor_All_Control_Loop(void) {
+    static uint8_t dm_send_slot = 0U;
     static uint8_t unitree_send_slot = 0U;
     Dji_3508_all_motor_control();
 
-    for (int i = DJI_MOTOR_COUNT; i < MOTOR_TOTAL_NUM; ++i) {
+    for (uint8_t n = 0U; n < DM_MOTOR_COUNT; ++n) {
+        uint8_t motor_idx = (uint8_t)((dm_send_slot + n) % DM_MOTOR_COUNT);
+        int global_idx = DJI_MOTOR_COUNT + motor_idx;
+        Motor_Class_t *cls = &g_motor_list[global_idx];
+
+        if (cls->instance == NULL || cls->type != MOTOR_TYPE_DAMIAO) {
+            continue;
+        }
+
+        Motor_UpdateSmoothGotoMIT(global_idx, cls);
+        dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
+    }
+    dm_send_slot = (uint8_t)((dm_send_slot + 1U) % DM_MOTOR_COUNT);
+
+    for (int i = DJI_MOTOR_COUNT + DM_MOTOR_COUNT; i < MOTOR_TOTAL_NUM; ++i) {
         Motor_Class_t *cls = &g_motor_list[i];
 
         if (cls->instance == NULL) {
@@ -908,9 +923,7 @@ void Motor_All_Control_Loop(void) {
 
         Motor_UpdateSmoothGotoMIT(i, cls);
 
-        if (cls->type == MOTOR_TYPE_DAMIAO) {
-            dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
-        } else if (cls->type == MOTOR_TYPE_XIAOMI) {
+        if (cls->type == MOTOR_TYPE_XIAOMI) {
             xiaomi_motor_ctrl_send((Xiaomi_Motor_t *)cls->instance);
         } else if (cls->type == MOTOR_TYPE_UNITREE_GO_M8010_6) {
             continue;
