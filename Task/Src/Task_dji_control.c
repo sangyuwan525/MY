@@ -28,8 +28,8 @@ void StartTask_dji(void *argument)
     osDelay(20);
     Motor_SetZero(XIAOMI_MOTOR2_G);
     osDelay(20);
-    Set_OneArmAngle(LIFT_WALK_LEFT, 0.5f, 1);
-    Set_OneArmAngle(LIFT_WALK_RIGHT, 0.5f, 1);
+    // Set_OneArmAngle(LIFT_WALK_LEFT, 0.5f, 1);
+    // Set_OneArmAngle(LIFT_WALK_RIGHT, 0.5f, 1);
     // Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G,
     //                          0.5f,
     //                          1.0f,

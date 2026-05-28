@@ -57,7 +57,7 @@ void StartTask_chassis(void *argument)
             // 使用 Remote_GetEngineerData 确保在互斥量保护下安全读取
             if (Remote_GetEngineerData(&rc_engineer_data) == pdPASS)
             {
-                // 模式 2 为手动模式
+                // 模式 2 为手动模式 左边两拨杆全往上
                 if (rc_engineer_data.mode == CHASSIS_MODE_MANUAL)
                 {
                     vec2 v_world,remote;
@@ -68,14 +68,16 @@ void StartTask_chassis(void *argument)
                     cha_remote(v_world.x,
                                v_world.y,
                                rc_engineer_data.vw);
+                    //最右边拨杆往上
                     if (rc_engineer_data.test_mode==CLIMB_MODE) {
                         if (climb_test_cnt==0)
                         {
-                            Point_struct now_point = {lcResult.x,lcResult.y};
-                            init_single_line_path(&path_test,now_point,entry_point[1],lcResult.r,0);
-                            if (go_path_control(&path_test, spd_test) == 1){
-                                climb_test_cnt++;
-                            }
+                            // Point_struct now_point = {lcResult.x,lcResult.y};
+                            // init_single_line_path(&path_test,now_point,entry_point[1],lcResult.r,0);
+                            // if (go_path_control(&path_test, spd_test) == 1){
+                            //     climb_test_cnt++;
+                            // }
+                            climb_test_cnt=1;
                         }
                         else if (climb_test_cnt==1)
                         {
@@ -85,7 +87,7 @@ void StartTask_chassis(void *argument)
                         }
                         else if (climb_test_cnt==2)
                         {
-                            if (ClimbStairs(1,0)) {
+                            if (ClimbStairs(1,4)) {
                                 climb_test_cnt++;
                             };
                         }
@@ -166,6 +168,8 @@ void StartTask_chassis(void *argument)
                 //全自动上楼梯 按键1 用于让R2停止
                 if (rc_engineer_data.button1 == 1)
                 {
+                    climb_cnt=0;
+                    climb_test_cnt=0;
                     // Change_dji_loc(DJI_M_CLIMB_LF,-back_up);
                     // Change_dji_loc(DJI_M_CLIMB_RF,back_up);
                     // Change_dji_loc(DJI_M_CLIMB_RB,-25000);
@@ -191,16 +195,13 @@ void StartTask_chassis(void *argument)
                 {
                     if (button2_flag==0)
                     {
-                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
-                        Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
-                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR1_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
-                        Motor_StartSmoothGotoMIT(UNITREE_GO_M8010_6_MOTOR2_G, 4.71f, 10.0f, 0.05f, 0.01f, 0.0f);
+                        climb_cnt++;
                         // if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
                         // {
                         //     g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);
                         //     g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],0.0f);
                         // }
-                        g_robot_ctx.current_top_state=1;
+                        // g_robot_ctx.current_top_state=1;
                         button2_flag=1;
                     }
                     // g_robot_ctx.sub_state.mf=

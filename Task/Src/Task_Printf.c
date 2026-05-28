@@ -210,7 +210,30 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("xiaomi2_online=%d  xiaomi2_angle=%f\n",
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.online,
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.angle);
-        osDelay(10);
+        RTT_Printf("current_climb_state:%d climb_cnt:%d\r\n",current_climb_state,climb_cnt);
+        if (g_motor_list[DM_FRONT_LEFT_G].get_state != NULL &&
+            g_motor_list[DM_FRONT_RIGHT_G].get_state != NULL &&
+            g_motor_list[BLAZER_FOC_MOTOR2_G].get_state != NULL &&
+            g_motor_list[BLAZER_FOC_MOTOR4_G].get_state != NULL) {
+                    Motor_State_t dm_l = g_motor_list[DM_FRONT_LEFT_G].get_state(&g_motor_list[DM_FRONT_LEFT_G]);
+                    Motor_State_t dm_r = g_motor_list[DM_FRONT_RIGHT_G].get_state(&g_motor_list[DM_FRONT_RIGHT_G]);
+                    Motor_State_t foc_l = g_motor_list[BLAZER_FOC_MOTOR2_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR2_G]);
+                    Motor_State_t foc_r = g_motor_list[BLAZER_FOC_MOTOR4_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR4_G]);
+
+                    RTT_Printf("dm(rad/s): L=%f R=%f | foc(rpm): L=%f R=%f\r\n",
+                               dm_l.speed,
+                               dm_r.speed,
+                               foc_l.speed,
+                               foc_r.speed);
+            RTT_Printf("dm_dbg: L set=%f fb=%f vmax=%f\r\n",
+                               g_dm_motor_registry[DM_Motor1].ctrl.vel_set,
+                               g_dm_motor_registry[DM_Motor1].para.vel,
+                               g_dm_motor_registry[DM_Motor1].tmp.VMAX
+                               );
+        }
+
+
+        osDelay(1000);
     }
     /* USER CODE END StartTask_Printf */
 }

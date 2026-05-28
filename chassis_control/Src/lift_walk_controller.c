@@ -371,7 +371,7 @@ static void lw_update_wheel_targets(LiftWalk_Controller_t *ctrl, const LiftWalk_
             front_rad_s = front_linear_mm_s / cfg->front_wheel_radius_mm;
         }
         if (rear_circumference_mm > LIFT_WALK_EPS) {
-            rear_rpm = rear_drive_mm_s * 60.0f / rear_circumference_mm;
+            rear_rpm = rear_drive_mm_s * 60.0f / rear_circumference_mm * 4.625;
         }
 
         front_rad_s *= cfg->front_wheel_sign[side];
@@ -507,7 +507,7 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
     cfg->rear_wheel_speed_limit_rpm = 3000.0f;
     cfg->front_wheel_accel_limit_rad_s2 = 15.0f;
     cfg->rear_wheel_accel_limit_rpm_s = 600.0f;
-    cfg->wheel_arm_comp_gain = 1.0f;
+    cfg->wheel_arm_comp_gain = 0.0f;
     cfg->front_wheel_sign[LIFT_WALK_LEFT] = 1.0f;
     cfg->front_wheel_sign[LIFT_WALK_RIGHT] = -1.0f;
     cfg->rear_wheel_sign[LIFT_WALK_LEFT] = -1.0f;
@@ -539,8 +539,8 @@ void LiftWalk_DefaultConfig(LiftWalk_Config_t *cfg) {
 
     cfg->min_height_mm = 0.0f;
     cfg->max_height_mm = 198.0f;
-    cfg->lift_vmax_mm_s = 100.0f;
-    cfg->lift_amax_mm_s2 = 200.0f;
+    cfg->lift_vmax_mm_s = 400.0f;
+    cfg->lift_amax_mm_s2 = 800.0f;
     cfg->slider_vel_limit_rad_s =
         lw_slider_lift_speed_to_motor_rad_s(cfg, cfg->lift_vmax_mm_s) *
         LIFT_WALK_SLIDER_SPEED_MARGIN;

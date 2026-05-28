@@ -1,5 +1,6 @@
 #include "blazer_foc_motor.h"
 
+#include <float.h>
 #include <string.h>
 #include "bsp_can.h"
 #include "fdcan.h"
@@ -7,6 +8,7 @@
 #define BLAZER_FOC_DEFAULT_CAN (&hfdcan3)
 #define BLAZER_FOC_READ_PARAM_COUNT 5U
 #define BLAZER_FOC_RPM_PER_RPS 60.0f
+#define BLAZER_FOC_MAX_VALID_SPEED_RPS 10000.0f
 #define BLAZER_FOC_TX_BUDGET_PER_LOOP 3U
 #define BLAZER_FOC_READ_PERIOD_MS 10U
 
@@ -81,6 +83,10 @@ static float Blazer_FOC_BitsToFloat(uint32_t bits) {
     float value;
     memcpy(&value, &bits, sizeof(value));
     return value;
+}
+
+static uint8_t Blazer_FOC_FloatIsFinite(float value) {
+    return (value == value && value <= FLT_MAX && value >= -FLT_MAX) ? 1U : 0U;
 }
 
 /*
@@ -413,6 +419,12 @@ void Blazer_FOC_Update_Feedback(Blazer_FOC_Motor_t *motor, uint32_t identifier, 
     param_id = (uint8_t)(identifier & 0xFEU);
     value = Blazer_FOC_UnpackFloat(data);
 
+    if (Blazer_FOC_FloatIsFinite(value) == 0U) {
+        motor->feedback.last_rx_tick_ms = HAL_GetTick();
+        motor->feedback.online = 1U;
+        return;
+    }
+
     switch (param_id) {
         case BLAZER_FOC_PARAM_VBUS:
             motor->feedback.vbus = value;
@@ -424,7 +436,10 @@ void Blazer_FOC_Update_Feedback(Blazer_FOC_Motor_t *motor, uint32_t identifier, 
             motor->feedback.iq = value;
             break;
         case BLAZER_FOC_PARAM_SPD_FILT:
-            motor->feedback.speed = value * BLAZER_FOC_RPM_PER_RPS;
+            if (value <= BLAZER_FOC_MAX_VALID_SPEED_RPS &&
+                value >= -BLAZER_FOC_MAX_VALID_SPEED_RPS) {
+                motor->feedback.speed = value * BLAZER_FOC_RPM_PER_RPS;
+            }
             break;
         case BLAZER_FOC_PARAM_ENC_RAW:
             motor->feedback.enc_raw = value;

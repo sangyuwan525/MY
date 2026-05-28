@@ -225,10 +225,8 @@ void StartTaskcommand(void *argument)
     UartRxMessage_t rx_msg;
     uint8_t processsed_command[COMMAND_LENGTH];
 
-    // HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
-    // __HAL_DMA_DISABLE_IT(huart5.hdmarx, DMA_IT_HT);
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart2,remote_Buffer,sizeof(remote_Buffer));
-    __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
+    __HAL_DMA_DISABLE_IT(huart5.hdmarx, DMA_IT_HT);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, unitree_rx_buffer, sizeof(unitree_rx_buffer));
     __HAL_DMA_DISABLE_IT(huart1.hdmarx, DMA_IT_HT);
     /* Infinite loop */
@@ -255,7 +253,7 @@ void StartTaskcommand(void *argument)
 
 // 串口接收完成回调函数
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-    if (huart->Instance == USART2) {
+    if (huart->Instance == UART5) {
         chassis_control_cnt=0;
         UartRxMessage_t rx_msg;
         uint16_t data_size = (Size < sizeof(rx_msg.data)) ? Size : sizeof(rx_msg.data);
@@ -286,10 +284,12 @@ void HAL_UART_ErrorCallback( UART_HandleTypeDef *huart)
     HAL_StatusTypeDef ret=HAL_ERROR;
     huart->RxState = HAL_UART_STATE_READY;
     __HAL_UART_CLEAR_FLAG(huart, UART_FLAG_PE | UART_FLAG_FE | UART_FLAG_ORE | UART_FLAG_NE);
-    if (huart == &huart2){
-        ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart2,remote_Buffer,sizeof(remote_Buffer));
+    if (huart == &huart5){
+        ret=HAL_UARTEx_ReceiveToIdle_DMA(&huart5,remote_Buffer,sizeof(remote_Buffer));
         if(ret!=HAL_OK){
             printf("ErrorCB Uart5 IT Enable Failed:%d\r\n",ret);
+        } else {
+            __HAL_DMA_DISABLE_IT(huart5.hdmarx, DMA_IT_HT);
         }
     } else if (huart == &huart1) {
         ret = HAL_UARTEx_ReceiveToIdle_DMA(&huart1, unitree_rx_buffer, sizeof(unitree_rx_buffer));
