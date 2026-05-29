@@ -280,11 +280,25 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                 }
                 int8_t target = r2->plan.r2_taken[idx];
                 if (Move_to_Edge(r2->current_stair_id,target)) {
-                    if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0)
+                    if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==3)
                     {
                         send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_KEEP);
+                    }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==3)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_KEEP);
+                    }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==1)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_HIGH_KEEP);
+                    }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==1)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_LOW_KEEP);
+                    }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==-1)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_HIGH_KEEP);
+                    }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==-1)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_LOW_KEEP);
                     }
-
                     if (MF_flag==3) {  // 抓取成功
                         r2->kfs_count++;
                         mark_r2_taken_done(r2, idx);
@@ -310,7 +324,14 @@ void Handle_MF_Logic(R2_Context_t *r2) {
         case MF_REMOVE_KFS: // 移除障碍 KFS
             // 规则 4.4.4: R2 可以移除阻碍路径的非目标 KFS（不能放入储藏区）
             if (Move_to_Edge(r2->current_stair_id,r2->target_stair_id)) {
-                send_flag_to_up(FLAG_REMOVE_KFS);
+                if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0)
+                {
+                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_REMOVE);
+                }else
+                {
+                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_REMOVE);
+                }
+
                 if (MF_flag==4) {
                     set_mf_state(r2, MF_MOVE_TO_BLOCK);
                 }
