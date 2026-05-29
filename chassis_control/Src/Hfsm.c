@@ -2,7 +2,7 @@
 
 #include "locator_driver.h"
 
-#define TOTAL_STICK  2  // 一区总共拿取的杆数量
+#define TOTAL_STICK  1  // 一区总共拿取的杆数量
 
 R2_Context_t g_robot_ctx = {
     .current_top_state = STATE_MC_AREA,
@@ -19,10 +19,10 @@ int MC_flag = 0;
 int CF_flag = 0;
 
 //向上层发送信息
-uint8_t send_flag_to_up(uint8_t flag)
+uint8_t send_flag_to_up(uint8_t id)
 {
-    uint8_t data[1] = {flag};
-    return bsp_can_send_std_msg(&hfdcan3, 0x120, data, 1, CAN_ID_STD);
+    uint8_t data[1] = {8};
+    return bsp_can_send_std_msg(&hfdcan3, 0x300+id, data, 1, CAN_ID_STD);
 }
 
 // 接收信号
@@ -37,8 +37,13 @@ bool is_target_kfs(int8_t current_id, int8_t r2_taken_id) {
 }
 
 // 判断是否是障碍KFS
-bool is_obstacle_kfs(int target_id, PlanResult res) {
-    return (target_id == res.r2_removed[0] || target_id == res.r2_removed[1]);
+static bool is_obstacle_kfs(int target_id, const PlanResult *res) {
+    for (int i = 0; i < res->r2r_cnt && i < MAX_R2_REMOVE; i++) {
+        if (target_id == res->r2_removed[i]) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool is_r2_taken_done(R2_Context_t *r2, int idx) {
@@ -220,7 +225,7 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                     if (idx >= 0) {
                         r2->current_r2_taken_idx = idx;
                         set_mf_state(r2, MF_PICK_ADJACENT);
-                    } else if (is_obstacle_kfs(r2->target_stair_id,r2->plan)) {
+                    } else if (is_obstacle_kfs(r2->target_stair_id,&r2->plan)) {
                         // 如果目标节点是要移出的 R2 KFS
                         set_mf_state(r2, MF_REMOVE_KFS);
                     } else {
@@ -275,7 +280,11 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                 }
                 int8_t target = r2->plan.r2_taken[idx];
                 if (Move_to_Edge(r2->current_stair_id,target)) {
-                    send_flag_to_up(FLAG_GRAB_KFS);
+                    if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0)
+                    {
+                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_KEEP);
+                    }
+
                     if (MF_flag==3) {  // 抓取成功
                         r2->kfs_count++;
                         mark_r2_taken_done(r2, idx);

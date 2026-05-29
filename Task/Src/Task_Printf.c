@@ -225,7 +225,8 @@ void StartTask_Printf(void *argument)
                                dm_r.speed,
                                foc_l.speed,
                                foc_r.speed);
-            RTT_Printf("dm_dbg: L set=%f fb=%f vmax=%f\r\n",
+            RTT_Printf("dm_dbg: L set=%f raw=%f fb=%f vmax=%f\r\n",
+                               g_dm_motor_registry[DM_Motor1].ctrl.vel_set * 6.28318530717958647692f / 60.0f,
                                g_dm_motor_registry[DM_Motor1].ctrl.vel_set,
                                g_dm_motor_registry[DM_Motor1].para.vel,
                                g_dm_motor_registry[DM_Motor1].tmp.VMAX
