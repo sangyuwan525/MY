@@ -171,6 +171,7 @@ typedef struct
     motor_ctrl_t ctrl;
 	esc_inf_t tmp;
 	uint8_t feedback_online;
+	uint8_t enabled;
 	uint8_t param_ack_valid;
 	uint8_t param_ack_rid;
 	uint32_t param_ack_value;

@@ -29,6 +29,7 @@ void dm_motor_enable(Damiao_Motor_t *motor)
 			enable_motor_mode(motor->hcan, motor->id, PSI_MODE);
 			break;
 	}
+	motor->enabled = 1U;
 }
 /**
 ************************************************************************
@@ -42,22 +43,12 @@ void dm_motor_enable(Damiao_Motor_t *motor)
 **/
 void dm_motor_disable(Damiao_Motor_t *motor)
 {
-	switch(motor->ctrl.mode)
-	{
-		case mit_mode:
-			disable_motor_mode(motor->hcan, motor->id, MIT_MODE);
-			break;
-		case pos_mode:
-			disable_motor_mode(motor->hcan, motor->id, POS_MODE);
-			break;
-		case spd_mode:
-			disable_motor_mode(motor->hcan, motor->id, SPD_MODE);
-			break;
-		case psi_mode:
-			disable_motor_mode(motor->hcan, motor->id, PSI_MODE);
-			break;
-	}
+	disable_motor_mode(motor->hcan, motor->id, MIT_MODE);
+	disable_motor_mode(motor->hcan, motor->id, POS_MODE);
+	disable_motor_mode(motor->hcan, motor->id, SPD_MODE);
+	disable_motor_mode(motor->hcan, motor->id, PSI_MODE);
 	dm_motor_clear_para(motor);
+	motor->enabled = 0U;
 }
 /**
 ************************************************************************

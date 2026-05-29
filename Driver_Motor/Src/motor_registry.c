@@ -153,20 +153,20 @@ static void DM_Adapter_Init(Motor_Class_t *self) {
     dm->feedback_online = 0U;
     dm_motor_clear_para(dm);
 
-    if (dm->hcan != NULL) {
-        DM_Adapter_SetRuntimeControlMode(dm, spd_mode);
-        osDelay(20);
+	if (dm->hcan != NULL) {
+		DM_Adapter_SetRuntimeControlMode(dm, spd_mode);
+		osDelay(20);
 
         for (int i = 0; i < 3; ++i) {
             dm_motor_clear_err(dm);
             osDelay(10);
         }
 
-        for (int i = 0; i < 5; ++i) {
-            dm_motor_enable(dm);
-            osDelay(100);
-        }
-    }
+		for (int i = 0; i < 5; ++i) {
+			dm_motor_enable(dm);
+			osDelay(100);
+		}
+	}
 }
 
 static uint16_t DM_Adapter_GetModeID(const Damiao_Motor_t *dm) {
@@ -905,13 +905,16 @@ void Motor_All_Control_Loop(void) {
         int global_idx = DJI_MOTOR_COUNT + motor_idx;
         Motor_Class_t *cls = &g_motor_list[global_idx];
 
-        if (cls->instance == NULL || cls->type != MOTOR_TYPE_DAMIAO) {
-            continue;
-        }
+		if (cls->instance == NULL || cls->type != MOTOR_TYPE_DAMIAO) {
+			continue;
+		}
+		if (((Damiao_Motor_t *)cls->instance)->enabled == 0U) {
+			continue;
+		}
 
-        Motor_UpdateSmoothGotoMIT(global_idx, cls);
-        dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
-    }
+		Motor_UpdateSmoothGotoMIT(global_idx, cls);
+		dm_motor_ctrl_send((Damiao_Motor_t *)cls->instance);
+	}
     dm_send_slot = (uint8_t)((dm_send_slot + 1U) % DM_MOTOR_COUNT);
 
     for (int i = DJI_MOTOR_COUNT + DM_MOTOR_COUNT; i < MOTOR_TOTAL_NUM; ++i) {

@@ -47,11 +47,10 @@ typedef enum
 typedef enum
 {
     DOWN_IDLE = 0,             // 初始/空闲状态
-    DOWN_STEP1_BASE_FORWARD,       // 第一步：底盘向前移动
-    DOWN_STEP2_FRONT_DOWN,   // 第二步：前侧3508下降
-    DOWN_STEP3_REAR_FORWARD,        // 第三步：后侧2006推动3508
-    DOWN_STEP4_DROP_DOWN,   // 第四步：降低车身
-    DOWN_STEP5_BASE_FORWARD,      // 第五步：再往前走一小段
+    DOWN_STEP1_FRONT_ARM_DEPLOY,    // 小臂向前伸直，车身继续前进
+    DOWN_STEP2_FRONT_ARM_SUPPORT,   // 前轮驶过台阶后，小臂转到竖直支撑并继续前进
+    DOWN_STEP3_FRONT_ARM_REDEPLOY,  // 车身继续前进，小臂逐渐回到向前伸直
+    DOWN_STEP4_CENTER_FORWARD,      // 车继续往前落下台阶，直到到达台阶中心
     DOWN_COMPLETE              // 攀爬完成
 } Down_State_e;
 //信号量（标志位）

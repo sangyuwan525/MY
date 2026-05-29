@@ -211,27 +211,28 @@ void StartTask_Printf(void *argument)
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.online,
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.angle);
         RTT_Printf("current_climb_state:%d climb_cnt:%d\r\n",current_climb_state,climb_cnt);
-        if (g_motor_list[DM_FRONT_LEFT_G].get_state != NULL &&
-            g_motor_list[DM_FRONT_RIGHT_G].get_state != NULL &&
-            g_motor_list[BLAZER_FOC_MOTOR2_G].get_state != NULL &&
-            g_motor_list[BLAZER_FOC_MOTOR4_G].get_state != NULL) {
-                    Motor_State_t dm_l = g_motor_list[DM_FRONT_LEFT_G].get_state(&g_motor_list[DM_FRONT_LEFT_G]);
-                    Motor_State_t dm_r = g_motor_list[DM_FRONT_RIGHT_G].get_state(&g_motor_list[DM_FRONT_RIGHT_G]);
-                    Motor_State_t foc_l = g_motor_list[BLAZER_FOC_MOTOR2_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR2_G]);
-                    Motor_State_t foc_r = g_motor_list[BLAZER_FOC_MOTOR4_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR4_G]);
-
-                    RTT_Printf("dm(rad/s): L=%f R=%f | foc(rpm): L=%f R=%f\r\n",
-                               dm_l.speed,
-                               dm_r.speed,
-                               foc_l.speed,
-                               foc_r.speed);
-            RTT_Printf("dm_dbg: L set=%f raw=%f fb=%f vmax=%f\r\n",
-                               g_dm_motor_registry[DM_Motor1].ctrl.vel_set * 6.28318530717958647692f / 60.0f,
-                               g_dm_motor_registry[DM_Motor1].ctrl.vel_set,
-                               g_dm_motor_registry[DM_Motor1].para.vel,
-                               g_dm_motor_registry[DM_Motor1].tmp.VMAX
-                               );
-        }
+        RTT_Printf("current_down_state:%d down_cnt:%d\r\n",current_down_state,down_cnt);
+        // if (g_motor_list[DM_FRONT_LEFT_G].get_state != NULL &&
+        //     g_motor_list[DM_FRONT_RIGHT_G].get_state != NULL &&
+        //     g_motor_list[BLAZER_FOC_MOTOR2_G].get_state != NULL &&
+        //     g_motor_list[BLAZER_FOC_MOTOR4_G].get_state != NULL) {
+        //             Motor_State_t dm_l = g_motor_list[DM_FRONT_LEFT_G].get_state(&g_motor_list[DM_FRONT_LEFT_G]);
+        //             Motor_State_t dm_r = g_motor_list[DM_FRONT_RIGHT_G].get_state(&g_motor_list[DM_FRONT_RIGHT_G]);
+        //             Motor_State_t foc_l = g_motor_list[BLAZER_FOC_MOTOR2_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR2_G]);
+        //             Motor_State_t foc_r = g_motor_list[BLAZER_FOC_MOTOR4_G].get_state(&g_motor_list[BLAZER_FOC_MOTOR4_G]);
+        //
+        //             RTT_Printf("dm(rad/s): L=%f R=%f | foc(rpm): L=%f R=%f\r\n",
+        //                        dm_l.speed,
+        //                        dm_r.speed,
+        //                        foc_l.speed,
+        //                        foc_r.speed);
+        //     RTT_Printf("dm_dbg: L set=%f raw=%f fb=%f vmax=%f\r\n",
+        //                        g_dm_motor_registry[DM_Motor1].ctrl.vel_set * 6.28318530717958647692f / 60.0f,
+        //                        g_dm_motor_registry[DM_Motor1].ctrl.vel_set,
+        //                        g_dm_motor_registry[DM_Motor1].para.vel,
+        //                        g_dm_motor_registry[DM_Motor1].tmp.VMAX
+        //                        );
+        // }
 
 
         osDelay(1000);

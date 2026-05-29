@@ -56,9 +56,9 @@ void StartTask_dji(void *argument)
     //     0.2f,
     //     0.0f
     // );
-    //osDelay(1000);
-    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
-    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.5f, 10.0f, 50.0f, 1.0f, 0.0f);
+    // //osDelay(1000);
+    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR1_G, 0.1f, 10.0f, 50.0f, 1.0f, 0.0f);
+    // Motor_StartSmoothGotoMIT(XIAOMI_MOTOR2_G, 0.1f, 10.0f, 50.0f, 1.0f, 0.0f);
 //     Motor_StartSmoothGotoMIT(
 //     UNITREE_GO_M8010_6_MOTOR2_G,
 //     4.71f,   // 目标位置，单位 rad

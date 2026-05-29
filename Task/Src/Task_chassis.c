@@ -87,13 +87,13 @@ void StartTask_chassis(void *argument)
                         }
                         else if (climb_test_cnt==2)
                         {
-                            if (ClimbStairs(1,4)) {
+                            if (DownStairs(0,3)) {
                                 climb_test_cnt++;
                             };
                         }
                         else if (climb_test_cnt==3)
                         {
-                            if (DownStairs(0,3)) {
+                            if (ClimbStairs(1,4)) {
                                 climb_test_cnt=-1;
                             };
                         }
@@ -254,18 +254,19 @@ void StartTask_chassis(void *argument)
                 {
                     if (button4_flag==0)
                     {
+                        down_cnt++;
                         //if (rc_engineer_data.)down_cnt++;
                         // valve_state=!valve_state;
                         // HAL_GPIO_WritePin(valve_port,valve_pin_l,valve_state);
                         // HAL_GPIO_WritePin(valve_port,valve_pin_r,valve_state);
-                        PID_Init();
-                        climb_cnt=0;
-                        climb_test_cnt=0;//climb_test_cnt=1-climb_test_cnt;
-                        current_climb_state=0;
-                        current_down_state=0;
-                        MF_flag--;
-                        MC_flag--;
-                        CF_flag--;
+                        // PID_Init();
+                        // climb_cnt=0;
+                        // climb_test_cnt=0;//climb_test_cnt=1-climb_test_cnt;
+                        // current_climb_state=0;
+                        // current_down_state=0;
+                        // MF_flag--;
+                        // MC_flag--;
+                        // CF_flag--;
                         button4_flag=1;
                     }
                 }else

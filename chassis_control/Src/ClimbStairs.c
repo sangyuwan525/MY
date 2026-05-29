@@ -19,7 +19,7 @@
 #define CLIMB_UNITREE_MOTOR_RAD_PER_ARM_RAD 1.5f
 #define CLIMB_LIFT_TARGET_HEIGHT_MM 198.0f
 #define CLIMB_LIFT_APPROACH_HEIGHT_MM 0.0f
-#define CLIMB_LIFT_FORWARD_MM_S 500.0f
+#define CLIMB_LIFT_FORWARD_MM_S 200.0f
 #define CLIMB_LIFT_START_HEIGHT_MM 0.0f
 #define CLIMB_LIFT_DONE_TOLERANCE_MM 2.0f
 #define CLIMB_LIFT_DT_S 0.01f
@@ -87,6 +87,13 @@ static LiftWalk_Input_t climb_lift_in;
 static uint8_t climb_lift_inited = 0U;
 static uint8_t climb_front_arm_move_started = 0U;
 static float climb_front_arm_target_rad[LIFT_WALK_SIDE_COUNT] = {0.0f, 0.0f};
+static uint8_t down_xiaomi_motor_disabled = 0U;
+static uint8_t down_dm_motor_disabled = 0U;
+
+#define DOWN_FORWARD_MM_S CLIMB_FRONT_ARM_DEPLOY_FORWARD_MM_S
+#define DOWN_FRONT_ARM_SUPPORT_RAD 4.7123889f      //  pi*3/2
+
+static float ClimbLift_GetMotorSpeed(int motor_index);
 
 static float ClimbLift_GetMotorAngle(int motor_index)
 {
@@ -221,6 +228,81 @@ static void ClimbFrontWheel_SetLinearSpeed(float vy_mm_s)
     if (g_motor_list[DM_FRONT_RIGHT_G].set_speed != NULL) {
         g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G], front_motor_rad_s);
     }
+}
+
+static void ClimbFrontWheel_SetClimbForwardSpeed(float vy_mm_s)
+{
+    float front_motor_rad_s = (vy_mm_s / CLIMB_FRONT_WHEEL_RADIUS_MM) *
+                              CLIMB_FRONT_WHEEL_MOTOR_RAD_PER_WHEEL_RAD;
+
+    if (g_motor_list[DM_FRONT_LEFT_G].set_speed != NULL) {
+        g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G], front_motor_rad_s);
+    }
+    if (g_motor_list[DM_FRONT_RIGHT_G].set_speed != NULL) {
+        g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G], -front_motor_rad_s);
+    }
+}
+
+static float ClimbArm_AngleError(float current_rad, float target_rad)
+{
+    float err = current_rad - target_rad;
+
+    while (err > PI) {
+        err -= CLIMB_TWO_PI;
+    }
+    while (err < -PI) {
+        err += CLIMB_TWO_PI;
+    }
+
+    return fabsf(err);
+}
+
+static bool ClimbFrontArm_IsTargetReached(void)
+{
+    float left_err = ClimbArm_AngleError(ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR1_G),
+                                         climb_front_arm_target_rad[LIFT_WALK_LEFT]);
+    float right_err = ClimbArm_AngleError(ClimbLift_GetArmAngle(UNITREE_GO_M8010_6_MOTOR2_G),
+                                          climb_front_arm_target_rad[LIFT_WALK_RIGHT]);
+    float left_speed = fabsf(ClimbLift_GetMotorSpeed(UNITREE_GO_M8010_6_MOTOR1_G));
+    float right_speed = fabsf(ClimbLift_GetMotorSpeed(UNITREE_GO_M8010_6_MOTOR2_G));
+
+    return left_err <= CLIMB_FRONT_ARM_DONE_TOLERANCE_RAD &&
+           right_err <= CLIMB_FRONT_ARM_DONE_TOLERANCE_RAD &&
+           left_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S &&
+           right_speed <= CLIMB_FRONT_ARM_DONE_SPEED_RAD_S;
+}
+
+static void DownStairs_DisableXiaomiOnce(void)
+{
+    if (down_xiaomi_motor_disabled != 0U) {
+        return;
+    }
+
+    Motor_Stop(XIAOMI_MOTOR1_G, 0U);
+    Motor_Stop(XIAOMI_MOTOR2_G, 0U);
+    down_xiaomi_motor_disabled = 1U;
+}
+
+static void DownStairs_DisableDamiaoOnce(void)
+{
+    if (down_dm_motor_disabled != 0U) {
+        return;
+    }
+
+    Motor_Stop(DM_FRONT_LEFT_G, 0U);
+    Motor_Stop(DM_FRONT_RIGHT_G, 0U);
+    down_dm_motor_disabled = 1U;
+}
+
+static void DownStairs_EnableXiaomiAndDamiao(void)
+{
+    Motor_Enable(XIAOMI_MOTOR1_G);
+    Motor_Enable(XIAOMI_MOTOR2_G);
+    Motor_Enable(DM_FRONT_LEFT_G);
+    Motor_Enable(DM_FRONT_RIGHT_G);
+
+    down_xiaomi_motor_disabled = 0U;
+    down_dm_motor_disabled = 0U;
 }
 
 static void ClimbLift_InitOnce(void)
@@ -796,6 +878,153 @@ int Move_to_Edge(int curr_id, int stair_id)
 //下楼梯的函数
 int DownStairs(int curr_id, int stair_id)
 {
+    int face = get_face(curr_id, stair_id);
+
+    if (current_down_state == DOWN_IDLE)
+    {
+        ClimbLift_Reset();
+        cha_remote(0.0f, 0.0f, 0.0f);
+        ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+        down_xiaomi_motor_disabled = 0U;
+        down_dm_motor_disabled = 0U;
+        DownStairs_DisableXiaomiOnce();
+        climb_front_arm_move_started = 0U;
+        current_down_state = DOWN_STEP1_FRONT_ARM_DEPLOY;
+        return 0;
+    }
+
+    switch (current_down_state)
+    {
+        case DOWN_IDLE:
+        {
+            cha_remote(0.0f, 0.0f, 0.0f);
+            ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+            break;
+        }
+
+        case DOWN_STEP1_FRONT_ARM_DEPLOY:
+        {
+            float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), lcResult.r);
+
+            if (climb_front_arm_move_started == 0U) {
+                climb_front_arm_target_rad[LIFT_WALK_LEFT] =
+                    CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD;
+                climb_front_arm_target_rad[LIFT_WALK_RIGHT] =
+                    CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD;
+                Set_OneArmAngle(LIFT_WALK_LEFT, climb_front_arm_target_rad[LIFT_WALK_LEFT], 1);
+                Set_OneArmAngle(LIFT_WALK_RIGHT, climb_front_arm_target_rad[LIFT_WALK_RIGHT], 1);
+                climb_front_arm_move_started = 1U;
+            }
+
+            if (fabsf(lcResult.r - face_angle(face)) < 0.05f) {
+                ClimbFrontWheel_SetClimbForwardSpeed(DOWN_FORWARD_MM_S);
+                cha_remote(0.0f, DOWN_FORWARD_MM_S, vr);
+
+                if ((HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1) || down_cnt >= 1) &&
+                    ClimbFrontArm_IsTargetReached()) {
+                    climb_front_arm_move_started = 0U;
+                    current_down_state = DOWN_STEP2_FRONT_ARM_SUPPORT;
+                }
+            } else {
+                ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+                cha_remote(0.0f, 0.0f, vr);
+            }
+            break;
+        }
+
+        case DOWN_STEP2_FRONT_ARM_SUPPORT:
+        {
+            float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), lcResult.r);
+
+            ClimbFrontWheel_SetClimbForwardSpeed(DOWN_FORWARD_MM_S);
+            cha_remote(0.0f, DOWN_FORWARD_MM_S, vr);
+
+            if (climb_front_arm_move_started == 0U) {
+                climb_front_arm_target_rad[LIFT_WALK_LEFT] = DOWN_FRONT_ARM_SUPPORT_RAD;
+                climb_front_arm_target_rad[LIFT_WALK_RIGHT] = DOWN_FRONT_ARM_SUPPORT_RAD;
+                Set_OneArmAngle(LIFT_WALK_LEFT, climb_front_arm_target_rad[LIFT_WALK_LEFT], 1);
+                Set_OneArmAngle(LIFT_WALK_RIGHT, climb_front_arm_target_rad[LIFT_WALK_RIGHT], 1);
+                climb_front_arm_move_started = 1U;
+            }
+
+            if ((HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_10) || down_cnt >= 2) &&
+                ClimbFrontArm_IsTargetReached()) {
+                climb_front_arm_move_started = 0U;
+                current_down_state = DOWN_STEP3_FRONT_ARM_REDEPLOY;
+            }
+            break;
+        }
+
+        case DOWN_STEP3_FRONT_ARM_REDEPLOY:
+        {
+            float vr = PID_Angle_Calculate(&chassis_yaw_pid, face_angle(face), lcResult.r);
+
+            DownStairs_DisableDamiaoOnce();
+            cha_remote(0.0f, DOWN_FORWARD_MM_S, vr);
+
+            if (climb_front_arm_move_started == 0U) {
+                climb_front_arm_target_rad[LIFT_WALK_LEFT] =
+                    CLIMB_FRONT_ARM_DEPLOY_LEFT_OFFSET_RAD;
+                climb_front_arm_target_rad[LIFT_WALK_RIGHT] =
+                    CLIMB_FRONT_ARM_DEPLOY_RIGHT_OFFSET_RAD;
+                Set_OneArmAngle(LIFT_WALK_LEFT, climb_front_arm_target_rad[LIFT_WALK_LEFT], -1);
+                Set_OneArmAngle(LIFT_WALK_RIGHT, climb_front_arm_target_rad[LIFT_WALK_RIGHT], -1);
+                climb_front_arm_move_started = 1U;
+            }
+
+            if (ClimbFrontArm_IsTargetReached() || down_cnt >= 3) {
+                climb_front_arm_move_started = 0U;
+                current_down_state = DOWN_STEP4_CENTER_FORWARD;
+
+            }
+            break;
+        }
+
+        case DOWN_STEP4_CENTER_FORWARD:
+        {
+            if (is_on_stair_center(stair_id) || down_cnt == 4)
+            {
+                cha_remote(0.0f, 0.0f, 0.0f);
+                current_down_state = DOWN_COMPLETE;
+            } else {
+                // Point_struct now_point = {lcResult.x, lcResult.y};
+                // float now_pos = lcResult.r;
+                // Point_struct end_point ={stairs_center[stair_id].x, stairs_center[stair_id].y};
+                //
+                // move_approach(now_point, end_point, now_pos, 0);
+                cha_remote(0.0f, DOWN_FORWARD_MM_S, 0.0f);
+            }
+            break;
+        }
+
+        case DOWN_COMPLETE:
+        {
+            ClimbLift_Reset();
+            cha_remote(0.0f, 0.0f, 0.0f);
+            DownStairs_EnableXiaomiAndDamiao();
+            ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+            climb_front_arm_move_started = 0U;
+            current_down_state = DOWN_IDLE;
+            down_cnt = 0;
+            return 1;
+        }
+
+        default:
+            ClimbLift_Reset();
+            cha_remote(0.0f, 0.0f, 0.0f);
+            DownStairs_EnableXiaomiAndDamiao();
+            ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+            climb_front_arm_move_started = 0U;
+            current_down_state = DOWN_IDLE;
+            break;
+    }
+
+    return 0;
+}
+
+#if 0
+static int DownStairs_old(int curr_id, int stair_id)
+{
     int face = get_face(curr_id,stair_id);
     // 假设按下 rc_engineer_data.button10_is_climb_trigger 是触发一键攀爬的按钮
     if ( current_down_state == DOWN_IDLE)
@@ -930,6 +1159,8 @@ int DownStairs(int curr_id, int stair_id)
     }
     return 0;
 }
+
+#endif
 
 // 200的台阶，可与ClimbStairs合并
 // void UpStairs(void)
