@@ -29,6 +29,7 @@ void init_tangent_line_circle_path(Path_struct* p_path, Point_struct line_start,
 // 构建 R2 在“非树林区可达区域”内的路径。
 // 当前支持的区域包括：一区(MC)、二区入口区、二区出口区、三区(CF)。
 // 该接口只负责这些大区域之间的几何路径拼接，不负责树林内部的方块搜索路径。
+int init_custom_path(Path_struct *p_path, const Trajectory *trajectories, uint8_t trajectory_num, float start_angle, float end_angle);
 int build_r2_accessible_path(Path_struct* p_path, Point_struct start, Point_struct end, float end_angle);
 
 // 构建“下台阶中心点 -> 坡道 -> 九宫格面前”的固定三段路径。

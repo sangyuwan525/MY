@@ -80,4 +80,5 @@ float PID_Angle_Calculate(PID_Angle_t *pid, float target_angle, float now_angle)
 vec2 PID_Correct_Calculate(PID_Correct_t *pid, Point_struct now_point, Point_struct foot_point);
 vec2 PID_Approaching_Calculate(PID_Approaching_t *pid, Point_struct now_point, Point_struct foot_point);
 void PID_Init(void);
+void PID_Path_Reset(void);
 #endif //R1_CHASSIS_CHASSIS_PID_H

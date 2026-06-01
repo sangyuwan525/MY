@@ -4,6 +4,10 @@
 
 #define TOTAL_STICK  1  // 一区总共拿取的杆数量
 
+Point_struct slope_entry = {3890,8390};
+Point_struct slope_end = {3890,10500};
+Point_struct MF_wait_point = {-710,10100};
+
 R2_Context_t g_robot_ctx = {
     .current_top_state = STATE_MC_AREA,
     .sub_state.mc = MC_INIT,
@@ -22,7 +26,7 @@ int CF_flag = 0;
 uint8_t send_flag_to_up(uint8_t id)
 {
     uint8_t data[1] = {8};
-    return bsp_can_send_std_msg(&hfdcan3, 0x300+id, data, 1, CAN_ID_STD);
+    return fdcanx_send_ex_data(&hfdcan3, 0x300+id, data, 1, CAN_ID_STD);
 }
 
 // 接收信号
@@ -354,6 +358,15 @@ void Handle_CF_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.cf) {
         case CF_CLIMB_RAMP:
             // 爬坡进入对抗区
+            if (!r2->path_inited) {
+                Trajectory tra_slope[3];
+                Point_struct cur_point = {lcResult.x,lcResult.y};
+                tra_slope[0] = generate_line_trajectory(cur_point,slope_entry,full);
+                tra_slope[1] = generate_line_trajectory(slope_entry,slope_end,full);
+                tra_slope[2] = generate_line_trajectory(slope_end,MF_wait_point,empty);
+                init_custom_path(&path_test,tra_slope,3,lcResult.r,-pi/2.0f);
+                r2->path_inited = true;
+            }
             if (go_path_control(&path_test, spd_test) == 1) {   // 移动到决策位置
                 set_cf_state(r2, CF_DECISION);
             }

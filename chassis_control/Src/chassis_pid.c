@@ -3,6 +3,7 @@
 //
 #include "chassis_pid.h"
 #include "chassis_path.h"
+#include "locator_driver.h"
 #include <math.h>
 
 PID_Angle_t chassis_yaw_pid;
@@ -297,4 +298,20 @@ void PID_Init(void)
     PID_Approaching_Init(&chassis_kaojin_pid);
     PID_Angle_Init(&chassis_yaw_pid);
     PID_Correct_Init(&chassis_correct_pid);
+}
+
+void PID_Path_Reset(void)
+{
+    chassis_yaw_pid.integral_sum = 0.0f;
+    chassis_yaw_pid.last_error = 0.0f;
+
+    chassis_correct_pid.integral_sum.x = 0.0f;
+    chassis_correct_pid.integral_sum.y = 0.0f;
+    chassis_correct_pid.last_error.x = 0.0f;
+    chassis_correct_pid.last_error.y = 0.0f;
+
+    chassis_kaojin_pid.integral_sum.x = 0.0f;
+    chassis_kaojin_pid.integral_sum.y = 0.0f;
+    chassis_kaojin_pid.last_point.x = lcResult.x;
+    chassis_kaojin_pid.last_point.y = lcResult.y;
 }

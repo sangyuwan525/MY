@@ -673,7 +673,7 @@ static int prepare_empty_path(Path_struct *p_path) {
  * 2. 规划函数只关心该生成哪些段；真正写入 Path_struct、累加总长度都统一走这里。
  * 3. 起点/终点角都会在这里再次做包角，避免外部遗漏。
  */
-static int init_custom_path(Path_struct *p_path, const Trajectory *trajectories, uint8_t trajectory_num, float start_angle, float end_angle) {
+int init_custom_path(Path_struct *p_path, const Trajectory *trajectories, uint8_t trajectory_num, float start_angle, float end_angle) {
     float total_length = 0.0f;
 
     if (prepare_path_storage(p_path, trajectory_num) != 0) {

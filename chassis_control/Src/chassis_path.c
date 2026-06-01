@@ -721,6 +721,7 @@ int go_path_control_smooth(Path_struct* path, path_spd_data_t path_spd)
 
     if ((*path).trajectory_count >= (*path).trajectory_num) {
         cha_remote(0.0f, 0.0f, 0.0f);
+        PID_Path_Reset();
         return 1;
     }
 
@@ -807,6 +808,7 @@ int go_path_control_smooth(Path_struct* path, path_spd_data_t path_spd)
         if (distance < 50.0f && path_remain < done_remain_threshold && fabsf(yaw_err) < 0.1f &&
             fabsf(lcResult.vx) < 50.0f && fabsf(lcResult.vy) < 50.0f && fabsf(lcResult.vr) < 50.0f) {
             cha_remote(0.0f, 0.0f, 0.0f);
+            PID_Path_Reset();
             return 1;
         }
     }
