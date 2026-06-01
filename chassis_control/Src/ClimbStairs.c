@@ -1001,8 +1001,23 @@ int DownStairs(int curr_id, int stair_id)
         {
             ClimbLift_Reset();
             cha_remote(0.0f, 0.0f, 0.0f);
-            DownStairs_EnableXiaomiAndDamiao();
             ClimbFrontWheel_SetClimbForwardSpeed(0.0f);
+
+            if (climb_front_arm_move_started == 0U) {
+                climb_front_arm_target_rad[LIFT_WALK_LEFT] =
+                    CLIMB_FRONT_ARM_HOME_LEFT_RAD;
+                climb_front_arm_target_rad[LIFT_WALK_RIGHT] =
+                    CLIMB_FRONT_ARM_HOME_RIGHT_RAD;
+                Set_OneArmAngle(LIFT_WALK_LEFT, climb_front_arm_target_rad[LIFT_WALK_LEFT], -1);
+                Set_OneArmAngle(LIFT_WALK_RIGHT, climb_front_arm_target_rad[LIFT_WALK_RIGHT], -1);
+                climb_front_arm_move_started = 1U;
+            }
+
+            if (!ClimbFrontArm_IsTargetReached()) {
+                break;
+            }
+
+            DownStairs_EnableXiaomiAndDamiao();
             climb_front_arm_move_started = 0U;
             current_down_state = DOWN_IDLE;
             down_cnt = 0;

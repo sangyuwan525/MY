@@ -175,24 +175,23 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             r2->current_step = 1;
             r2->target_stair_id = r2->plan.path[r2->current_step];
             r2->current_stair_id = r2->plan.path[r2->current_step-1];
-            {
-                int idx = find_next_r2_taken_idx(r2);
-                if (idx < 0 || r2->plan.r2_taken[idx]==1) {
-                    set_mf_state(r2, MF_ENTRY);
-                }else if (is_entry_side_r2(r2->plan.r2_taken[idx])) {
-                    r2->current_r2_taken_idx = idx;
-                    if (!r2->path_inited) {
-                        Point_struct cur_point = {lcResult.x,lcResult.y};
-                        init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[idx]],lcResult.r,0);
-                        r2->path_inited = true;
-                    }
-                    if (go_path_control(&path_test, spd_test) == 1) {
-                        set_mf_state(r2, MF_PICK_ADJACENT);
-                    }
-                }else {
-                    set_mf_state(r2, MF_ENTRY);
+            int idx = find_next_r2_taken_idx(r2);
+            if (idx < 0 || r2->plan.r2_taken[idx]==1) {
+                set_mf_state(r2, MF_ENTRY);
+            }else if (is_entry_side_r2(r2->plan.r2_taken[idx])) {
+                r2->current_r2_taken_idx = idx;
+                if (!r2->path_inited) {
+                    Point_struct cur_point = {lcResult.x,lcResult.y};
+                    init_single_line_path(&path_test,cur_point,entry_point[r2->plan.r2_taken[idx]],lcResult.r,0);
+                    r2->path_inited = true;
                 }
+                if (go_path_control(&path_test, spd_test) == 1) {
+                    set_mf_state(r2, MF_PICK_ADJACENT);
+                }
+            }else {
+                set_mf_state(r2, MF_ENTRY);
             }
+
             break;
         case MF_ENTRY: // 进入树林入口
             // 规则：从入口方块(1,2,3)进入，假设此处调用路径控制前往入口

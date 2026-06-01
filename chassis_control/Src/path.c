@@ -1022,6 +1022,72 @@ int build_r2_accessible_path(Path_struct* p_path, Point_struct start, Point_stru
 }
 
 /**
+ * @brief 构建“下台阶中心点 -> 坡道 -> 九宫格面前”的固定三段路径。
+ *
+ * @param p_path   输出路径。
+ * @param start_id 起点选择：0 = (2690,8090)，1 = (290,8090)。
+ *
+ * @note
+ * 该路径不走 build_r2_accessible_path() 的自动分区/自动锚点逻辑，而是严格生成三段：
+ * 1. 下台阶后的中心点 -> 坡道出发点 (3890,8390)：圆弧。
+ * 2. 坡道出发点 (3890,8390) -> 坡道终点 (3890,10500)：直线。
+ * 3. 坡道终点 (3890,10500) -> 九宫格面前 (-710,10100)：圆弧。
+ *
+ * 第一段的两个圆心和圆心角，按“到达坡道出发点时切向沿 +Y 方向”计算。
+ * 第三段为了从坡道终点以 +Y 切向离开，会形成大于 180 度的圆弧；如果实车跟踪方向不稳，
+ * 建议后续把第三段拆成“圆弧 + 直线”或改成贝塞尔。
+ */
+int build_r2_ramp_grid_path(Path_struct* p_path, uint8_t start_id) {
+    const Point_struct ramp_start = {3890.0f, 8390.0f};
+    const Point_struct ramp_end = {3890.0f, 10500.0f};
+    const Point_struct grid_front = {-710.0f, 10100.0f};
+    const Point_struct robot_now = {lcResult.x, lcResult.y};
+    const float R2_RAMP_GRID_END_YAW_RAD = 0.0f;
+    Trajectory trajectories[3];
+    Point_struct start;
+    Point_struct first_arc_center;
+    float first_arc_angle;
+    float start_angle;
+
+    if (p_path == NULL) {
+        return -1;
+    }
+
+    if (start_id == 0U) {
+        // 左侧下台阶中心点：该圆弧终点在 ramp_start，终点切向沿 +Y。
+        start = (Point_struct){2690.0f, 8090.0f};
+        first_arc_center = (Point_struct){3252.5f, 8390.0f};
+        first_arc_angle = 2.6516354f;
+    } else if (start_id == 1U) {
+        // 右侧下台阶中心点：同样保证到 ramp_start 时切向沿 +Y。
+        start = (Point_struct){290.0f, 8090.0f};
+        first_arc_center = (Point_struct){2077.5f, 8390.0f};
+        first_arc_angle = 2.9753102f;
+    } else {
+        return -1;
+    }
+
+    // 如果机器人实际就在该起点附近，用定位器当前角度作为姿态起点；
+    // 否则使用第一段圆弧在起点处的切向角，避免姿态插值从错误方向开始。
+    start_angle = point_near(robot_now, start, R2_START_ANGLE_NEAR_MM) ? lcResult.r : -first_arc_angle;
+
+    trajectories[0] = generate_circle_trajectory(start, ramp_start, first_arc_center, first_arc_angle, full);
+    trajectories[1] = generate_line_trajectory(ramp_start, ramp_end, full);
+
+    // 从坡道终点以 +Y 切向离开，并落到九宫格面前。
+    trajectories[2] = generate_circle_trajectory(
+        ramp_end,
+        grid_front,
+        (Point_struct){1572.6087f, 10500.0f},
+        3.3150694f,
+        empty
+    );
+
+    mark_last_segment(trajectories, 3U);
+    return init_custom_path(p_path, trajectories, 3U, start_angle, R2_RAMP_GRID_END_YAW_RAD);
+}
+
+/**
  * @brief R2 路径规划的业务总入口。
  *
  * @note

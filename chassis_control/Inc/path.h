@@ -31,6 +31,10 @@ void init_tangent_line_circle_path(Path_struct* p_path, Point_struct line_start,
 // 该接口只负责这些大区域之间的几何路径拼接，不负责树林内部的方块搜索路径。
 int build_r2_accessible_path(Path_struct* p_path, Point_struct start, Point_struct end, float end_angle);
 
+// 构建“下台阶中心点 -> 坡道 -> 九宫格面前”的固定三段路径。
+// start_id = 0 使用 (2690,8090)，start_id = 1 使用 (290,8090)。
+int build_r2_ramp_grid_path(Path_struct* p_path, uint8_t start_id);
+
 typedef struct {
     // 端头架抓取位：R2 最终执行抓取动作时应到达的位置。
     Point_struct grab_point;
