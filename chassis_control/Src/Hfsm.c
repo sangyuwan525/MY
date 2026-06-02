@@ -313,7 +313,6 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                         }else{
                             set_mf_state(r2, MF_BACK_TO_CENTER);
                         }
-
                     }
                 }
             }
