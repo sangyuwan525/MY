@@ -17,6 +17,7 @@ typedef struct LocatorRxQueue {
     uint8_t rx_data[16];
 } Locator_Rx_Queue_t;
 
+
 /* Legacy queue names: x_y now carries 0x12 x/y/yaw; z_r now carries 0x100 laser data. */
 extern osMessageQueueId_t locatorQueue_x_yHandle;
 extern osMessageQueueId_t locatorQueue_z_rHandle;
