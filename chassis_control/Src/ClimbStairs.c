@@ -42,6 +42,8 @@
 int climb_cnt = 0;
 int down_cnt = 0;
 
+volatile uint8_t climb_stair_flag = 0;
+volatile uint8_t down_stair_flag = 0;
 // pb11 碰撞开关，碰到为 1
 // pb10 后光电开关，常亮为 1
 // pc1  前光电开关，常亮为 1，抬起灯
@@ -566,6 +568,7 @@ int ClimbStairs(int curr_id, int stair_id)
 
     if (current_climb_state == CLIMB_IDLE)
     {
+        climb_stair_flag = 0;
         ClimbLift_Reset();
         cha_remote(0.0f, 0.0f, 0.0f);
         climb_front_arm_move_started = 0U;
@@ -640,7 +643,8 @@ int ClimbStairs(int curr_id, int stair_id)
                 ClimbLift_UpdateTarget(CLIMB_LIFT_TARGET_HEIGHT_MM, CLIMB_LIFT_FORWARD_MM_S);
             }
 
-            if (is_on_stair_edge(stair_id, face)||climb_cnt==2) {
+            // if (is_on_stair_edge(stair_id, face)||climb_cnt==2||climb_stair_flag==1)
+            if (climb_cnt==2||climb_stair_flag==1){
                 climb_front_arm_move_started = 0U;
                 current_climb_state = CLIMB_STEP3_FRONT_ARM_RETRACT;
             }
@@ -750,6 +754,7 @@ int ClimbStairs(int curr_id, int stair_id)
 
         case CLIMB_COMPLETE:
         {
+            climb_stair_flag = 0;
             ClimbLift_Reset();
             cha_remote(0.0f, 0.0f, 0.0f);
             climb_front_arm_move_started = 0U;
@@ -759,6 +764,7 @@ int ClimbStairs(int curr_id, int stair_id)
         }
 
         default:
+            climb_stair_flag = 0;
             ClimbLift_Reset();
             cha_remote(0.0f, 0.0f, 0.0f);
             climb_front_arm_move_started = 0U;

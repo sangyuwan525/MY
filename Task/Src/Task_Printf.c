@@ -189,10 +189,11 @@ void StartTask_Printf(void *argument)
             // printf("desired_vx = %f\n", 1000*desired_vx);
             (void)chassis_cmd;
         }
+        //send_flag_to_up(1);send_flag_to_up(2);send_flag_to_up(3);send_flag_to_up(4);send_flag_to_up(5);send_flag_to_up(6);
         //printf("x66 y55 z66\n");
         RTT_Printf("locator: x=%.3f y=%.3f r=%.6f\r\n", lcResult.x, lcResult.y, lcResult.r);
         // RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
-        // RTT_Printf("dis=%f\n",lcResult.laser_current);
+        RTT_Printf("dis=%f\n",lcResult.laser_current);
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
         //RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));

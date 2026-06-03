@@ -18,9 +18,9 @@ R2_Context_t g_robot_ctx = {
     .kfs_count = 0,
     .path_inited = false
 };
-int MF_flag = 0;
-int MC_flag = 0;
-int CF_flag = 0;
+volatile int MF_flag = 0;
+volatile int MC_flag = 0;
+volatile int CF_flag = 0;
 
 //向上层发送信息
 uint8_t send_flag_to_up(uint8_t id)

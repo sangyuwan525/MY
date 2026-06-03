@@ -70,6 +70,8 @@ extern int down_cnt;
 extern Climb_State_e current_climb_state;
 extern Down_State_e current_down_state;
 extern Point_struct entry_point[3];
+extern volatile uint8_t climb_stair_flag;
+extern volatile uint8_t down_stair_flag;
 
 //上下楼梯的函数
 uint8_t ClimbLift_RunStep(void);

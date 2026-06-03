@@ -25,6 +25,26 @@ typedef enum {
     FLAG_LIFT,          // 三区爬上R1指令
 } FLAG_TO_UP;
 
+typedef enum {
+    UPPER_CAN_ID_MC_PICK_HEAD_DONE = 0x311U,
+    UPPER_CAN_ID_MC_ASSEMBLE_READY = 0x312U,
+    UPPER_CAN_ID_MC_ASSEMBLE_DONE = 0x313U,
+    UPPER_CAN_ID_MC_R1_LEFT = 0x314U,
+
+    UPPER_CAN_ID_MF_ENTRY_DONE = 0x321U,
+    UPPER_CAN_ID_MF_ACTION_READY = 0x322U,
+    UPPER_CAN_ID_MF_GRAB_DONE = 0x323U,
+    UPPER_CAN_ID_MF_REMOVE_DONE = 0x324U,
+    UPPER_CAN_ID_MF_EXIT_DONE = 0x325U,
+
+    UPPER_CAN_ID_CF_PLACE_TOP_DECISION = 0x331U,
+    UPPER_CAN_ID_CF_PUT_MID_DONE = 0x332U,
+    UPPER_CAN_ID_CF_LIFT_DONE = 0x333U,
+    UPPER_CAN_ID_CF_R1_IN_POSITION = 0x334U,
+    UPPER_CAN_ID_CF_PUT_TOP_DONE = 0x335U,
+    UPPER_CAN_ID_CF_WIN = 0x336U,
+} Upper_To_Chassis_CanId_e;
+
 // --- 顶级状态：区域逻辑 (Top-Level States) ---
 typedef enum {
     STATE_MC_AREA,    // 一区：武馆 (Martial Arts Hall)
@@ -90,9 +110,9 @@ typedef struct {
     bool path_inited;     // 当前状态下是否以完成路径生成
 } R2_Context_t;
 
-extern int MF_flag;
-extern int MC_flag;
-extern int CF_flag;
+extern volatile int MF_flag;
+extern volatile int MC_flag;
+extern volatile int CF_flag;
 extern R2_Context_t g_robot_ctx;
 uint8_t send_flag_to_up(uint8_t id);
 int chassis_auto_control(R2_Context_t *robot_ctx);

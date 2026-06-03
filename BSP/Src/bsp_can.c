@@ -5,6 +5,7 @@
 #include "cmsis_os.h"
 #include "cmsis_os2.h"
 #include "dm_motor_ctrl.h"
+#include "Hfsm.h"
 #include "locator_driver.h"
 
 #define BLAZER_FOC_NODE_ID_MAX 0x07U
@@ -27,6 +28,52 @@ static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHea
 
     return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y||
             rx_header->Identifier == LOCATOR_CAN_ID_LASER);
+}
+
+static bool Is_Upper_Signal_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHeaderTypeDef *rx_header)
+{
+    if (hfdcan != &hfdcan3 || rx_header == NULL || rx_header->IdType != FDCAN_STANDARD_ID) {
+        return false;
+    }
+
+    return ((rx_header->Identifier >= UPPER_CAN_ID_MC_PICK_HEAD_DONE &&
+             rx_header->Identifier <= UPPER_CAN_ID_MC_R1_LEFT) ||
+            (rx_header->Identifier >= UPPER_CAN_ID_MF_ENTRY_DONE &&
+             rx_header->Identifier <= UPPER_CAN_ID_MF_EXIT_DONE) ||
+            (rx_header->Identifier >= UPPER_CAN_ID_CF_PLACE_TOP_DECISION &&
+             rx_header->Identifier <= UPPER_CAN_ID_CF_WIN));
+}
+
+static void Process_Upper_Signal_Message(uint32_t id)
+{
+    switch (id) {
+        case UPPER_CAN_ID_MC_PICK_HEAD_DONE:
+        case UPPER_CAN_ID_MC_ASSEMBLE_READY:
+        case UPPER_CAN_ID_MC_ASSEMBLE_DONE:
+        case UPPER_CAN_ID_MC_R1_LEFT:
+            MC_flag = (int)(id - 0x310U);
+            break;
+
+        case UPPER_CAN_ID_MF_ENTRY_DONE:
+        case UPPER_CAN_ID_MF_ACTION_READY:
+        case UPPER_CAN_ID_MF_GRAB_DONE:
+        case UPPER_CAN_ID_MF_REMOVE_DONE:
+        case UPPER_CAN_ID_MF_EXIT_DONE:
+            MF_flag = (int)(id - 0x320U);
+            break;
+
+        case UPPER_CAN_ID_CF_PLACE_TOP_DECISION:
+        case UPPER_CAN_ID_CF_PUT_MID_DONE:
+        case UPPER_CAN_ID_CF_LIFT_DONE:
+        case UPPER_CAN_ID_CF_R1_IN_POSITION:
+        case UPPER_CAN_ID_CF_PUT_TOP_DONE:
+        case UPPER_CAN_ID_CF_WIN:
+            CF_flag = (int)(id - 0x330U);
+            break;
+
+        default:
+            break;
+    }
 }
 
 static void FDCAN_Filter_Config(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo_assignment, CAN_Id_Type_e id_type) {
@@ -239,10 +286,14 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
                 // if (ret != pdPASS) {
                 //     __NOP();
                 // }
-            } else if (rx_header.Identifier == LOCATOR_CAN_ID_LASER)
-                        {
+            } else if (rx_header.Identifier == LOCATOR_CAN_ID_LASER && locatorQueue_z_rHandle != NULL) {
                 xQueueSendFromISR(locatorQueue_z_rHandle, &locator_msg, &xHigherPriorityTaskWoken);
-                       }
+            }
+            continue;
+        }
+
+        if (Is_Upper_Signal_Message(hfdcan, &rx_header)) {
+            Process_Upper_Signal_Message(rx_header.Identifier);
             continue;
         }
 
