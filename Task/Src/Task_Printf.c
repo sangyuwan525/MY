@@ -191,7 +191,7 @@ void StartTask_Printf(void *argument)
         }
         //send_flag_to_up(1);send_flag_to_up(2);send_flag_to_up(3);send_flag_to_up(4);send_flag_to_up(5);send_flag_to_up(6);
         //printf("x66 y55 z66\n");
-        RTT_Printf("locator: x=%.3f y=%.3f r=%.6f\r\n", lcResult.x, lcResult.y, lcResult.r);
+        // RTT_Printf("locator: x=%.3f y=%.3f r=%.6f\r\n", lcResult.x, lcResult.y, lcResult.r);
         // RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
         RTT_Printf("dis=%f\n",lcResult.laser_current);
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
@@ -209,8 +209,8 @@ void StartTask_Printf(void *argument)
         // RTT_Printf("xiaomi2_online=%d  xiaomi2_angle=%f\n",
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.online,
         //            g_xiaomi_motor_registry[XIAOMI_Motor2].feedback.angle);
-        RTT_Printf("current_climb_state:%d climb_cnt:%d\r\n",current_climb_state,climb_cnt);
-        RTT_Printf("current_down_state:%d down_cnt:%d\r\n",current_down_state,down_cnt);
+        // RTT_Printf("current_climb_state:%d climb_cnt:%d\r\n",current_climb_state,climb_cnt);
+        // RTT_Printf("current_down_state:%d down_cnt:%d\r\n",current_down_state,down_cnt);
         // if (g_motor_list[DM_FRONT_LEFT_G].get_state != NULL &&
         //     g_motor_list[DM_FRONT_RIGHT_G].get_state != NULL &&
         //     g_motor_list[BLAZER_FOC_MOTOR2_G].get_state != NULL &&
