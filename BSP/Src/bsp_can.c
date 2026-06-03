@@ -10,7 +10,6 @@
 #define BLAZER_FOC_NODE_ID_MAX 0x07U
 #define BLAZER_FOC_PARAM_ID_MAX 0x47U
 #define LOCATOR_CAN_ID_X_Y 0x12U
-#define LOCATOR_CAN_ID_Z_R 0x13U
 #define LOCATOR_CAN_ID_LASER 0x100U
 #define FDCAN_TX_FIFO_WAIT_TIMEOUT_MS 5U
 #define FDCAN_TX_MUTEX_TIMEOUT_MS 10U
@@ -26,8 +25,7 @@ static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHea
         return false;
     }
 
-    return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y ||
-            rx_header->Identifier == LOCATOR_CAN_ID_Z_R ||
+    return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y||
             rx_header->Identifier == LOCATOR_CAN_ID_LASER);
 }
 
@@ -230,17 +228,21 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
             if (locator_len > sizeof(locator_msg.rx_data)) {
                 locator_len = sizeof(locator_msg.rx_data);
             }
+            locator_msg.data_len = locator_len;
             if (locator_len > 0U) {
                 memcpy(locator_msg.rx_data, rx_data, locator_len);
             }
 
             if (rx_header.Identifier == LOCATOR_CAN_ID_X_Y && locatorQueue_x_yHandle != NULL) {
                 xQueueSendFromISR(locatorQueue_x_yHandle, &locator_msg, &xHigherPriorityTaskWoken);
-            } else if ((rx_header.Identifier == LOCATOR_CAN_ID_Z_R ||
-                        rx_header.Identifier == LOCATOR_CAN_ID_LASER) &&
-                       locatorQueue_z_rHandle != NULL) {
+                // BaseType_t ret = xQueueSendFromISR(locatorQueue_x_yHandle, &locator_msg, &xHigherPriorityTaskWoken);
+                // if (ret != pdPASS) {
+                //     __NOP();
+                // }
+            } else if (rx_header.Identifier == LOCATOR_CAN_ID_LASER)
+                        {
                 xQueueSendFromISR(locatorQueue_z_rHandle, &locator_msg, &xHigherPriorityTaskWoken);
-            }
+                       }
             continue;
         }
 

@@ -190,9 +190,7 @@ void StartTask_Printf(void *argument)
             (void)chassis_cmd;
         }
         //printf("x66 y55 z66\n");
-        // printf("x=%.1f,",lcResult.x);
-        // printf("y=%.1f,",lcResult.y);
-        // printf("r=%.3f\n",lcResult.r);
+        RTT_Printf("locator: x=%.3f y=%.3f r=%.6f\r\n", lcResult.x, lcResult.y, lcResult.r);
         // RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
         // RTT_Printf("dis=%f\n",lcResult.laser_current);
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);

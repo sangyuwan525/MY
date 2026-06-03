@@ -1,83 +1,49 @@
-//
-// Created by 马皓然 on 2025/11/5.
-//
 #include "locator_driver.h"
 
-#include <stdio.h>
 #include <string.h>
 
-Locator_Result_t lcResult={0};
+#define LOCATOR_CAN_ID_POSE 0x12U
+#define LOCATOR_CAN_ID_LASER 0x100U
 
-// 解析定位器X/Y坐标（大端序，8字节数据拆分为2个4字节float）
-void analysis_locator_X_Y(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* rx_msg_tmp) {
-    uint32_t database_x;
-    uint32_t database_y;
+Locator_Result_t lcResult = {0};
 
-    // 先校验指针非空，避免空指针崩溃
-    if (lcResult == NULL || rx_msg_tmp == NULL) {
-        return; // 指针无效直接返回，不处理
-    }
-    //printf("%x\n",rx_msg_tmp->msg_identifier);
-    //  匹配目标报头，解析大端序float数据
-    if (rx_msg_tmp->msg_identifier == 0x12) {
-        //printf("ok222222\n");
-        // 前4字节（rx_data[0-3]）拼接为X的32位整数（大端序）
-        database_x = ((uint32_t)rx_msg_tmp->rx_data[3] << 24) |
-                     ((uint32_t)rx_msg_tmp->rx_data[2] << 16) |
-                     ((uint32_t)rx_msg_tmp->rx_data[1] << 8)  |
-                     ((uint32_t)rx_msg_tmp->rx_data[0]);
+static float Locator_ReadFloatLE(const uint8_t *data)
+{
+    uint32_t raw;
+    float value;
 
-        // 内存强转：将32位整数的二进制解析为float
-        lcResult->x = 1000*(*(float*)(&database_x));
-
-        // 后4字节（rx_data[4-7]）拼接为Y的32位整数（大端序）
-        database_y = ((uint32_t)rx_msg_tmp->rx_data[7] << 24) |
-                     ((uint32_t)rx_msg_tmp->rx_data[6] << 16) |
-                     ((uint32_t)rx_msg_tmp->rx_data[5] << 8)  |
-                     ((uint32_t)rx_msg_tmp->rx_data[4]);
-
-        // 内存强转：解析Y坐标
-        lcResult->y = 1000 * (*(float*)(&database_y));
-    }
+    raw = ((uint32_t)data[0]) |
+          ((uint32_t)data[1] << 8) |
+          ((uint32_t)data[2] << 16) |
+          ((uint32_t)data[3] << 24);
+    memcpy(&value, &raw, sizeof(value));
+    return value;
 }
 
-void analysis_locator_Z_R(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* rx_msg_tmp) {
-    uint32_t database_r;
-
+void analysis_locator_X_Y(Locator_Result_t *lcResult, const Locator_Rx_Queue_t *rx_msg_tmp)
+{
     if (lcResult == NULL || rx_msg_tmp == NULL) {
         return;
     }
 
-    //  匹配目标报头，解析大端序float数据
-    if (rx_msg_tmp->msg_identifier == 0x13) {
-
-        // 后4字节（rx_data[4-7]）拼接为R的32位整数（大端序）
-        database_r = ((uint32_t)rx_msg_tmp->rx_data[7] << 24) |
-                     ((uint32_t)rx_msg_tmp->rx_data[6] << 16) |
-                     ((uint32_t)rx_msg_tmp->rx_data[5] << 8)  |
-                     ((uint32_t)rx_msg_tmp->rx_data[4]);
-
-        // 内存强转：解析R
-        lcResult->r = *(float*)(&database_r);
+    if (rx_msg_tmp->msg_identifier != LOCATOR_CAN_ID_POSE || rx_msg_tmp->data_len < 16U) {
+        return;
     }
+
+    lcResult->x = 1000.0f * Locator_ReadFloatLE(&rx_msg_tmp->rx_data[0]);
+    lcResult->y = 1000.0f * Locator_ReadFloatLE(&rx_msg_tmp->rx_data[4]);
+    lcResult->r = Locator_ReadFloatLE(&rx_msg_tmp->rx_data[12]);
 }
 
-void analysis_locator_laser(Locator_Result_t* lcResult, const Locator_Rx_Queue_t* rx_msg_tmp) {
-    float laser_current;
-
+void analysis_locator_laser(Locator_Result_t *lcResult, const Locator_Rx_Queue_t *rx_msg_tmp)
+{
     if (lcResult == NULL || rx_msg_tmp == NULL) {
         return;
     }
 
-    if (rx_msg_tmp->msg_identifier != 0x100U) {
+    if (rx_msg_tmp->msg_identifier != LOCATOR_CAN_ID_LASER || rx_msg_tmp->data_len < 4U) {
         return;
     }
 
-    /*
-     * The laser board sends:
-     *   memcpy(can_data, &current, 4)
-     * on STM32, so the bytes are little-endian IEEE-754 float bytes.
-     */
-    memcpy(&laser_current, rx_msg_tmp->rx_data, sizeof(laser_current));
-    lcResult->laser_current = laser_current;
+    lcResult->laser_current = Locator_ReadFloatLE(&rx_msg_tmp->rx_data[0]);
 }
