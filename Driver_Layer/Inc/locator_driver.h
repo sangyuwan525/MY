@@ -9,6 +9,8 @@ typedef struct LocatorResult {
     float vx, vy, vr;
     float pitch, roll, yaw;
     float laser_current;
+    float laser_current_1;
+    float laser_current_2;
 } Locator_Result_t;
 
 typedef struct LocatorRxQueue {
@@ -17,7 +19,7 @@ typedef struct LocatorRxQueue {
     uint8_t rx_data[16];
 } Locator_Rx_Queue_t;
 
-/* Legacy queue names: x_y now carries 0x12 x/y/yaw; z_r now carries 0x100 laser data. */
+/* Legacy queue names: x_y now carries 0x12 x/y/yaw; z_r now carries 0x100/0x101 laser data. */
 extern osMessageQueueId_t locatorQueue_x_yHandle;
 extern osMessageQueueId_t locatorQueue_z_rHandle;
 extern Locator_Result_t lcResult;

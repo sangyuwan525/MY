@@ -11,7 +11,8 @@
 #define BLAZER_FOC_NODE_ID_MAX 0x07U
 #define BLAZER_FOC_PARAM_ID_MAX 0x47U
 #define LOCATOR_CAN_ID_X_Y 0x12U
-#define LOCATOR_CAN_ID_LASER 0x100U
+#define LOCATOR_CAN_ID_LASER_1 0x100U
+#define LOCATOR_CAN_ID_LASER_2 0x101U
 #define FDCAN_TX_FIFO_WAIT_TIMEOUT_MS 5U
 #define FDCAN_TX_MUTEX_TIMEOUT_MS 10U
 
@@ -26,8 +27,9 @@ static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHea
         return false;
     }
 
-    return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y||
-            rx_header->Identifier == LOCATOR_CAN_ID_LASER);
+    return (rx_header->Identifier == LOCATOR_CAN_ID_X_Y ||
+            rx_header->Identifier == LOCATOR_CAN_ID_LASER_1 ||
+            rx_header->Identifier == LOCATOR_CAN_ID_LASER_2);
 }
 
 static bool Is_Upper_Signal_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxHeaderTypeDef *rx_header)
@@ -286,7 +288,9 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
                 // if (ret != pdPASS) {
                 //     __NOP();
                 // }
-            } else if (rx_header.Identifier == LOCATOR_CAN_ID_LASER && locatorQueue_z_rHandle != NULL) {
+            } else if ((rx_header.Identifier == LOCATOR_CAN_ID_LASER_1 ||
+                        rx_header.Identifier == LOCATOR_CAN_ID_LASER_2) &&
+                       locatorQueue_z_rHandle != NULL) {
                 xQueueSendFromISR(locatorQueue_z_rHandle, &locator_msg, &xHigherPriorityTaskWoken);
             }
             continue;

@@ -181,7 +181,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 | CAN ID | 来源 | 用途 | 队列 | 解析函数 |
 | --- | --- | --- | --- | --- |
 | `0x12` | 上层/雷达 | `x/y/z/yaw` 位姿 | `locatorQueue_x_yHandle` | `analysis_locator_X_Y()` |
-| `0x100` | 上层/laser | laser float 数据 | `locatorQueue_z_rHandle` | `analysis_locator_laser()` |
+| `0x100` | 上层/laser1 | laser float 数据 | `locatorQueue_z_rHandle` | `analysis_locator_laser()` |
+| `0x101` | 上层/laser2 | laser float 数据 | `locatorQueue_z_rHandle` | `analysis_locator_laser()` |
 
 另外状态机里已有三类上层信号变量：
 
@@ -279,11 +280,11 @@ void Upper_SendPoseToChassis(FDCAN_HandleTypeDef *hfdcan,
 }
 ```
 
-### 3.2 上层发送 laser 报文：`0x100`
+### 3.2 上层发送 laser 报文：`0x100` / `0x101`
 
 | 字段 | 内容 |
 | --- | --- |
-| CAN ID | `0x100` |
+| CAN ID | `0x100` 或 `0x101` |
 | ID 类型 | 标准帧 |
 | DLC | 至少 4 |
 | 字节序 | 小端 |
@@ -292,7 +293,7 @@ Payload：
 
 | 字节 | 类型 | 含义 | 底盘保存 |
 | --- | --- | --- | --- |
-| 0..3 | `float` | laser current | `lcResult.laser_current` |
+| 0..3 | `float` | laser current | `0x100 -> lcResult.laser_current_1`，`0x101 -> lcResult.laser_current_2` |
 
 底盘解析代码：
 
@@ -301,15 +302,24 @@ Payload：
 void analysis_locator_laser(Locator_Result_t *lcResult,
                             const Locator_Rx_Queue_t *rx_msg_tmp)
 {
+    float laser_current;
+
     if (lcResult == NULL || rx_msg_tmp == NULL) {
         return;
     }
 
-    if (rx_msg_tmp->msg_identifier != 0x100U || rx_msg_tmp->data_len < 4U) {
+    if (rx_msg_tmp->data_len < 4U) {
         return;
     }
 
-    lcResult->laser_current = Locator_ReadFloatLE(&rx_msg_tmp->rx_data[0]);
+    laser_current = Locator_ReadFloatLE(&rx_msg_tmp->rx_data[0]);
+
+    if (rx_msg_tmp->msg_identifier == 0x100U) {
+        lcResult->laser_current = laser_current;
+        lcResult->laser_current_1 = laser_current;
+    } else if (rx_msg_tmp->msg_identifier == 0x101U) {
+        lcResult->laser_current_2 = laser_current;
+    }
 }
 ```
 
@@ -427,7 +437,7 @@ static void Process_Upper_Signal_Message(uint32_t id)
 ```c
 while (HAL_FDCAN_GetRxMessage(hfdcan, fifo, &rx_header, rx_data) == HAL_OK) {
     if (Is_Locator_Rx_Message(hfdcan, &rx_header)) {
-        /* 当前工程已有：0x12 和 0x100 入定位/laser队列 */
+        /* 当前工程已有：0x12 和 0x100/0x101 入定位/laser队列 */
         ...
         continue;
     }
@@ -499,7 +509,8 @@ static bool Is_Locator_Rx_Message(FDCAN_HandleTypeDef *hfdcan,
     }
 
     return (rx_header->Identifier == 0x12U ||
-            rx_header->Identifier == 0x100U);
+            rx_header->Identifier == 0x100U ||
+            rx_header->Identifier == 0x101U);
 }
 ```
 
@@ -514,7 +525,8 @@ memcpy(locator_msg.rx_data, rx_data, locator_msg.data_len);
 
 if (rx_header.Identifier == 0x12U) {
     xQueueSendFromISR(locatorQueue_x_yHandle, &locator_msg, &xHigherPriorityTaskWoken);
-} else if (rx_header.Identifier == 0x100U) {
+} else if (rx_header.Identifier == 0x100U ||
+           rx_header.Identifier == 0x101U) {
     xQueueSendFromISR(locatorQueue_z_rHandle, &locator_msg, &xHigherPriorityTaskWoken);
 }
 ```
