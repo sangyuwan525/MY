@@ -45,6 +45,7 @@ int down_cnt = 0;
 volatile uint8_t climb_stair_flag = 0;
 volatile uint8_t down_stair_flag = 0;
 volatile uint8_t rear_photogate_flag = 0;
+
 // pb11 左臂光电，检测到物体为1  用于下楼梯
 // pb10 车头光电开关，检测到物体为0  用于上楼梯
 // 底盘气缸发送数据为1是张开
