@@ -176,7 +176,9 @@ void StartTask_chassis(void *argument)
                     // Change_dji_loc(DJI_M_CLIMB_LB,25000);
                     //
                     //
-
+                    send_flag_to_up(CHASSIS_VACUMM_OPEN,1);
+                    send_flag_to_up(XIAOMI_SLIDER_VACUMM_OPEN,1);
+                    send_flag_to_up(UPPER_CAN_ID_MC_ASSEMBLE,1);
                 //     if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
                 //     {
                 //         g_motor_list[DM_FRONT_RIGHT_G].set_speed(&g_motor_list[DM_FRONT_RIGHT_G],20.0f);
@@ -196,6 +198,8 @@ void StartTask_chassis(void *argument)
                     if (button2_flag==0)
                     {
                         climb_cnt++;
+                        send_flag_to_up(CHASSIS_VACUMM_OPEN,0);
+                        send_flag_to_up(XIAOMI_SLIDER_VACUMM_OPEN,0);
                         // if (g_motor_list[DM_FRONT_LEFT_G].set_speed!=NULL && g_motor_list[DM_FRONT_RIGHT_G].set_speed!=NULL)
                         // {
                         //     g_motor_list[DM_FRONT_LEFT_G].set_speed(&g_motor_list[DM_FRONT_LEFT_G],0.0f);

@@ -315,7 +315,6 @@ void analysis_locator_laser(Locator_Result_t *lcResult,
     laser_current = Locator_ReadFloatLE(&rx_msg_tmp->rx_data[0]);
 
     if (rx_msg_tmp->msg_identifier == 0x100U) {
-        lcResult->laser_current = laser_current;
         lcResult->laser_current_1 = laser_current;
     } else if (rx_msg_tmp->msg_identifier == 0x101U) {
         lcResult->laser_current_2 = laser_current;

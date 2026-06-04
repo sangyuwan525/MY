@@ -46,37 +46,37 @@ static bool Is_Upper_Signal_Message(FDCAN_HandleTypeDef *hfdcan, const FDCAN_RxH
              rx_header->Identifier <= UPPER_CAN_ID_CF_WIN));
 }
 
-static void Process_Upper_Signal_Message(uint32_t id)
-{
-    switch (id) {
-        case UPPER_CAN_ID_MC_PICK_HEAD_DONE:
-        case UPPER_CAN_ID_MC_ASSEMBLE_READY:
-        case UPPER_CAN_ID_MC_ASSEMBLE_DONE:
-        case UPPER_CAN_ID_MC_R1_LEFT:
-            MC_flag = (int)(id - 0x310U);
-            break;
-
-        case UPPER_CAN_ID_MF_ENTRY_DONE:
-        case UPPER_CAN_ID_MF_ACTION_READY:
-        case UPPER_CAN_ID_MF_GRAB_DONE:
-        case UPPER_CAN_ID_MF_REMOVE_DONE:
-        case UPPER_CAN_ID_MF_EXIT_DONE:
-            MF_flag = (int)(id - 0x320U);
-            break;
-
-        case UPPER_CAN_ID_CF_PLACE_TOP_DECISION:
-        case UPPER_CAN_ID_CF_PUT_MID_DONE:
-        case UPPER_CAN_ID_CF_LIFT_DONE:
-        case UPPER_CAN_ID_CF_R1_IN_POSITION:
-        case UPPER_CAN_ID_CF_PUT_TOP_DONE:
-        case UPPER_CAN_ID_CF_WIN:
-            CF_flag = (int)(id - 0x330U);
-            break;
-
-        default:
-            break;
-    }
-}
+// static void Process_Upper_Signal_Message(uint32_t id)
+// {
+//     switch (id) {
+//         case UPPER_CAN_ID_MC_PICK_HEAD_DONE:
+//         case UPPER_CAN_ID_MC_ASSEMBLE_READY:
+//         case UPPER_CAN_ID_MC_ASSEMBLE_DONE:
+//         case UPPER_CAN_ID_MC_R1_LEFT:
+//             MC_flag = (int)(id - 0x310U);
+//             break;
+//
+//         case UPPER_CAN_ID_MF_ENTRY_DONE:
+//         case UPPER_CAN_ID_MF_ACTION_READY:
+//         case UPPER_CAN_ID_MF_GRAB_DONE:
+//         case UPPER_CAN_ID_MF_REMOVE_DONE:
+//         case UPPER_CAN_ID_MF_EXIT_DONE:
+//             MF_flag = (int)(id - 0x320U);
+//             break;
+//
+//         case UPPER_CAN_ID_CF_PLACE_TOP_DECISION:
+//         case UPPER_CAN_ID_CF_PUT_MID_DONE:
+//         case UPPER_CAN_ID_CF_LIFT_DONE:
+//         case UPPER_CAN_ID_CF_R1_IN_POSITION:
+//         case UPPER_CAN_ID_CF_PUT_TOP_DONE:
+//         case UPPER_CAN_ID_CF_WIN:
+//             CF_flag = (int)(id - 0x330U);
+//             break;
+//
+//         default:
+//             break;
+//     }
+// }
 
 static void FDCAN_Filter_Config(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo_assignment, CAN_Id_Type_e id_type) {
     (void)id_type;
@@ -296,10 +296,10 @@ static void Process_Rx_Message(FDCAN_HandleTypeDef *hfdcan, uint32_t fifo) {
             continue;
         }
 
-        if (Is_Upper_Signal_Message(hfdcan, &rx_header)) {
-            Process_Upper_Signal_Message(rx_header.Identifier);
-            continue;
-        }
+        // if (Is_Upper_Signal_Message(hfdcan, &rx_header)) {
+        //     Process_Upper_Signal_Message(rx_header.Identifier);
+        //     continue;
+        // }
 
         memset(&msg, 0, sizeof(msg));
         msg.id = rx_header.Identifier;

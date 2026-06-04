@@ -193,7 +193,11 @@ void StartTask_Printf(void *argument)
         //printf("x66 y55 z66\n");
         // RTT_Printf("locator: x=%.3f y=%.3f r=%.6f\r\n", lcResult.x, lcResult.y, lcResult.r);
         // RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.vx,remote_engineer.vy,remote_engineer.vw);
-        RTT_Printf("laser1=%f laser2=%f\n", lcResult.laser_current_1, lcResult.laser_current_2);
+       // RTT_Printf("laser1=%f laser2=%f\n", lcResult.laser_current_1, lcResult.laser_current_2);
+        RTT_Printf("PB10:%d\r\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10));
+        RTT_Printf("PB11:%d\r\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
+        RTT_Printf("PC1:%d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
+        RTT_Printf("PC0:%d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0));
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
         //RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));

@@ -26,23 +26,13 @@ typedef enum {
 } FLAG_TO_UP;
 
 typedef enum {
-    UPPER_CAN_ID_MC_PICK_HEAD_DONE = 0x311U,
-    UPPER_CAN_ID_MC_ASSEMBLE_READY = 0x312U,
-    UPPER_CAN_ID_MC_ASSEMBLE_DONE = 0x313U,
-    UPPER_CAN_ID_MC_R1_LEFT = 0x314U,
+    CHASSIS_VACUMM_OPEN = 0x11U,
+    XIAOMI_SLIDER_VACUMM_OPEN = 0x12U,
+    UPPER_CAN_ID_MC_ASSEMBLE = 0x13U,
+} Chassis_To_Upper_CanId_e;
 
-    UPPER_CAN_ID_MF_ENTRY_DONE = 0x321U,
-    UPPER_CAN_ID_MF_ACTION_READY = 0x322U,
-    UPPER_CAN_ID_MF_GRAB_DONE = 0x323U,
-    UPPER_CAN_ID_MF_REMOVE_DONE = 0x324U,
-    UPPER_CAN_ID_MF_EXIT_DONE = 0x325U,
-
-    UPPER_CAN_ID_CF_PLACE_TOP_DECISION = 0x331U,
-    UPPER_CAN_ID_CF_PUT_MID_DONE = 0x332U,
-    UPPER_CAN_ID_CF_LIFT_DONE = 0x333U,
-    UPPER_CAN_ID_CF_R1_IN_POSITION = 0x334U,
-    UPPER_CAN_ID_CF_PUT_TOP_DONE = 0x335U,
-    UPPER_CAN_ID_CF_WIN = 0x336U,
+typedef enum {
+    REAR_PHOTOGATE = 0x314,
 } Upper_To_Chassis_CanId_e;
 
 // --- 顶级状态：区域逻辑 (Top-Level States) ---
@@ -114,7 +104,7 @@ extern volatile int MF_flag;
 extern volatile int MC_flag;
 extern volatile int CF_flag;
 extern R2_Context_t g_robot_ctx;
-uint8_t send_flag_to_up(uint8_t id);
+uint8_t send_flag_to_up(uint8_t id, uint8_t data_byte);
 int chassis_auto_control(R2_Context_t *robot_ctx);
 
 #endif

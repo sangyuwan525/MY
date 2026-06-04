@@ -44,9 +44,11 @@ int down_cnt = 0;
 
 volatile uint8_t climb_stair_flag = 0;
 volatile uint8_t down_stair_flag = 0;
-// pb11 碰撞开关，碰到为 1
-// pb10 后光电开关，常亮为 1
-// pc1  前光电开关，常亮为 1，抬起灯
+volatile uint8_t rear_photogate_flag = 0;
+// pb11 左臂光电，检测到物体为1  用于下楼梯
+// pb10 车头光电开关，检测到物体为0  用于上楼梯
+// 底盘气缸发送数据为1是张开
+// 小米滑轨气缸数据为1是张开
 
 // R2 出发点为原点下台阶坐标
 // pos stairs_center[13]={

@@ -1,8 +1,21 @@
 #include "Hfsm.h"
 
+#include <math.h>
+
+#include "chassis_driver.h"
+#include "chassis_pid.h"
 #include "locator_driver.h"
 
 #define TOTAL_STICK  1  // 一区总共拿取的杆数量
+
+#define PICK_HEAD_TARGET_X_MM          1000.0f
+#define PICK_HEAD_TARGET_R_RAD         0.0f
+#define PICK_HEAD_TARGET_LASER_MM      300.0f
+
+/* 0: use 0x100 laser, 1: use 0x101 laser. Change this according to the half field. */
+#define PICK_HEAD_USE_LASER_2          0U
+/* If the car moves away from the target when laser error is positive, change this to -1.0f. */
+#define PICK_HEAD_LASER_CMD_SIGN       1.0f
 
 Point_struct slope_entry = {3890,8390};
 Point_struct slope_end = {3890,10500};
@@ -23,9 +36,9 @@ volatile int MC_flag = 0;
 volatile int CF_flag = 0;
 
 //向上层发送信息
-uint8_t send_flag_to_up(uint8_t id)
+uint8_t send_flag_to_up(uint8_t id, uint8_t data_byte)
 {
-    uint8_t data[1] = {8};
+    uint8_t data[1] = {data_byte};
     return fdcanx_send_ex_data(&hfdcan3, 0x300+id, data, 1, CAN_ID_STD);
 }
 
@@ -110,6 +123,105 @@ static void set_cf_state(R2_Context_t *r2, CFSubState_t next) {
 
 
 //  一区逻辑
+static float clamp_float(float value, float min_value, float max_value)
+{
+    if (value > max_value) {
+        return max_value;
+    }
+    if (value < min_value) {
+        return min_value;
+    }
+    return value;
+}
+
+static float angle_error_rad(float target, float current)
+{
+    float err = target - current;
+
+    while (err > pi) {
+        err -= 2.0f * pi;
+    }
+    while (err < -pi) {
+        err += 2.0f * pi;
+    }
+    return err;
+}
+
+static float pick_head_get_laser_mm(void)
+{
+    return (PICK_HEAD_USE_LASER_2 != 0U) ? lcResult.laser_current_2 : lcResult.laser_current_1;
+}
+
+static int pick_head_laser_control_loop(uint8_t reset)
+{
+    static uint8_t stable_cnt = 0U;
+    static bool aligned = false;
+    const float laser_min_mm = 30.0f;
+    const float laser_max_mm = 1500.0f;
+    const float x_ok_mm = 15.0f;
+    const float r_ok_rad = 0.03f;
+    const float laser_ok_mm = 2.0f;
+    const float x_kp = 1.0f;
+    const float laser_kp = 1.5f;
+    const float x_max_speed_mm_s = 250.0f;
+    const float laser_max_speed_mm_s = 120.0f;
+    const uint8_t stable_target = 5U;
+
+    if (reset != 0U) {
+        stable_cnt = 0U;
+        aligned = false;
+        cha_remote(0.0f, 0.0f, 0.0f);
+        return 0;
+    }
+
+    if (aligned) {
+        cha_remote(0.0f, 0.0f, 0.0f);
+        return 1;
+    }
+
+    const float laser = pick_head_get_laser_mm();
+    const bool laser_valid = laser >= laser_min_mm && laser <= laser_max_mm;
+    const float x_err = PICK_HEAD_TARGET_X_MM - lcResult.x;
+    const float r_err = angle_error_rad(PICK_HEAD_TARGET_R_RAD, lcResult.r);
+    float laser_err = 0.0f;
+
+    const float x_cmd_world = clamp_float(x_kp * x_err,
+                                          -x_max_speed_mm_s,
+                                          x_max_speed_mm_s);
+    vec2 cmd_local = change_world_to_local((vec2){x_cmd_world, 0.0f}, lcResult.r);
+    const float vr = PID_Angle_Calculate(&chassis_yaw_pid, PICK_HEAD_TARGET_R_RAD, lcResult.r);
+
+    if (laser_valid) {
+        const float laser_cmd = clamp_float(PICK_HEAD_LASER_CMD_SIGN *
+                                            laser_kp *
+                                            (laser - PICK_HEAD_TARGET_LASER_MM),
+                                            -laser_max_speed_mm_s,
+                                            laser_max_speed_mm_s);
+
+        laser_err = laser - PICK_HEAD_TARGET_LASER_MM;
+        cmd_local.y = laser_cmd;
+    }
+
+    if (fabsf(x_err) < x_ok_mm &&
+        fabsf(r_err) < r_ok_rad &&
+        laser_valid &&
+        fabsf(laser_err) < laser_ok_mm) {
+        stable_cnt++;
+    } else {
+        stable_cnt = 0U;
+    }
+
+    if (stable_cnt >= stable_target) {
+        stable_cnt = 0U;
+        aligned = true;
+        cha_remote(0.0f, 0.0f, 0.0f);
+        return 1;
+    }
+
+    cha_remote(cmd_local.x, cmd_local.y, vr);
+    return 0;
+}
+
 void Handle_MC_Logic(R2_Context_t *r2) {
     switch (r2->sub_state.mc) {
         case MC_INIT:  //  初始状态
@@ -120,13 +232,10 @@ void Handle_MC_Logic(R2_Context_t *r2) {
         case MC_PICK_HEAD:  //  出发取端头
             // 规则4.3.3: R2从端头架取下一个端头 [cite: 98]
             if (!r2->path_inited) {
-                Point_struct now_point = {lcResult.x,lcResult.y};
-                Point_struct central_point = {800.f,1000.f};
-                Point_struct end_point = {1000.f,1500.f};
-                init_tangent_line_circle_path(&path_test,now_point,end_point,central_point,1,lcResult.r,1.57f);
+                pick_head_laser_control_loop(1U);
                 r2->path_inited = true;
             }
-            if (go_path_control(&path_test,spd_test) == 1) {
+            if (pick_head_laser_control_loop(0U) == 1) {
                // printf("MC_PICK_HEAD\n");
                 if (MC_flag==1) {   // 收到上层信息
                     r2->stick_count++;
@@ -146,7 +255,7 @@ void Handle_MC_Logic(R2_Context_t *r2) {
         case MC_ASSEMBLE_ACT:  // 执行组装动作
             // 规则4.3.6: 组装过程中R1与R2不得直接肢体接触
             // R2保持端头稳定，等待R1插入
-            send_flag_to_up(FLAG_ASSEMBLE);  // 向上层发送组装信号
+            send_flag_to_up(FLAG_ASSEMBLE,0);  // 向上层发送组装信号
             if (MC_flag==3) {  // 收到组装完成的信号
                 if (r2->stick_count < TOTAL_STICK) {
                     set_mc_state(r2, MC_PICK_HEAD);
@@ -285,22 +394,22 @@ void Handle_MF_Logic(R2_Context_t *r2) {
                 if (Move_to_Edge(r2->current_stair_id,target)) {
                     if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==3)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_KEEP,0);
                     }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==3)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_KEEP,0);
                     }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==1)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_HIGH_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_HIGH_KEEP,0);
                     }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==1)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_LOW_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_LEFT_LOW_KEEP,0);
                     }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]<0 && target-r2->current_stair_id==-1)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_HIGH_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_HIGH_KEEP,0);
                     }else if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[target]>0 && target-r2->current_stair_id==-1)
                     {
-                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_LOW_KEEP);
+                        send_flag_to_up(FLAG_GRAB_KFS_RIGHT_LOW_KEEP,0);
                     }
                     if (MF_flag==3) {  // 抓取成功
                         r2->kfs_count++;
@@ -329,10 +438,10 @@ void Handle_MF_Logic(R2_Context_t *r2) {
             if (Move_to_Edge(r2->current_stair_id,r2->target_stair_id)) {
                 if (HEIGHT_MAP[r2->current_stair_id]-HEIGHT_MAP[r2->target_stair_id]<0)
                 {
-                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_REMOVE);
+                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_HIGH_REMOVE,0);
                 }else
                 {
-                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_REMOVE);
+                    send_flag_to_up(FLAG_GRAB_KFS_FRONT_LOW_REMOVE,0);
                 }
 
                 if (MF_flag==4) {
@@ -389,7 +498,7 @@ void Handle_CF_Logic(R2_Context_t *r2) {
         case CF_PLACE_MID:
             // 规则4.5.13: R2把KFS放到九宫格中层
             if (go_path_control(&path_test, spd_test) == 1) {
-                send_flag_to_up(FLAG_PUT_KFS_MID);
+                send_flag_to_up(FLAG_PUT_KFS_MID,0);
                 if (CF_flag==2){
                     r2->kfs_count--;
                     set_cf_state(r2, CF_DECISION); // 循环决策，直到放完
@@ -401,7 +510,7 @@ void Handle_CF_Logic(R2_Context_t *r2) {
             // 规则3.8(3): R1举起R2 [cite: 121]
             // R2检测自身IMU或高度传感器确认被举起
             if (go_path_control(&path_test, spd_test) == 1) {   // 移动到被抬起的位置
-                send_flag_to_up(FLAG_LIFT);
+                send_flag_to_up(FLAG_LIFT,0);
                 if (CF_flag==3){
                     set_cf_state(r2, CF_PLACE_TOP);
                 }
@@ -411,7 +520,7 @@ void Handle_CF_Logic(R2_Context_t *r2) {
         case CF_PLACE_TOP:
             // 规则4.5.16: 被R1举起后放置顶层
             if (CF_flag==4) {   // 收到r1移动到位指令
-                send_flag_to_up(FLAG_PUT_KFS_TOP);     //向上层发送放置KFS到顶层的指令
+                send_flag_to_up(FLAG_PUT_KFS_TOP,0);     //向上层发送放置KFS到顶层的指令
                 // 放置完成后等待R1放下
                 if (CF_flag==5) {
                     r2->kfs_count--;

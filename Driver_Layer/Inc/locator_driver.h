@@ -8,7 +8,6 @@ typedef struct LocatorResult {
     float x, y, r;
     float vx, vy, vr;
     float pitch, roll, yaw;
-    float laser_current;
     float laser_current_1;
     float laser_current_2;
 } Locator_Result_t;

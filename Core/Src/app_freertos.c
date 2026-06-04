@@ -165,10 +165,10 @@ void MX_FREERTOS_Init(void) {
   /* creation of motorRxQueue */
   motorRxQueueHandle = osMessageQueueNew (32, sizeof(Motor_Rx_Queue_t), &motorRxQueue_attributes);
 
-  /* creation of locatorQueue_x_y: legacy name, now used for 0x12 x/y/yaw data */
+  /* creation of locatorQueue_x_y */
   locatorQueue_x_yHandle = osMessageQueueNew (16, sizeof(Locator_Rx_Queue_t), &locatorQueue_x_y_attributes);
 
-  /* creation of locatorQueue_z_r: legacy name, now used for 0x100 laser data */
+  /* creation of locatorQueue_z_r */
   locatorQueue_z_rHandle = osMessageQueueNew (16, sizeof(Locator_Rx_Queue_t), &locatorQueue_z_r_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
