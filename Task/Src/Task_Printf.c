@@ -196,8 +196,7 @@ void StartTask_Printf(void *argument)
        // RTT_Printf("laser1=%f laser2=%f\n", lcResult.laser_current_1, lcResult.laser_current_2);
         RTT_Printf("PB10:%d\r\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_10));
         RTT_Printf("PB11:%d\r\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
-        RTT_Printf("PC1:%d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1));
-        RTT_Printf("PC0:%d\r\n",HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0));
+        RTT_Printf("rear_photogate_flag:%d\r\n",rear_photogate_flag);
         //RTT_Printf("vx=%f  vy=%f  vr=%f\n",remote_engineer.mode,remote_engineer.vy,remote_engineer.vw);
         //RTT_Printf("test_cnt%d,state%d,cnt%d\n",climb_test_cnt,current_climb_state,climb_cnt);
         //printf("开关:%d\n",HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_11));
